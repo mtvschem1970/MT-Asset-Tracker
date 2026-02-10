@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Tracker Pro (Popup Edit)</title>
+    <title>Asset Tracker Pro (Stable Version)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="importmap">
     {
@@ -35,11 +35,9 @@
             adminPassword: '888'
         };
 
-        // --- Helpers ---
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
-            // เช็คขนาดไฟล์ (Limit 4MB to be safe for GAS)
-            if (file.size > 4 * 1024 * 1024) {
-                alert("ไฟล์ขนาดใหญ่เกิน 4MB อาจทำให้อัปโหลดล้มเหลว กรุณาลดขนาดไฟล์");
+            if (file.size > 5 * 1024 * 1024) { // Limit 5MB
+                alert("ไฟล์ขนาดใหญ่เกิน 5MB อาจทำให้อัปโหลดล้มเหลว");
                 reject("File too large");
                 return;
             }
@@ -78,8 +76,6 @@
             const [showAdminModal, setShowAdminModal] = useState(false);
             const [adminInputPassword, setAdminInputPassword] = useState('');
             const [tempConfig, setTempConfig] = useState(config);
-
-            // History Modal State
             const [historyModalOpen, setHistoryModalOpen] = useState(false);
             const [selectedLog, setSelectedLog] = useState(null);
 
@@ -102,26 +98,34 @@
                 if (!config.scriptUrl) return alert("ตั้งค่า URL ก่อน");
                 setIsSyncing(true);
                 try {
+                    // ใช้ POST แบบ no-cors เพื่อส่งข้อมูล (แต่จะไม่ได้รับ Response กลับมาในโหมดนี้)
+                    // เราจึงต้องใช้ setTimeout แล้ว Fetch ใหม่เพื่อดูผลลัพธ์
                     await fetch(config.scriptUrl, {
                         method: 'POST',
                         mode: 'no-cors', 
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    setTimeout(() => { fetchFromGoogle(); alert("ดำเนินการสำเร็จ!"); }, 2500);
-                } catch (error) { alert("Error: " + error.message); } 
-                finally { setIsSyncing(false); }
+                    
+                    setTimeout(() => { 
+                        fetchFromGoogle(); 
+                        alert("บันทึกข้อมูลสำเร็จ! (กรุณารอข้อมูลอัปเดตสักครู่)");
+                    }, 4000); // รอ 4 วิ เผื่อไฟล์ใหญ่
+                } catch (error) { 
+                    alert("Error: " + error.message); 
+                } finally { 
+                    setIsSyncing(false); 
+                }
             };
 
-            // Actions
             const handleAddItem = (newItem) => {
-                callApi({ action: 'save', ...newItem }); // Send full object
+                callApi({ action: 'save', ...newItem }); 
                 setItems(prev => [newItem, ...prev]);
+                if(newItem.location) setDepartmentList(prev => [...new Set([...prev, newItem.location])]);
                 setView('departmentItems');
             };
 
             const handleAddLog = (assetId, logData) => {
-                // ส่งเฉพาะ log ใหม่ไป append
                 callApi({ action: 'save', id: assetId, newLog: logData }); 
             };
 
@@ -137,25 +141,22 @@
                  setHistoryModalOpen(false);
             };
 
-            // --- Components ---
             const LoadingOverlay = () => (
-                <div className="fixed inset-0 bg-white/80 z-50 flex flex-col items-center justify-center backdrop-blur-sm">
+                <div className="fixed inset-0 bg-white/90 z-50 flex flex-col items-center justify-center backdrop-blur-sm">
                     <Loader2 className="animate-spin text-blue-600 mb-2" size={48} />
-                    <p className="text-slate-600 font-medium">{isSyncing ? 'กำลังบันทึกและซิงค์ข้อมูล...' : 'กำลังโหลดข้อมูล...'}</p>
+                    <p className="text-slate-600 font-medium animate-pulse">{isSyncing ? 'กำลังอัปโหลดไฟล์และบันทึก...' : 'กำลังดึงข้อมูลจาก Cloud...'}</p>
                 </div>
             );
 
-            // --- Views ---
-            // (Dashboard, DeptList, DeptItems are same as before - omitting for brevity, putting DetailView focused code)
-             const DashboardView = () => (
+            const DashboardView = () => (
                 <div className="fade-in pb-10 space-y-4">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-2xl shadow-lg flex justify-between">
-                        <div><h2 className="text-2xl font-bold">Asset Cloud</h2><p className="text-blue-100">ระบบจัดการอุปกรณ์ออนไลน์</p></div>
+                    <div className="bg-gradient-to-r from-slate-700 to-slate-900 text-white p-6 rounded-2xl shadow-lg flex justify-between">
+                        <div><h2 className="text-2xl font-bold">Asset Manager</h2><p className="text-slate-300">ระบบจัดการอุปกรณ์</p></div>
                         <DownloadCloud size={40} className="text-white/30"/>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-white p-4 rounded-xl shadow-sm border"><div className="text-slate-500 text-sm">อุปกรณ์</div><div className="text-3xl font-bold">{items.length}</div></div>
-                        <div className="bg-white p-4 rounded-xl shadow-sm border"><div className="text-slate-500 text-sm">ซ่อมบำรุง</div><div className="text-3xl font-bold text-orange-600">{items.reduce((s,i)=>s+(i.history?.length||0),0)}</div></div>
+                        <div className="bg-white p-4 rounded-xl shadow-sm border"><div className="text-slate-500 text-sm">ซ่อมบำรุง</div><div className="text-3xl font-bold text-blue-600">{items.reduce((s,i)=>s+(i.history?.length||0),0)}</div></div>
                     </div>
                 </div>
             );
@@ -205,7 +206,6 @@
                 );
             };
 
-            // --- Detail View with History ---
             const DetailView = () => {
                 const item = selectedItem;
                 const [log, setLog] = useState({ id: Date.now(), date: new Date().toISOString().split('T')[0], type: 'repair', description: '', laborCost: 0, parts: [] });
@@ -245,7 +245,6 @@
                         <div className="space-y-4">
                             <h3 className="font-bold text-lg text-slate-800">ประวัติการซ่อม ({item.history?.length || 0})</h3>
                             
-                            {/* New Log Form */}
                             <div className="bg-white p-4 rounded-xl border shadow-sm space-y-3">
                                 <h4 className="text-sm font-bold text-slate-600">+ เพิ่มประวัติใหม่</h4>
                                 <div className="grid grid-cols-2 gap-2">
@@ -260,18 +259,17 @@
                                         <input className="w-20 border p-1 rounded" type="number" placeholder="บาท" value={part.price} onChange={e=>setPart({...part, price:e.target.value})}/>
                                     </div>
                                     <div className="flex gap-2 text-xs mb-2">
-                                         <label className="flex-1 bg-white border py-1 text-center rounded cursor-pointer">{part.image ? '✓ รูป' : '+ รูป'} <input type="file" className="hidden" accept="image/*" onChange={e=>handlePartFile(e,'image')}/></label>
-                                         <label className="flex-1 bg-white border py-1 text-center rounded cursor-pointer">{part.receiptPdf ? '✓ PDF' : '+ PDF'} <input type="file" className="hidden" accept="application/pdf" onChange={e=>handlePartFile(e,'receiptPdf')}/></label>
+                                         <label className={`flex-1 border py-1 text-center rounded cursor-pointer ${part.image?'bg-green-100 text-green-700':'bg-white'}`}>{part.image ? '✓ รูป' : '+ รูป'} <input type="file" className="hidden" accept="image/*" onChange={e=>handlePartFile(e,'image')}/></label>
+                                         <label className={`flex-1 border py-1 text-center rounded cursor-pointer ${part.receiptPdf?'bg-green-100 text-green-700':'bg-white'}`}>{part.receiptPdf ? '✓ PDF' : '+ PDF'} <input type="file" className="hidden" accept="application/pdf" onChange={e=>handlePartFile(e,'receiptPdf')}/></label>
                                          <button onClick={()=>{if(part.name){setLog({...log, parts:[...log.parts, part]}); setPart({name:'',price:0,image:null,receiptPdf:null})}}} className="bg-blue-600 text-white px-3 rounded">+</button>
                                     </div>
-                                    {log.parts.map((p,i)=><div key={i} className="text-xs flex justify-between px-1">{p.name} <span>{p.price}</span></div>)}
+                                    {log.parts.map((p,i)=><div key={i} className="text-xs flex justify-between px-1 bg-white border mb-1 rounded p-1">{p.name} <span>{p.price}</span></div>)}
                                 </div>
                                 
                                 <input type="number" className="w-full border p-2 rounded text-sm" placeholder="ค่าแรง" value={log.laborCost} onChange={e=>setLog({...log, laborCost:e.target.value})}/>
                                 <button onClick={saveLog} className="w-full bg-slate-800 text-white py-2 rounded font-medium text-sm">บันทึก</button>
                             </div>
 
-                            {/* History List */}
                             <div className="space-y-3">
                                 {item.history && item.history.map((h) => (
                                     <div key={h.id} onClick={() => { setSelectedLog(h); setHistoryModalOpen(true); }} className="bg-white p-4 rounded-xl border hover:border-blue-400 cursor-pointer transition shadow-sm relative group">
@@ -282,14 +280,8 @@
                                             </div>
                                             <div className="text-right">
                                                 <div className="font-bold text-blue-600">฿{Number(h.totalCost).toLocaleString()}</div>
-                                                <div className="text-[10px] text-slate-400">คลิกเพื่อดู/แก้ไข</div>
                                             </div>
                                         </div>
-                                        {h.parts?.length > 0 && (
-                                            <div className="mt-2 text-xs text-slate-600 bg-slate-50 p-2 rounded">
-                                                {h.parts.length} อะไหล่: {h.parts.map(p=>p.name).join(', ')}
-                                            </div>
-                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -298,12 +290,14 @@
                 );
             };
 
-            // --- History Popup (Modal) ---
             const HistoryModal = () => {
                 if (!historyModalOpen || !selectedLog) return null;
                 const [editMode, setEditMode] = useState(false);
                 const [tempLog, setTempLog] = useState(selectedLog);
+                const [tempPart, setTempPart] = useState({ name: '', price: 0, image: null, receiptPdf: null });
 
+                const handleTempPartFile = async (e, k) => { if(e.target.files[0]) setTempPart({...tempPart, [k]: await fileToBase64(e.target.files[0])}) };
+                
                 const saveEdit = () => {
                     const total = Number(tempLog.laborCost) + (tempLog.parts||[]).reduce((s,p)=>s+Number(p.price),0);
                     handleUpdateLog(selectedItem.id, { ...tempLog, totalCost: total });
@@ -316,7 +310,6 @@
                                 <h3 className="font-bold text-lg">รายละเอียดการซ่อม</h3>
                                 <button onClick={()=>setHistoryModalOpen(false)}><X/></button>
                             </div>
-                            
                             <div className="p-6 space-y-4">
                                 {!editMode ? (
                                     <>
@@ -325,7 +318,6 @@
                                             <div><label className="text-xs text-slate-500">วันที่</label><div>{selectedLog.date}</div></div>
                                             <div><label className="text-xs text-slate-500">ประเภท</label><div>{selectedLog.type}</div></div>
                                         </div>
-                                        
                                         {selectedLog.parts?.length > 0 && (
                                             <div className="bg-slate-50 p-3 rounded-lg border">
                                                 <label className="text-xs font-bold text-slate-500 mb-2 block">อะไหล่ที่ใช้</label>
@@ -341,12 +333,10 @@
                                                 ))}
                                             </div>
                                         )}
-                                        
                                         <div className="flex justify-between items-center pt-2 border-t">
                                             <span className="text-sm">ค่าแรง: ฿{Number(selectedLog.laborCost).toLocaleString()}</span>
                                             <span className="font-bold text-xl text-blue-600">รวม ฿{Number(selectedLog.totalCost).toLocaleString()}</span>
                                         </div>
-
                                         <div className="grid grid-cols-2 gap-3 pt-4">
                                             <button onClick={()=>setEditMode(true)} className="bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200">แก้ไข</button>
                                             <button onClick={()=>handleDeleteLog(selectedItem.id, selectedLog.id)} className="bg-red-50 text-red-600 py-3 rounded-xl font-bold hover:bg-red-100">ลบประวัติ</button>
@@ -354,13 +344,27 @@
                                     </>
                                 ) : (
                                     <div className="space-y-3">
-                                        <div className="bg-yellow-50 text-yellow-800 p-2 text-xs rounded border border-yellow-200">โหมดแก้ไข: แก้ไขข้อมูลด้านล่างแล้วกดบันทึก</div>
+                                        <div className="bg-yellow-50 text-yellow-800 p-2 text-xs rounded border border-yellow-200">โหมดแก้ไข</div>
                                         <input type="date" className="w-full border p-2 rounded" value={tempLog.date} onChange={e=>setTempLog({...tempLog, date:e.target.value})}/>
                                         <input className="w-full border p-2 rounded" value={tempLog.description} onChange={e=>setTempLog({...tempLog, description:e.target.value})}/>
                                         <input type="number" className="w-full border p-2 rounded" placeholder="ค่าแรง" value={tempLog.laborCost} onChange={e=>setTempLog({...tempLog, laborCost:e.target.value})}/>
-                                        {/* (Simple edit doesn't support adding/removing parts yet to keep it simple, suggest delete and re-add for major changes) */}
+                                        
+                                        <div className="bg-slate-50 p-2 rounded border">
+                                            <label className="text-xs font-bold mb-1 block">เพิ่มอะไหล่ (ถ้ามี)</label>
+                                            <div className="flex gap-2 mb-2">
+                                                <input className="flex-1 border p-1 rounded text-sm" placeholder="ชื่อ" value={tempPart.name} onChange={e=>setTempPart({...tempPart, name:e.target.value})}/>
+                                                <input className="w-16 border p-1 rounded text-sm" type="number" placeholder="฿" value={tempPart.price} onChange={e=>setTempPart({...tempPart, price:e.target.value})}/>
+                                            </div>
+                                            <div className="flex gap-2 text-xs mb-2">
+                                                 <label className={`flex-1 border py-1 text-center rounded cursor-pointer ${tempPart.image?'bg-green-100':'bg-white'}`}>รูป <input type="file" className="hidden" accept="image/*" onChange={e=>handleTempPartFile(e,'image')}/></label>
+                                                 <label className={`flex-1 border py-1 text-center rounded cursor-pointer ${tempPart.receiptPdf?'bg-green-100':'bg-white'}`}>PDF <input type="file" className="hidden" accept="application/pdf" onChange={e=>handleTempPartFile(e,'receiptPdf')}/></label>
+                                                 <button onClick={()=>{if(tempPart.name){setTempLog({...tempLog, parts:[...(tempLog.parts||[]), tempPart]}); setTempPart({name:'',price:0,image:null,receiptPdf:null})}}} className="bg-blue-600 text-white px-3 rounded">+</button>
+                                            </div>
+                                            {(tempLog.parts||[]).map((p,i)=><div key={i} className="text-xs flex justify-between p-1 bg-white border mb-1 rounded">{p.name} <button onClick={()=>setTempLog({...tempLog, parts:tempLog.parts.filter((_,idx)=>idx!==i)})} className="text-red-500">ลบ</button></div>)}
+                                        </div>
+
                                         <div className="flex gap-2 pt-2">
-                                            <button onClick={saveEdit} className="flex-1 bg-green-600 text-white py-2 rounded font-bold">บันทึกการแก้ไข</button>
+                                            <button onClick={saveEdit} className="flex-1 bg-green-600 text-white py-2 rounded font-bold">บันทึก</button>
                                             <button onClick={()=>setEditMode(false)} className="px-4 border rounded text-slate-500">ยกเลิก</button>
                                         </div>
                                     </div>
@@ -381,13 +385,13 @@
                             <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><Plus className="text-blue-600"/> เพิ่มอุปกรณ์ใหม่</h2>
                             <form onSubmit={e => { e.preventDefault(); handleAddItem(form); }} className="space-y-4">
                                 <div className="w-full h-40 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center relative overflow-hidden group">
-                                    {form.image ? <img src={form.image} className="w-full h-full object-cover"/> : <div className="text-center text-slate-400"><Camera className="mx-auto mb-2" size={32}/><span className="text-sm">เพิ่มรูป (Max 4MB)</span></div>}
+                                    {form.image ? <img src={form.image} className="w-full h-full object-cover"/> : <div className="text-center text-slate-400"><Camera className="mx-auto mb-2" size={32}/><span className="text-sm">เพิ่มรูป (Max 5MB)</span></div>}
                                     <input type="file" onChange={e => handleFile(e, 'image')} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*"/>
                                 </div>
                                 <input className="w-full p-2 border rounded-lg" placeholder="ชื่ออุปกรณ์" required onChange={e => setForm({...form, name: e.target.value})}/>
                                 <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
                                     <label className="flex items-center gap-2 text-orange-800 font-bold text-sm mb-2"><FileIcon size={16}/> ใบเสร็จ (PDF)</label>
-                                    <input type="file" accept="application/pdf" onChange={e => handleFile(e, 'receiptPdf')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200"/>
+                                    <input type="file" accept="application/pdf" onChange={e => handleFile(e, 'receiptPdf')} className="block w-full text-sm text-slate-500"/>
                                 </div>
                                 <button type="submit" disabled={isSyncing} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 disabled:bg-slate-300 mt-4">{isSyncing ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</button>
                             </form>
