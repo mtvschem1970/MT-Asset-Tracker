@@ -42,7 +42,7 @@
         
         // ******************************************************
         // *** ใส่ URL Web App ที่ได้จากการ Deploy ที่นี่ ***
-        const API_URL = "URL_FROM_GOOGLE_APPS_SCRIPT_DEPLOYMENT"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec"; 
         // ******************************************************
 
         // --- Icons System ---
@@ -110,7 +110,6 @@
                         body: JSON.stringify(payload)
                     });
                     
-                    // หน่วงเวลาเพิ่มขึ้นเผื่อ Upload ไฟล์
                     setTimeout(() => {
                         fetchData();
                         setSubmitting(false);
