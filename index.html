@@ -39,7 +39,11 @@
 
     <script type="text/babel">
         const { useState, useEffect } = React;
-        const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
+        
+        // ******************************************************
+        // *** ใส่ URL Web App ที่ได้จากการ Deploy ที่นี่ ***
+        const API_URL = "URL_FROM_GOOGLE_APPS_SCRIPT_DEPLOYMENT"; 
+        // ******************************************************
 
         // --- Icons System ---
         const Icon = ({ path, size = 24, className = "" }) => (
@@ -105,12 +109,14 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
+                    
+                    // หน่วงเวลาเพิ่มขึ้นเผื่อ Upload ไฟล์
                     setTimeout(() => {
                         fetchData();
                         setSubmitting(false);
                         if(view === 'add') setView('departments');
-                        if(payload.action === 'save_log') alert("บันทึกข้อมูลเรียบร้อย");
-                    }, 4000);
+                        if(payload.action === 'save_log') alert("บันทึกข้อมูลและอัปโหลดไฟล์เรียบร้อย");
+                    }, 5000); 
                 } catch (err) {
                     alert("Error: " + err.message);
                     setSubmitting(false);
@@ -120,7 +126,7 @@
             const LoadingOverlay = () => (
                 <div className="fixed inset-0 bg-white/80 z-[60] flex flex-col items-center justify-center fade-in backdrop-blur-sm">
                     <div className="animate-spin text-blue-600 mb-4"><Icon path={Icons.Loader} size={48} /></div>
-                    <p className="text-slate-600 font-bold text-lg">{submitting ? 'กำลังบันทึก...' : 'กำลังดึงข้อมูล...'}</p>
+                    <p className="text-slate-600 font-bold text-lg">{submitting ? 'กำลังบันทึกและอัปโหลด...' : 'กำลังดึงข้อมูล...'}</p>
                 </div>
             );
 
@@ -319,10 +325,28 @@
                 const [part, setPart] = useState({ name: '', price: '', image: '', pdf: '' });
                 const [selLog, setSelLog] = useState(null);
 
-                const handlePartFile = async (e, k) => { if(e.target.files[0]) setPart({...part, [k]: await fileToBase64(e.target.files[0])}) };
-                const addPart = () => { if(part.name) { setLog({...log, parts:[...log.parts, part]}); setPart({name:'', price:'', image:'', pdf:''}); }};
+                // *** จุดสำคัญ: จัดการไฟล์อะไหล่ให้เป็น Base64 ***
+                const handlePartFile = async (e, k) => { 
+                    if(e.target.files[0]) {
+                        try {
+                            const base64 = await fileToBase64(e.target.files[0]);
+                            if (base64) setPart(prev => ({...prev, [k]: base64}));
+                        } catch(err) { console.error(err); alert("Error reading file"); }
+                    }
+                };
+
+                const addPart = () => { 
+                    if(part.name) { 
+                        setLog({...log, parts:[...log.parts, part]}); 
+                        setPart({name:'', price:'', image:'', pdf:''}); 
+                    } else {
+                        alert("กรุณาระบุชื่ออะไหล่");
+                    }
+                };
+
                 const submitLog = () => {
                     const total = Number(log.labor) + log.parts.reduce((s,p)=>s+Number(p.price),0);
+                    // ส่งข้อมูลอะไหล่ที่เป็น Base64 ไปด้วย เพื่อให้ Backend อัปโหลด
                     const newLog = { id: Date.now(), date: log.date, type: log.type, description: log.description, laborCost: log.labor, totalCost: total, parts: log.parts };
                     postData({ action: 'save_log', assetId: item.id, log: newLog });
                 };
