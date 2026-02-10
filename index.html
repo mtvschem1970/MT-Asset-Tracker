@@ -3,59 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ระบบซ่อมบำรุง (Stable)</title>
+    <title>Asset Cloud Manager</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
         .fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* ซ่อน Scrollbar แต่ยังเลื่อนได้ */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .card-hover { transition: all 0.2s; }
-        .card-hover:active { transform: scale(0.98); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .input-box { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; outline: none; transition: all 0.2s; background: white; }
+        .input-box:focus { border-color: #3b82f6; ring: 2px solid #93c5fd; }
+        .btn-nav { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: #94a3b8; transition: all 0.2s; }
+        .btn-nav.active { color: #2563eb; transform: scale(1.05); }
     </style>
 </head>
 <body>
-    <div id="root">
-        <div class="flex h-screen items-center justify-center flex-col text-slate-400 gap-2">
-            <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <span>กำลังโหลดระบบ...</span>
-        </div>
-    </div>
-
-    <script>
-        window.onerror = function(message, source, lineno, colno, error) {
-            document.getElementById('root').innerHTML = `
-                <div class="p-6 text-center">
-                    <h1 class="text-red-500 text-xl font-bold mb-2">เกิดข้อผิดพลาด (System Error)</h1>
-                    <p class="text-gray-600 text-sm mb-4">${message}</p>
-                    <button onclick="location.reload()" class="bg-blue-600 text-white px-4 py-2 rounded-lg">รีโหลดหน้าเว็บ</button>
-                </div>
-            `;
-        };
-    </script>
+    <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
-        // เรียกใช้ Icons ผ่าน window.lucide
-        const { 
-            LayoutDashboard, Building2, Plus, ArrowLeft, Search, Save, Trash2, 
-            FileText, Image: ImageIcon, Loader2, RefreshCw, X, Wrench, FolderOpen, 
-            AlertCircle, Calendar, MapPin
-        } = lucide;
 
-        // *** URL Backend ***
+        // *** URL Backend ของคุณ ***
         const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
 
-        // Helper Functions
+        // --- ส่วนจัดการ ICON (ฝังโค้ดแก้ปัญหา Error #130 ถาวร) ---
+        const Icon = ({ path, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        // รวมไอคอนทั้งหมดไว้ที่นี่ ไม่ต้องโหลดจากภายนอก
+        const Icons = {
+            Dashboard: <><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></>,
+            Building: <><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></>,
+            Plus: <><path d="M5 12h14"/><path d="M12 5v14"/></>,
+            ArrowLeft: <><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></>,
+            Search: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>,
+            Save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>,
+            Trash: <><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></>,
+            File: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></>,
+            Image: <><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></>,
+            Refresh: <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></>,
+            Close: <><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>,
+            Wrench: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></>,
+            Folder: <><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-3.25 7a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></>,
+            MapPin: <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>,
+            Loader: <><path d="M21 12a9 9 0 1 1-6.219-8.56"/></>
+        };
+
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
             if (file.size > 5 * 1024 * 1024) return alert("ไฟล์ต้องไม่เกิน 5MB");
             const reader = new FileReader();
@@ -64,7 +64,7 @@
             reader.onerror = error => reject(error);
         });
 
-        // --- Main Component ---
+        // --- Main App ---
         function App() {
             const [view, setView] = useState('dashboard');
             const [assets, setAssets] = useState([]);
@@ -74,15 +74,7 @@
             const [loading, setLoading] = useState(false);
             const [submitting, setSubmitting] = useState(false);
 
-            // Fetch Data on Load
-            useEffect(() => {
-                fetchData();
-                // Initialize Lucide icons
-                setTimeout(() => lucide.createIcons(), 100);
-            }, []);
-
-            // Re-render icons when view changes
-            useEffect(() => { setTimeout(() => lucide.createIcons(), 100); }, [view, assets]);
+            useEffect(() => { fetchData(); }, []);
 
             const fetchData = async () => {
                 setLoading(true);
@@ -106,7 +98,6 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    // Polling to wait for update
                     setTimeout(() => {
                         fetchData();
                         setSubmitting(false);
@@ -119,12 +110,14 @@
                 }
             };
 
-            // --- Views ---
+            // --- Components ---
 
             const LoadingOverlay = () => (
                 <div className="fixed inset-0 bg-white/90 z-50 flex flex-col items-center justify-center fade-in backdrop-blur-sm">
-                    <Loader2 className="animate-spin text-blue-600 mb-2" size={48} />
-                    <p className="text-slate-600 font-bold">{submitting ? 'กำลังบันทึกและอัปโหลด...' : 'กำลังอัปเดตข้อมูล...'}</p>
+                    <div className="animate-spin text-blue-600 mb-2">
+                        <Icon path={Icons.Loader} size={48} />
+                    </div>
+                    <p className="text-slate-600 font-bold">{submitting ? 'กำลังบันทึกและอัปโหลด...' : 'กำลังดึงข้อมูล...'}</p>
                 </div>
             );
 
@@ -133,44 +126,37 @@
                 const repair = assets.filter(a => a.status === 'ส่งซ่อม').length;
                 return (
                     <div className="p-4 pb-24 fade-in">
-                        <div className="bg-white p-6 rounded-3xl shadow-lg mb-6 border border-slate-100 relative overflow-hidden">
+                        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-3xl text-white shadow-xl mb-6 relative overflow-hidden">
                             <div className="relative z-10">
-                                <h1 className="text-2xl font-bold text-slate-800">Asset System</h1>
-                                <p className="text-slate-500 text-sm">ระบบจัดการและซ่อมบำรุง</p>
+                                <h1 className="text-2xl font-bold">ระบบซ่อมบำรุง</h1>
+                                <p className="opacity-80 text-sm">Asset Maintenance Tracker</p>
                             </div>
-                            <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-blue-50 to-transparent"></div>
+                            <div className="absolute right-4 bottom-4 text-white/10">
+                                <Icon path={Icons.Folder} size={80}/>
+                            </div>
                         </div>
-
                         <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-32">
-                                <div className="bg-blue-50 w-10 h-10 rounded-full flex items-center justify-center text-blue-600"><FolderOpen size={20}/></div>
-                                <div>
-                                    <p className="text-slate-400 text-xs font-bold uppercase">ทั้งหมด</p>
-                                    <p className="text-3xl font-bold text-slate-800">{total}</p>
-                                </div>
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                                <p className="text-slate-400 text-xs font-bold uppercase">ทั้งหมด</p>
+                                <p className="text-3xl font-bold text-slate-800">{total}</p>
                             </div>
-                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-32">
-                                <div className="bg-orange-50 w-10 h-10 rounded-full flex items-center justify-center text-orange-600"><Wrench size={20}/></div>
-                                <div>
-                                    <p className="text-slate-400 text-xs font-bold uppercase">ซ่อมบำรุง</p>
-                                    <p className="text-3xl font-bold text-orange-500">{repair}</p>
-                                </div>
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                                <p className="text-slate-400 text-xs font-bold uppercase">กำลังซ่อม</p>
+                                <p className="text-3xl font-bold text-orange-500">{repair}</p>
                             </div>
                         </div>
-
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="font-bold text-slate-700 text-lg">อัปเดตล่าสุด</h2>
-                            <button onClick={fetchData} className="text-blue-500 text-sm flex items-center gap-1"><RefreshCw size={14}/> รีเฟรช</button>
-                        </div>
+                        <h2 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <Icon path={Icons.Refresh} size={16}/> รายการล่าสุด
+                        </h2>
                         <div className="space-y-3">
                             {assets.slice(0, 5).map(item => (
-                                <div key={item.id} onClick={()=>{setSelectedAsset(item); setView('detail');}} className="bg-white p-3 rounded-2xl border border-slate-100 flex gap-4 items-center card-hover cursor-pointer shadow-sm">
+                                <div key={item.id} onClick={()=>{setSelectedAsset(item); setView('detail');}} className="bg-white p-3 rounded-2xl border border-slate-100 flex gap-4 items-center cursor-pointer hover:bg-slate-50 transition shadow-sm">
                                     <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200">
-                                        {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <ImageIcon className="m-auto mt-4 text-slate-400" size={24}/>}
+                                        {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="mt-4 flex justify-center text-slate-400"><Icon path={Icons.Image} size={24}/></div>}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="font-bold text-slate-800 truncate">{item.name}</div>
-                                        <div className="text-xs text-slate-500 mt-1 flex items-center gap-1"><MapPin size={10}/> {item.location}</div>
+                                        <div className="text-xs text-slate-500 mt-1 flex items-center gap-1"><Icon path={Icons.MapPin} size={10}/> {item.location}</div>
                                     </div>
                                     <div className={`px-3 py-1 rounded-full text-xs font-bold ${item.status==='ปกติ'?'bg-green-50 text-green-600':'bg-orange-50 text-orange-600'}`}>{item.status}</div>
                                 </div>
@@ -189,13 +175,13 @@
                     <div className="p-4 pb-24 fade-in">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-bold text-slate-800">แผนก</h2>
-                            <button onClick={createDept} className="bg-blue-600 text-white px-4 py-2 rounded-full text-xs font-bold flex gap-1 shadow-lg shadow-blue-200 active:scale-95 transition"><Plus size={16}/> เพิ่มแผนก</button>
+                            <button onClick={createDept} className="bg-blue-600 text-white px-4 py-2 rounded-full text-xs font-bold flex gap-1 shadow-lg shadow-blue-200 active:scale-95 transition"><Icon path={Icons.Plus} size={16}/> เพิ่มแผนก</button>
                         </div>
                         <div className="grid grid-cols-1 gap-3">
                             {departments.map(dept => (
-                                <div key={dept} onClick={()=>{setSelectedDept(dept); setView('assets');}} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-center cursor-pointer card-hover">
+                                <div key={dept} onClick={()=>{setSelectedDept(dept); setView('assets');}} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-center cursor-pointer hover:border-blue-400 transition active:scale-[0.98]">
                                     <div className="flex items-center gap-4">
-                                        <div className="bg-slate-50 text-slate-600 p-3 rounded-xl"><Building2 size={24}/></div>
+                                        <div className="bg-slate-50 text-slate-600 p-3 rounded-xl"><Icon path={Icons.Building} size={24}/></div>
                                         <span className="font-bold text-slate-700 text-lg">{dept}</span>
                                     </div>
                                     <span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold text-slate-600">{assets.filter(a=>a.location===dept).length} รายการ</span>
@@ -213,18 +199,18 @@
                 return (
                     <div className="p-4 pb-24 fade-in min-h-screen flex flex-col">
                         <div className="flex items-center gap-4 mb-6">
-                            <button onClick={()=>setView('departments')} className="p-3 bg-white rounded-xl border shadow-sm text-slate-600"><ArrowLeft size={20}/></button>
+                            <button onClick={()=>setView('departments')} className="p-3 bg-white rounded-xl border shadow-sm text-slate-600"><Icon path={Icons.ArrowLeft} size={20}/></button>
                             <h2 className="text-xl font-bold truncate text-slate-800 flex-1">{selectedDept}</h2>
                         </div>
                         <div className="relative mb-4">
-                            <Search className="absolute left-4 top-3.5 text-slate-400" size={18}/>
+                            <div className="absolute left-4 top-3.5 text-slate-400"><Icon path={Icons.Search} size={18}/></div>
                             <input className="input-box pl-12 py-3 shadow-sm border-0" placeholder="ค้นหาอุปกรณ์..." value={term} onChange={e=>setTerm(e.target.value)}/>
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-3 pb-24">
                             {filtered.map(item => (
-                                <div key={item.id} onClick={()=>{setSelectedAsset(item); setView('detail');}} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex gap-4 cursor-pointer card-hover">
+                                <div key={item.id} onClick={()=>{setSelectedAsset(item); setView('detail');}} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex gap-4 cursor-pointer hover:shadow-md transition">
                                     <div className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 border border-slate-200">
-                                        {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <ImageIcon className="m-auto mt-5 text-slate-300"/>}
+                                        {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="mt-5 flex justify-center text-slate-300"><Icon path={Icons.Image} size={24}/></div>}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="font-bold text-slate-800 text-lg truncate">{item.name}</div>
@@ -235,7 +221,7 @@
                             ))}
                             {filtered.length === 0 && <div className="text-center text-slate-400 mt-10">ไม่พบอุปกรณ์</div>}
                         </div>
-                        <button onClick={()=>setView('add')} className="fixed bottom-24 right-4 bg-blue-600 text-white p-4 rounded-full shadow-xl shadow-blue-500/40 hover:bg-blue-700 transition active:scale-90"><Plus size={28}/></button>
+                        <button onClick={()=>setView('add')} className="fixed bottom-24 right-4 bg-blue-600 text-white p-4 rounded-full shadow-xl shadow-blue-500/40 hover:bg-blue-700 transition active:scale-90"><Icon path={Icons.Plus} size={28}/></button>
                     </div>
                 );
             };
@@ -246,12 +232,12 @@
                 return (
                     <div className="p-4 pb-24 fade-in">
                         <div className="flex items-center gap-4 mb-6">
-                            <button onClick={()=>setView('departments')} className="p-3 bg-white rounded-xl border shadow-sm text-slate-600"><ArrowLeft size={20}/></button>
+                            <button onClick={()=>setView('departments')} className="p-3 bg-white rounded-xl border shadow-sm text-slate-600"><Icon path={Icons.ArrowLeft} size={20}/></button>
                             <h2 className="text-xl font-bold text-slate-800">เพิ่มอุปกรณ์</h2>
                         </div>
                         <div className="space-y-5 bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                            <div className="w-full h-48 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden card-hover">
-                                {form.image ? <img src={form.image} className="w-full h-full object-cover"/> : <div className="text-slate-400 text-sm flex flex-col items-center font-bold"><ImageIcon size={32} className="mb-2 text-slate-300"/>เพิ่มรูปภาพ</div>}
+                            <div className="w-full h-48 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden hover:bg-slate-100 transition">
+                                {form.image ? <img src={form.image} className="w-full h-full object-cover"/> : <div className="text-slate-400 text-sm flex flex-col items-center font-bold"><Icon path={Icons.Image} size={32} className="mb-2 text-slate-300"/>เพิ่มรูปภาพ</div>}
                                 <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>handleFile(e,'image')}/>
                             </div>
                             <div><label className="text-xs font-bold text-slate-500 ml-1">ชื่ออุปกรณ์ *</label><input className="input-box mt-1" value={form.name} onChange={e=>setForm({...form, name:e.target.value})}/></div>
@@ -262,7 +248,7 @@
                             </div>
                             <div><label className="text-xs font-bold text-slate-500 ml-1">วันที่ซื้อ</label><input type="date" className="input-box mt-1" value={form.purchaseDate} onChange={e=>setForm({...form, purchaseDate:e.target.value})}/></div>
                             <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 text-xs text-orange-800">
-                                <label className="flex gap-2 font-bold mb-2 items-center"><FileText size={16}/> ใบเสร็จ PDF (ถ้ามี)</label>
+                                <label className="flex gap-2 font-bold mb-2 items-center"><Icon path={Icons.File} size={16}/> ใบเสร็จ PDF (ถ้ามี)</label>
                                 <input type="file" accept="application/pdf" className="w-full text-slate-500" onChange={e=>handleFile(e,'receiptPdf')}/>
                             </div>
                             <button onClick={()=>postData({action:'save_asset', ...form})} className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold mt-4 shadow-lg active:scale-95 transition">บันทึกข้อมูล</button>
@@ -289,8 +275,8 @@
                 return (
                     <div className="pb-24 fade-in min-h-screen bg-white">
                         <div className="relative h-80 bg-slate-200">
-                             {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-slate-400"><ImageIcon size={64}/></div>}
-                             <button onClick={()=>setView('assets')} className="absolute top-6 left-6 bg-white/80 p-3 rounded-full backdrop-blur-sm shadow-sm active:scale-90 transition"><ArrowLeft size={20}/></button>
+                             {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-slate-400"><Icon path={Icons.Image} size={64}/></div>}
+                             <button onClick={()=>setView('assets')} className="absolute top-6 left-6 bg-white/80 p-3 rounded-full backdrop-blur-sm shadow-sm active:scale-90 transition"><Icon path={Icons.ArrowLeft} size={20}/></button>
                              <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6 pt-24 text-white">
                                  <h1 className="text-3xl font-bold">{item.name}</h1>
                                  <p className="text-sm opacity-80 font-mono mt-1">{item.id}</p>
@@ -309,14 +295,14 @@
                                         <div><label className="text-xs text-slate-400 font-bold uppercase block mb-1">แผนก</label><div className="font-bold text-lg text-slate-800">{item.location}</div></div>
                                         <div><label className="text-xs text-slate-400 font-bold uppercase block mb-1">สถานะ</label><div className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${item.status==='ปกติ'?'bg-green-50 text-green-600':'bg-orange-50 text-orange-600'}`}>{item.status}</div></div>
                                     </div>
-                                    {item.receiptPdf && <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 p-4 bg-orange-50 text-orange-700 rounded-2xl border border-orange-100 text-sm font-bold shadow-sm hover:bg-orange-100 transition"><FileText size={20}/> ดูใบเสร็จ PDF</a>}
+                                    {item.receiptPdf && <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 p-4 bg-orange-50 text-orange-700 rounded-2xl border border-orange-100 text-sm font-bold shadow-sm hover:bg-orange-100 transition"><Icon path={Icons.File} size={20}/> ดูใบเสร็จ PDF</a>}
                                     <button onClick={()=>{if(confirm('ลบอุปกรณ์?')) {postData({action:'delete_asset', id:item.id}); setView('assets');}}} className="w-full py-4 text-red-500 bg-red-50 rounded-2xl font-bold text-sm mt-8 hover:bg-red-100 transition">ลบอุปกรณ์ถาวร</button>
                                 </div>
                             )}
                             {tab === 'history' && (
                                 <div className="space-y-6 fade-in">
                                     <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200">
-                                        <h3 className="font-bold text-slate-700 text-sm mb-4 flex gap-2 items-center"><Wrench size={18}/> บันทึกการซ่อม</h3>
+                                        <h3 className="font-bold text-slate-700 text-sm mb-4 flex gap-2 items-center"><Icon path={Icons.Wrench} size={18}/> บันทึกการซ่อม</h3>
                                         <div className="grid grid-cols-2 gap-3 mb-3">
                                             <input type="date" className="input-box text-sm" value={log.date} onChange={e=>setLog({...log, date:e.target.value})}/>
                                             <select className="input-box text-sm" value={log.type} onChange={e=>setLog({...log, type:e.target.value})}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select>
@@ -350,11 +336,11 @@
                         {selLog && (
                             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 fade-in backdrop-blur-sm">
                                 <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
-                                    <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg text-slate-800">รายละเอียดซ่อม</h3><button onClick={()=>setSelLog(null)} className="bg-slate-100 p-2 rounded-full"><X size={18}/></button></div>
+                                    <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-lg text-slate-800">รายละเอียดซ่อม</h3><button onClick={()=>setSelLog(null)} className="bg-slate-100 p-2 rounded-full"><Icon path={Icons.Close} size={18}/></button></div>
                                     <div className="space-y-4 text-sm text-slate-600">
                                         <div><label className="text-xs font-bold text-slate-400 block mb-1 uppercase">วันที่ & ประเภท</label><div className="font-bold text-slate-800">{selLog.date} ({selLog.type})</div></div>
                                         <div><label className="text-xs font-bold text-slate-400 block mb-1 uppercase">อาการ</label><div className="font-bold text-slate-800 bg-slate-50 p-3 rounded-xl">{selLog.description}</div></div>
-                                        {selLog.parts?.length > 0 && <div className="bg-slate-50 p-4 rounded-xl border border-slate-100"><p className="font-bold text-xs mb-3 text-slate-400 uppercase">รายการอะไหล่</p>{selLog.parts.map((p,i)=>(<div key={i} className="flex justify-between text-xs py-2 border-b last:border-0 border-slate-200"><span className="flex gap-2 items-center font-bold text-slate-700">{p.name} {p.image && <a href={p.image} target="_blank" className="text-blue-500 bg-blue-50 p-1 rounded"><ImageIcon size={12}/></a>} {p.pdf && <a href={p.pdf} target="_blank" className="text-orange-500 bg-orange-50 p-1 rounded"><FileText size={12}/></a>}</span><span className="font-mono text-slate-500">฿{p.price}</span></div>))}</div>}
+                                        {selLog.parts?.length > 0 && <div className="bg-slate-50 p-4 rounded-xl border border-slate-100"><p className="font-bold text-xs mb-3 text-slate-400 uppercase">รายการอะไหล่</p>{selLog.parts.map((p,i)=>(<div key={i} className="flex justify-between text-xs py-2 border-b last:border-0 border-slate-200"><span className="flex gap-2 items-center font-bold text-slate-700">{p.name} {p.image && <a href={p.image} target="_blank" className="text-blue-500 bg-blue-50 p-1 rounded"><Icon path={Icons.Image} size={12}/></a>} {p.pdf && <a href={p.pdf} target="_blank" className="text-orange-500 bg-orange-50 p-1 rounded"><Icon path={Icons.File} size={12}/></a>}</span><span className="font-mono text-slate-500">฿{p.price}</span></div>))}</div>}
                                         <div className="flex justify-between items-center pt-2 text-lg font-bold text-slate-800"><span>รวมทั้งหมด</span><span className="text-blue-600">฿{Number(selLog.totalCost).toLocaleString()}</span></div>
                                         <button onClick={()=>{if(confirm('ลบประวัตินี้?')){postData({action:'delete_log', assetId:item.id, logId:selLog.id}); setSelLog(null);}}} className="w-full py-3 bg-red-50 text-red-500 font-bold rounded-xl mt-2 hover:bg-red-100 transition">ลบประวัติ</button>
                                     </div>
@@ -375,10 +361,10 @@
                     {view === 'detail' && <DetailAsset />}
 
                     <div className="fixed bottom-0 w-full max-w-md bg-white border-t border-slate-200 flex justify-around py-3 z-40 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.04)]">
-                        <button onClick={()=>setView('dashboard')} className={`btn-nav ${view==='dashboard'?'active':''}`}><LayoutDashboard size={24}/><span>ภาพรวม</span></button>
-                        <button onClick={()=>setView('departments')} className={`btn-nav ${['departments','assets','detail'].includes(view)?'active':''}`}><Building2 size={24}/><span>แผนก</span></button>
-                        <button onClick={()=>setView('add')} className={`btn-nav ${view==='add'?'active':''}`}><div className="bg-blue-600 text-white p-3 rounded-2xl -mt-8 border-4 border-slate-50 shadow-lg shadow-blue-500/30 transform transition-transform active:scale-95"><Plus size={28}/></div></button>
-                        <button onClick={fetchData} className="btn-nav active:scale-95 transition"><RefreshCw size={24}/><span>รีเฟรช</span></button>
+                        <button onClick={()=>setView('dashboard')} className={`btn-nav ${view==='dashboard'?'active':''}`}><Icon path={Icons.Dashboard} size={24}/><span>ภาพรวม</span></button>
+                        <button onClick={()=>setView('departments')} className={`btn-nav ${['departments','assets','detail'].includes(view)?'active':''}`}><Icon path={Icons.Building} size={24}/><span>แผนก</span></button>
+                        <button onClick={()=>setView('add')} className={`btn-nav ${view==='add'?'active':''}`}><div className="bg-blue-600 text-white p-3 rounded-2xl -mt-8 border-4 border-slate-50 shadow-lg shadow-blue-500/30 transform transition-transform active:scale-95"><Icon path={Icons.Plus} size={28}/></div></button>
+                        <button onClick={fetchData} className="btn-nav active:scale-95 transition"><Icon path={Icons.Refresh} size={24}/><span>รีเฟรช</span></button>
                     </div>
                 </div>
             );
