@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Tracker (Cloud Sync)</title>
+    <title>Asset Tracker System (Full Cloud Sync)</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script type="importmap">
     {
         "imports": {
@@ -15,11 +17,12 @@
     }
     </script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; }
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -30,13 +33,13 @@
         import { createRoot } from 'react-dom/client';
         import { Camera, Plus, Save, Wrench, Clock, FileText, ChevronLeft, Search, Trash2, MapPin, Tag, ShoppingBag, DollarSign, X, LayoutDashboard, List, BarChart3, AlertTriangle, TrendingUp, Calendar, Folder, Image as ImageIcon, Building2, PlusCircle, Package, File as FileIcon, UploadCloud, Loader2, Settings, Lock, Check, RefreshCw, DownloadCloud } from 'lucide-react';
 
-        // --- CONSTANTS ---
+        // --- ค่าเริ่มต้นระบบ ---
         const DEFAULT_CONFIG = {
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec',
+            scriptUrl: '', // URL จะถูกใส่ผ่านหน้า Admin
             adminPassword: '888'
         };
 
-        // --- Helper Functions ---
+        // --- Helper: แปลงไฟล์เป็น Base64 ---
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -44,8 +47,10 @@
             reader.onerror = error => reject(error);
         });
 
+        // --- Helper: สร้างรหัสอุปกรณ์ ---
         const generateCode = () => `EQ-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
 
+        // --- Helper: คำนวณอายุ ---
         const calculateAge = (dateString) => {
             if (!dateString) return '-';
             const start = new Date(dateString);
@@ -57,34 +62,37 @@
             return years > 0 ? `${years} ปี ${months > 0 ? months + ' เดือน' : ''}` : (months > 0 ? `${months} เดือน` : 'เพิ่งซื้อ');
         };
 
+        // --- Main App Component ---
         function App() {
-            // State
+            // State: หน้าจอและการตั้งค่า
             const [view, setView] = useState('dashboard');
             const [config, setConfig] = useState(() => {
                 const saved = localStorage.getItem('assetTrackerConfig');
                 return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
             });
             
-            // App Data
-            const [items, setItems] = useState([]); // เริ่มต้นว่างเปล่า รอโหลดจาก Google
+            // State: ข้อมูล
+            const [items, setItems] = useState([]); 
             const [departmentList, setDepartmentList] = useState([]);
             const [selectedItem, setSelectedItem] = useState(null);
             const [selectedDepartment, setSelectedDepartment] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
             
-            // Status State
+            // State: สถานะการทำงาน
             const [isLoading, setIsLoading] = useState(false);
             const [isSyncing, setIsSyncing] = useState(false);
             const [showAdminModal, setShowAdminModal] = useState(false);
             const [adminInputPassword, setAdminInputPassword] = useState('');
             const [tempConfig, setTempConfig] = useState(config);
 
-            // --- Load Data on Start ---
+            // --- Effect: โหลดข้อมูลเมื่อเปิดเว็บ ---
             useEffect(() => {
-                fetchFromGoogle();
+                if (config.scriptUrl) {
+                    fetchFromGoogle();
+                }
             }, []);
 
-            // --- Google API Logic ---
+            // --- Function: ดึงข้อมูลจาก Google (GET) ---
             const fetchFromGoogle = async () => {
                 if (!config.scriptUrl) return;
                 setIsLoading(true);
@@ -94,7 +102,7 @@
                     
                     if (Array.isArray(data)) {
                         setItems(data);
-                        // Update department list form data
+                        // อัปเดตรายชื่อแผนกจากข้อมูลที่ได้
                         const depts = [...new Set(data.map(i => i.location).filter(Boolean))];
                         setDepartmentList(depts);
                     } else if (data.error) {
@@ -102,43 +110,45 @@
                     }
                 } catch (error) {
                     console.error("Fetch Error:", error);
-                    alert("ไม่สามารถดึงข้อมูลจาก Google Sheet ได้ (ตรวจสอบ URL หรือ Internet)");
+                    alert("ไม่สามารถดึงข้อมูลได้ (ตรวจสอบ URL หรืออินเทอร์เน็ต)");
                 } finally {
                     setIsLoading(false);
                 }
             };
 
+            // --- Function: ส่งข้อมูลไป Google (POST) ---
             const syncToGoogle = async (itemData) => {
-                if (!config.scriptUrl) return alert("กรุณาตั้งค่า URL ก่อน");
+                if (!config.scriptUrl) return alert("กรุณาตั้งค่า URL ก่อนใช้งาน");
                 setIsSyncing(true);
                 try {
+                    // ใช้ mode: 'no-cors' เพื่อส่งข้อมูลไปยัง Web App ได้โดยไม่ติด Policy (แต่จะอ่าน response ไม่ได้)
                     await fetch(config.scriptUrl, {
                         method: 'POST',
                         mode: 'no-cors', 
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(itemData)
                     });
-                    // เนื่องจาก no-cors เราไม่รู้ผลลัพธ์ที่แน่ชัด แต่ถ้าไม่ error ถือว่าส่งไปแล้ว
-                    // ให้หน่วงเวลาแล้วดึงข้อมูลใหม่
+                    
+                    // รอสักครู่แล้วดึงข้อมูลใหม่เพื่อยืนยันว่าข้อมูลเข้าแล้ว
                     setTimeout(() => {
-                        fetchFromGoogle(); // Refresh data to confirm save
-                        alert("บันทึกข้อมูลและ Sync เรียบร้อยแล้ว");
-                    }, 2000); 
+                        fetchFromGoogle(); 
+                        alert("บันทึกข้อมูลเรียบร้อยแล้ว");
+                    }, 2500); 
                 } catch (error) {
-                    alert("Sync ล้มเหลว: " + error.message);
+                    alert("การบันทึกล้มเหลว: " + error.message);
                 } finally {
                     setIsSyncing(false);
                 }
             };
 
-            // --- Local Actions ---
+            // --- Logic: เพิ่ม/แก้ไข/ลบ ข้อมูล (Local State + Trigger Sync) ---
             const handleAddItem = (newItem) => {
-                // Optimistic UI Update (เพิ่มในหน้าจอก่อน แล้วค่อยส่ง)
+                // อัปเดตหน้าจอทันที (Optimistic)
                 setItems(prev => [newItem, ...prev]);
                 if (newItem.location && !departmentList.includes(newItem.location)) {
                     setDepartmentList(prev => [...prev, newItem.location]);
                 }
-                syncToGoogle(newItem); // Auto Sync
+                syncToGoogle(newItem); // ส่งไป Cloud
                 setSelectedDepartment(newItem.location);
                 setView('departmentItems');
             };
@@ -146,55 +156,53 @@
             const handleUpdateItem = (updatedItem) => {
                 setItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
                 setSelectedItem(updatedItem);
-                syncToGoogle(updatedItem); // Auto Sync
+                syncToGoogle(updatedItem); // ส่งไป Cloud
             };
 
             const deleteItem = (id) => {
-                if(confirm('การลบในหน้านี้อาจไม่ลบใน Google Sheet ทันที (ต้องลบใน Sheet เองเพื่อความปลอดภัย) ต้องการซ่อนจากหน้านี้หรือไม่?')) {
+                if(confirm('คำเตือน: การลบในหน้านี้จะแค่ "ซ่อน" ข้อมูลชั่วคราว หากต้องการลบถาวรต้องลบใน Google Sheet\n\nยืนยันการซ่อนอุปกรณ์นี้?')) {
                     setItems(prev => prev.filter(i => i.id !== id));
                     setView('departmentItems');
                 }
             };
 
-            // --- Sub-Components ---
+            // --- Component: Loading Overlay ---
             const LoadingOverlay = () => (
                 <div className="fixed inset-0 bg-white/80 z-50 flex flex-col items-center justify-center backdrop-blur-sm">
                     <Loader2 className="animate-spin text-blue-600 mb-2" size={48} />
-                    <p className="text-slate-600 font-medium">กำลังเชื่อมต่อฐานข้อมูล Google...</p>
+                    <p className="text-slate-600 font-medium">กำลังซิงค์ข้อมูลกับ Google Cloud...</p>
                 </div>
             );
 
-            // ... (View Components: DashboardView, DepartmentListView etc. - Same logic, slightly adapted) ...
-            
+            // --- View: Dashboard ---
             const DashboardView = () => {
                 const totalAssets = items.length;
                 const totalRepairs = items.reduce((sum, item) => sum + (item.history?.filter(h => h.type === 'repair').length || 0), 0);
                 return (
                     <div className="space-y-6 fade-in pb-10">
-                        <div className="bg-blue-600 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
+                        <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
                              <div>
-                                <h2 className="text-2xl font-bold mb-1">ยินดีต้อนรับ</h2>
-                                <p className="text-blue-100 text-sm">ระบบเชื่อมต่อกับ Google Sheet เรียบร้อยแล้ว</p>
+                                <h2 className="text-2xl font-bold mb-1">ภาพรวมระบบ</h2>
+                                <p className="text-blue-100 text-sm">เชื่อมต่อข้อมูลแบบ Real-time</p>
                              </div>
                              <div className="bg-white/20 p-3 rounded-lg"><DownloadCloud size={32}/></div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                                 <div className="text-sm text-slate-500 mb-1">อุปกรณ์ทั้งหมด</div>
-                                <div className="text-3xl font-bold text-slate-800">{totalAssets}</div>
+                                <div className="text-4xl font-bold text-slate-800">{totalAssets}</div>
                             </div>
-                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                                 <div className="text-sm text-slate-500 mb-1">รายการซ่อมบำรุง</div>
-                                <div className="text-3xl font-bold text-orange-600">{totalRepairs}</div>
+                                <div className="text-4xl font-bold text-orange-600">{totalRepairs}</div>
                             </div>
                         </div>
                     </div>
                 );
             };
 
-            // (ส่วน DepartmentListView, DepartmentItemsView ใช้ Logic เดิม แต่ดึงตัวแปร items จาก State หลัก)
+            // --- View: รายชื่อแผนก ---
             const DepartmentListView = () => {
-                // คำนวณจำนวนจาก items ล่าสุดเสมอ
                 const counts = items.reduce((acc, i) => { 
                     acc[i.location] = (acc[i.location] || 0) + 1; 
                     return acc; 
@@ -208,86 +216,99 @@
                                 <button onClick={() => { 
                                     const n = prompt("ชื่อแผนกใหม่:"); 
                                     if(n) setDepartmentList([...departmentList, n]); 
-                                }} className="bg-white border px-3 py-2 rounded-lg text-sm flex items-center gap-1 shadow-sm"><PlusCircle size={16}/> แผนก</button>
-                                <button onClick={() => setView('add')} className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 shadow-md"><Plus size={16}/> อุปกรณ์</button>
+                                }} className="bg-white border px-3 py-2 rounded-lg text-sm flex items-center gap-1 shadow-sm hover:bg-slate-50"><PlusCircle size={16}/> แผนก</button>
+                                <button onClick={() => setView('add')} className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1 shadow-md hover:bg-blue-700"><Plus size={16}/> อุปกรณ์</button>
                             </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {departmentList.map(dept => (
-                                <div key={dept} onClick={() => { setSelectedDepartment(dept); setView('departmentItems'); }} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-blue-400 cursor-pointer flex justify-between items-center">
+                                <div key={dept} onClick={() => { setSelectedDepartment(dept); setView('departmentItems'); }} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-blue-400 hover:shadow-md cursor-pointer flex justify-between items-center transition">
                                     <div className="flex items-center gap-3">
                                         <div className="bg-blue-50 text-blue-600 p-2 rounded-lg"><Building2 size={20}/></div>
                                         <span className="font-medium">{dept}</span>
                                     </div>
-                                    <span className="text-xs bg-slate-100 px-2 py-1 rounded-full text-slate-500">{counts[dept] || 0}</span>
+                                    <span className="text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-600 font-bold">{counts[dept] || 0}</span>
                                 </div>
                             ))}
-                            {departmentList.length === 0 && <div className="col-span-full text-center py-10 text-slate-400">ยังไม่มีข้อมูลแผนก</div>}
+                            {departmentList.length === 0 && <div className="col-span-full text-center py-10 text-slate-400 bg-white rounded-xl border border-dashed">ยังไม่มีข้อมูลแผนก</div>}
                         </div>
                     </div>
                 );
             };
 
+            // --- View: รายการในแผนก ---
             const DepartmentItemsView = () => {
-                const filtered = items.filter(i => i.location === selectedDepartment && (i.name.toLowerCase().includes(searchTerm) || i.id.toLowerCase().includes(searchTerm)));
+                const filtered = items.filter(i => i.location === selectedDepartment && (i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.id.toLowerCase().includes(searchTerm.toLowerCase())));
                 return (
                     <div className="fade-in pb-10">
                         <div className="flex items-center gap-2 mb-4">
                             <button onClick={() => setView('departments')} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft/></button>
-                            <h2 className="text-xl font-bold">{selectedDepartment}</h2>
+                            <h2 className="text-xl font-bold truncate">{selectedDepartment}</h2>
                         </div>
                         <div className="relative mb-4">
-                            <input type="text" placeholder="ค้นหา..." className="w-full pl-9 pr-4 py-2 bg-white border rounded-lg shadow-sm" onChange={e => setSearchTerm(e.target.value)} />
-                            <Search className="absolute left-3 top-2.5 text-slate-400" size={16}/>
+                            <input type="text" placeholder="ค้นหาชื่อ หรือ รหัส..." className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setSearchTerm(e.target.value)} />
+                            <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
                         </div>
                         <div className="space-y-3">
                             {filtered.map(item => (
-                                <div key={item.id} onClick={() => { setSelectedItem(item); setView('detail'); }} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex gap-3 cursor-pointer hover:shadow-md">
-                                    <div className="w-16 h-16 bg-slate-100 rounded-lg flex-shrink-0 overflow-hidden">
+                                <div key={item.id} onClick={() => { setSelectedItem(item); setView('detail'); }} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex gap-3 cursor-pointer hover:shadow-md transition">
+                                    <div className="w-20 h-20 bg-slate-100 rounded-lg flex-shrink-0 overflow-hidden border border-slate-100">
                                         {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon/></div>}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between"><h3 className="font-bold truncate">{item.name}</h3><span className={`text-[10px] px-2 py-0.5 rounded-full ${item.status==='active'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`}>{item.status==='active'?'ปกติ':'ซ่อม'}</span></div>
-                                        <div className="text-xs text-slate-500 font-mono">{item.id}</div>
-                                        <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
-                                            <span>{calculateAge(item.purchaseDate)}</span>
-                                            {item.receiptPdf && <FileIcon size={12} className="text-orange-500"/>}
+                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <h3 className="font-bold text-slate-800 truncate pr-2">{item.name}</h3>
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ${item.status==='active'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`}>{item.status==='active'?'ปกติ':'ซ่อม'}</span>
+                                        </div>
+                                        <div className="text-xs text-slate-500 font-mono mb-1">{item.id}</div>
+                                        <div className="flex items-center gap-3 text-xs text-slate-400">
+                                            <span className="flex items-center gap-1"><Clock size={12}/> {calculateAge(item.purchaseDate)}</span>
+                                            {item.receiptPdf && <span className="flex items-center gap-1 text-orange-500"><FileIcon size={12}/> PDF</span>}
                                         </div>
                                     </div>
                                 </div>
                             ))}
+                            {filtered.length === 0 && <div className="text-center py-10 text-slate-400">ไม่พบอุปกรณ์</div>}
                         </div>
                     </div>
                 );
             };
 
-            // ... (AddView & DetailView similar logic to previous, ensuring handleAddItem/Update calls main actions) ...
+            // --- View: เพิ่มอุปกรณ์ ---
             const AddView = () => {
                 const [form, setForm] = useState({ id: generateCode(), name: '', location: selectedDepartment || '', purchaseDate: new Date().toISOString().split('T')[0], status: 'active', history: [] });
                 const handleFile = async (e, k) => { if(e.target.files[0]) setForm({...form, [k]: await fileToBase64(e.target.files[0])}) };
                 return (
                     <div className="fade-in max-w-lg mx-auto pb-10">
-                        <button onClick={() => setView('departments')} className="mb-4 flex items-center gap-1 text-slate-500"><ChevronLeft size={18}/> ยกเลิก</button>
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
-                            <h2 className="text-lg font-bold mb-4">เพิ่มอุปกรณ์</h2>
-                            <form onSubmit={e => { e.preventDefault(); handleAddItem(form); }} className="space-y-3">
-                                <div className="w-full h-32 bg-slate-50 border-2 border-dashed rounded-lg flex items-center justify-center relative overflow-hidden">
-                                    {form.image ? <img src={form.image} className="w-full h-full object-cover"/> : <div className="text-center text-slate-400"><Camera className="mx-auto"/><span className="text-xs">เพิ่มรูป</span></div>}
+                        <button onClick={() => setView('departments')} className="mb-4 flex items-center gap-1 text-slate-500 hover:text-slate-800"><ChevronLeft size={20}/> ยกเลิก</button>
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                            <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><Plus className="text-blue-600"/> เพิ่มอุปกรณ์ใหม่</h2>
+                            <form onSubmit={e => { e.preventDefault(); handleAddItem(form); }} className="space-y-4">
+                                <div className="w-full h-40 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center relative overflow-hidden group hover:border-blue-400 transition">
+                                    {form.image ? <img src={form.image} className="w-full h-full object-cover"/> : <div className="text-center text-slate-400 group-hover:text-blue-500"><Camera className="mx-auto mb-2" size={32}/><span className="text-sm">แตะเพื่อเพิ่มรูปถ่าย</span></div>}
                                     <input type="file" onChange={e => handleFile(e, 'image')} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*"/>
                                 </div>
-                                <input className="w-full p-2 border rounded" placeholder="ชื่ออุปกรณ์" required onChange={e => setForm({...form, name: e.target.value})}/>
-                                <input className="w-full p-2 border rounded" placeholder="รุ่น / Model" onChange={e => setForm({...form, model: e.target.value})}/>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <input type="date" className="p-2 border rounded" value={form.purchaseDate} onChange={e => setForm({...form, purchaseDate: e.target.value})}/>
-                                    <input className="p-2 border rounded" placeholder="แผนก" list="depts" value={form.location} onChange={e => setForm({...form, location: e.target.value})}/>
-                                    <datalist id="depts">{departmentList.map(d=><option key={d} value={d}/>)}</datalist>
+                                
+                                <div><label className="text-sm font-medium text-slate-700">ชื่ออุปกรณ์</label><input className="w-full p-2 border rounded-lg mt-1" required onChange={e => setForm({...form, name: e.target.value})}/></div>
+                                <div><label className="text-sm font-medium text-slate-700">รุ่น / Model</label><input className="w-full p-2 border rounded-lg mt-1" onChange={e => setForm({...form, model: e.target.value})}/></div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div><label className="text-sm font-medium text-slate-700">วันที่ซื้อ</label><input type="date" className="w-full p-2 border rounded-lg mt-1" value={form.purchaseDate} onChange={e => setForm({...form, purchaseDate: e.target.value})}/></div>
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">แผนก</label>
+                                        <input className="w-full p-2 border rounded-lg mt-1" list="depts" value={form.location} onChange={e => setForm({...form, location: e.target.value})}/>
+                                        <datalist id="depts">{departmentList.map(d=><option key={d} value={d}/>)}</datalist>
+                                    </div>
                                 </div>
-                                <div className="bg-orange-50 p-3 rounded border border-orange-100 text-xs">
-                                    <label className="flex items-center gap-2 text-orange-700 font-medium mb-1"><FileIcon size={14}/> ใบเสร็จ (PDF)</label>
-                                    <input type="file" accept="application/pdf" onChange={e => handleFile(e, 'receiptPdf')} className="block w-full text-slate-500"/>
+                                
+                                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                                    <label className="flex items-center gap-2 text-orange-800 font-bold text-sm mb-2"><FileIcon size={16}/> ใบเสร็จรับเงิน (PDF)</label>
+                                    <input type="file" accept="application/pdf" onChange={e => handleFile(e, 'receiptPdf')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200"/>
+                                    {form.receiptPdf && <p className="text-xs text-green-600 mt-2">✓ พร้อมอัปโหลด</p>}
                                 </div>
-                                <button type="submit" disabled={isSyncing} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow hover:bg-blue-700 disabled:bg-slate-300">
-                                    {isSyncing ? 'กำลังบันทึก...' : 'บันทึก'}
+
+                                <button type="submit" disabled={isSyncing} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 disabled:bg-slate-300 transition mt-4">
+                                    {isSyncing ? 'กำลังบันทึกและซิงค์...' : 'บันทึกข้อมูล'}
                                 </button>
                             </form>
                         </div>
@@ -295,107 +316,149 @@
                 );
             };
 
+            // --- View: รายละเอียดอุปกรณ์ ---
             const DetailView = () => {
                 const item = selectedItem;
                 const [tab, setTab] = useState('info'); // info, history
                 const [log, setLog] = useState({ id: Date.now(), date: new Date().toISOString().split('T')[0], type: 'repair', description: '', laborCost: 0, parts: [] });
-                const [part, setPart] = useState({ name: '', price: 0 });
+                const [part, setPart] = useState({ name: '', price: 0, image: null, receiptPdf: null });
+
+                const handlePartFile = async (e, k) => { if(e.target.files[0]) setPart({...part, [k]: await fileToBase64(e.target.files[0])}) };
 
                 const saveLog = () => {
-                    const newEntry = { ...log, totalCost: Number(log.laborCost) + log.parts.reduce((s,p)=>s+Number(p.price),0) };
+                    const newEntry = { 
+                        ...log, 
+                        id: Date.now(), // New ID for log
+                        totalCost: Number(log.laborCost) + log.parts.reduce((s,p)=>s+Number(p.price),0) 
+                    };
                     const updatedHistory = [newEntry, ...(item.history || [])];
-                    handleUpdateItem({ ...item, history: updatedHistory });
+                    handleUpdateItem({ ...item, history: updatedHistory }); // This triggers Sync automatically
                     setTab('info');
-                    alert("บันทึกประวัติและกำลัง Sync...");
+                    setLog({ id: Date.now(), date: new Date().toISOString().split('T')[0], type: 'repair', description: '', laborCost: 0, parts: [] }); // Reset form
                 };
 
                 return (
                     <div className="fade-in max-w-2xl mx-auto pb-10">
-                        <button onClick={() => setView('departmentItems')} className="mb-4 flex items-center gap-1 text-slate-500"><ChevronLeft size={18}/> กลับ</button>
+                        <button onClick={() => setView('departmentItems')} className="mb-4 flex items-center gap-1 text-slate-500 hover:text-slate-800"><ChevronLeft size={20}/> กลับ</button>
                         
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mb-4">
-                            <div className="h-48 bg-slate-100 relative">
-                                {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-slate-300"><ImageIcon size={48}/></div>}
-                                <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-4 pt-10">
-                                    <h1 className="text-xl font-bold text-white">{item.name}</h1>
-                                    <p className="text-white/80 text-sm">{item.id}</p>
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4">
+                            <div className="h-64 bg-slate-200 relative">
+                                {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-slate-300"><ImageIcon size={64}/></div>}
+                                <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-6 pt-20">
+                                    <h1 className="text-2xl font-bold text-white">{item.name}</h1>
+                                    <p className="text-white/80 text-sm font-mono">{item.id}</p>
                                 </div>
                             </div>
                             
                             <div className="flex border-b">
-                                <button onClick={() => setTab('info')} className={`flex-1 py-3 text-sm font-medium ${tab==='info'?'text-blue-600 border-b-2 border-blue-600':'text-slate-500'}`}>รายละเอียด</button>
-                                <button onClick={() => setTab('history')} className={`flex-1 py-3 text-sm font-medium ${tab==='history'?'text-blue-600 border-b-2 border-blue-600':'text-slate-500'}`}>ประวัติซ่อม</button>
+                                <button onClick={() => setTab('info')} className={`flex-1 py-4 text-sm font-medium border-b-2 transition ${tab==='info'?'text-blue-600 border-blue-600 bg-blue-50/50':'text-slate-500 border-transparent hover:text-slate-700'}`}>รายละเอียด</button>
+                                <button onClick={() => setTab('history')} className={`flex-1 py-4 text-sm font-medium border-b-2 transition ${tab==='history'?'text-blue-600 border-blue-600 bg-blue-50/50':'text-slate-500 border-transparent hover:text-slate-700'}`}>ประวัติซ่อม ({item.history?.length || 0})</button>
                             </div>
 
-                            <div className="p-4">
+                            <div className="p-6">
                                 {tab === 'info' && (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4 text-sm">
-                                            <div><div className="text-slate-500">รุ่น</div><div>{item.model || '-'}</div></div>
-                                            <div><div className="text-slate-500">วันที่ซื้อ</div><div>{item.purchaseDate}</div></div>
-                                            <div><div className="text-slate-500">สถานะ</div><div className={item.status==='active'?'text-green-600':'text-red-600'}>{item.status}</div></div>
-                                            <div><div className="text-slate-500">สถานที่</div><div>{item.location}</div></div>
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div><div className="text-xs text-slate-500 uppercase tracking-wide mb-1">รุ่น / Model</div><div className="font-medium text-slate-800">{item.model || '-'}</div></div>
+                                            <div><div className="text-xs text-slate-500 uppercase tracking-wide mb-1">วันที่ซื้อ</div><div className="font-medium text-slate-800">{item.purchaseDate}</div></div>
+                                            <div><div className="text-xs text-slate-500 uppercase tracking-wide mb-1">สถานะปัจจุบัน</div><div className={`inline-block px-2 py-1 rounded text-xs font-bold ${item.status==='active'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`}>{item.status==='active'?'ใช้งานปกติ':'ส่งซ่อม'}</div></div>
+                                            <div><div className="text-xs text-slate-500 uppercase tracking-wide mb-1">สถานที่เก็บ</div><div className="font-medium text-slate-800">{item.location}</div></div>
                                         </div>
-                                        {item.receiptPdf && (
-                                            <a href={item.receiptPdf} target="_blank" className="flex items-center gap-2 bg-orange-50 text-orange-700 p-3 rounded-lg border border-orange-100 text-sm hover:bg-orange-100">
-                                                <FileIcon size={16}/> เปิดดูใบเสร็จ (PDF)
+                                        
+                                        {item.receiptPdf ? (
+                                            <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100 hover:bg-orange-100 transition shadow-sm">
+                                                <FileIcon size={20}/> เปิดดูใบเสร็จฉบับเต็ม (PDF)
                                             </a>
+                                        ) : (
+                                            <div className="text-center p-4 bg-slate-50 rounded-xl text-slate-400 text-sm">ไม่มีไฟล์ใบเสร็จ</div>
                                         )}
-                                        <button onClick={() => deleteItem(item.id)} className="w-full border border-red-200 text-red-500 py-2 rounded-lg text-sm mt-4 hover:bg-red-50">ลบอุปกรณ์ (ซ่อน)</button>
+                                        
+                                        <div className="pt-6 border-t border-slate-100">
+                                            <button onClick={() => deleteItem(item.id)} className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-500 py-3 rounded-xl text-sm hover:bg-red-50 transition">
+                                                <Trash2 size={16}/> ซ่อนอุปกรณ์นี้
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
 
                                 {tab === 'history' && (
                                     <div>
-                                        <div className="mb-6 border-b pb-6">
-                                            <h3 className="font-bold text-sm mb-3 text-slate-800">+ เพิ่มรายการซ่อม</h3>
+                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                                            <h3 className="font-bold text-sm mb-4 text-slate-800 flex items-center gap-2"><Wrench size={16}/> บันทึกการซ่อม/บำรุงรักษา</h3>
                                             <div className="space-y-3">
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <input type="date" className="border p-2 rounded text-sm" value={log.date} onChange={e=>setLog({...log, date:e.target.value})}/>
-                                                    <select className="border p-2 rounded text-sm" onChange={e=>setLog({...log, type:e.target.value})}>
-                                                        <option value="repair">ซ่อมแซม</option><option value="maintenance">บำรุงรักษา</option>
-                                                    </select>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <div className="col-span-1"><label className="text-xs text-slate-500">วันที่</label><input type="date" className="w-full border p-2 rounded-lg text-sm" value={log.date} onChange={e=>setLog({...log, date:e.target.value})}/></div>
+                                                    <div className="col-span-2"><label className="text-xs text-slate-500">ประเภท</label><select className="w-full border p-2 rounded-lg text-sm" onChange={e=>setLog({...log, type:e.target.value})}><option value="repair">ซ่อมแซม (Repair)</option><option value="maintenance">บำรุงรักษา (Maintenance)</option></select></div>
                                                 </div>
-                                                <textarea className="border p-2 rounded text-sm w-full" placeholder="รายละเอียดอาการ..." rows="2" onChange={e=>setLog({...log, description:e.target.value})}></textarea>
+                                                <div><label className="text-xs text-slate-500">อาการ/รายละเอียด</label><textarea className="w-full border p-2 rounded-lg text-sm" rows="2" placeholder="ระบุรายละเอียด..." onChange={e=>setLog({...log, description:e.target.value})}></textarea></div>
                                                 
-                                                <div className="bg-slate-50 p-2 rounded border">
+                                                <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                                    <div className="text-xs font-bold text-slate-700 mb-2">เพิ่มรายการอะไหล่ (ถ้ามี)</div>
                                                     <div className="flex gap-2 mb-2">
-                                                        <input className="border p-1 rounded text-sm flex-1" placeholder="ชื่ออะไหล่" value={part.name} onChange={e=>setPart({...part, name:e.target.value})}/>
-                                                        <input className="border p-1 rounded text-sm w-20" type="number" placeholder="บาท" value={part.price} onChange={e=>setPart({...part, price:e.target.value})}/>
-                                                        <button onClick={()=>{ if(part.name) { setLog({...log, parts:[...log.parts, part]}); setPart({name:'', price:0}); }}} className="bg-slate-200 px-3 rounded">+</button>
+                                                        <input className="border p-2 rounded-lg text-sm flex-1" placeholder="ชื่ออะไหล่" value={part.name} onChange={e=>setPart({...part, name:e.target.value})}/>
+                                                        <input className="border p-2 rounded-lg text-sm w-24" type="number" placeholder="ราคา" value={part.price} onChange={e=>setPart({...part, price:e.target.value})}/>
                                                     </div>
-                                                    {log.parts.map((p,i)=><div key={i} className="text-xs flex justify-between px-1">{p.name} <span>{p.price}</span></div>)}
+                                                    <div className="flex gap-2 mb-2">
+                                                        <label className="flex-1 bg-slate-100 text-slate-500 text-xs py-2 rounded-lg text-center cursor-pointer hover:bg-slate-200">
+                                                            {part.image ? '✓ มีรูปแล้ว' : '+ รูปอะไหล่'}
+                                                            <input type="file" className="hidden" accept="image/*" onChange={e=>handlePartFile(e,'image')}/>
+                                                        </label>
+                                                        <label className="flex-1 bg-orange-50 text-orange-600 text-xs py-2 rounded-lg text-center cursor-pointer hover:bg-orange-100">
+                                                            {part.receiptPdf ? '✓ มี PDF แล้ว' : '+ ใบเสร็จ PDF'}
+                                                            <input type="file" className="hidden" accept="application/pdf" onChange={e=>handlePartFile(e,'receiptPdf')}/>
+                                                        </label>
+                                                        <button onClick={()=>{ if(part.name) { setLog({...log, parts:[...log.parts, part]}); setPart({name:'', price:0, image:null, receiptPdf:null}); }}} className="bg-blue-600 text-white px-4 rounded-lg text-sm hover:bg-blue-700">+</button>
+                                                    </div>
+                                                    {log.parts.map((p,i)=>(
+                                                        <div key={i} className="flex justify-between items-center text-xs bg-slate-50 p-2 rounded border border-slate-100 mb-1">
+                                                            <span className="flex items-center gap-1">{p.receiptPdf && <FileIcon size={10} className="text-orange-500"/>} {p.name}</span>
+                                                            <span className="font-mono">฿{p.price}</span>
+                                                        </div>
+                                                    ))}
                                                 </div>
 
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm">ค่าแรง:</span>
-                                                    <input type="number" className="border p-1 rounded w-24 text-sm" onChange={e=>setLog({...log, laborCost:e.target.value})}/>
-                                                </div>
-                                                <button onClick={saveLog} disabled={isSyncing} className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-bold shadow">{isSyncing?'กำลังบันทึก...':'บันทึกประวัติ'}</button>
+                                                <div><label className="text-xs text-slate-500">ค่าแรงช่าง</label><input type="number" className="w-full border p-2 rounded-lg text-sm" placeholder="0.00" onChange={e=>setLog({...log, laborCost:e.target.value})}/></div>
+                                                
+                                                <button onClick={saveLog} disabled={isSyncing} className="w-full bg-slate-800 text-white py-3 rounded-xl text-sm font-bold shadow hover:bg-slate-900 transition flex justify-center items-center gap-2">
+                                                    {isSyncing ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} บันทึกประวัติ
+                                                </button>
                                             </div>
                                         </div>
                                         
                                         <div className="space-y-4">
                                             {item.history && item.history.map((h, i) => (
-                                                <div key={i} className="flex gap-3 text-sm">
+                                                <div key={i} className="flex gap-4 relative">
                                                     <div className="flex flex-col items-center">
-                                                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
+                                                        <div className="w-3 h-3 rounded-full bg-blue-500 mt-1.5 ring-4 ring-blue-50"></div>
                                                         <div className="w-0.5 bg-slate-200 flex-1 my-1"></div>
                                                     </div>
-                                                    <div className="flex-1 pb-4">
-                                                        <div className="flex justify-between">
-                                                            <span className="font-bold text-slate-700">{h.description}</span>
-                                                            <span className="font-mono text-blue-600">฿{h.totalCost}</span>
+                                                    <div className="flex-1 pb-6 border-b border-slate-50 last:border-0">
+                                                        <div className="flex justify-between items-start">
+                                                            <span className="font-bold text-slate-800 text-sm">{h.description}</span>
+                                                            <span className="font-bold text-blue-600 text-sm">฿{Number(h.totalCost).toLocaleString()}</span>
                                                         </div>
-                                                        <div className="text-xs text-slate-400">{h.date} • {h.type}</div>
+                                                        <div className="text-xs text-slate-400 mt-1 flex gap-2">
+                                                            <span>{h.date}</span> • <span className="uppercase">{h.type}</span>
+                                                        </div>
                                                         {h.parts && h.parts.length > 0 && (
-                                                            <div className="mt-1 bg-slate-50 p-2 rounded text-xs text-slate-500">
-                                                                เปลี่ยนอะไหล่: {h.parts.map(p=>p.name).join(', ')}
+                                                            <div className="mt-2 bg-slate-50 p-3 rounded-lg text-xs space-y-1 border border-slate-100">
+                                                                <div className="font-semibold text-slate-500 mb-1">อะไหล่ที่เปลี่ยน:</div>
+                                                                {h.parts.map((p, idx)=>(
+                                                                    <div key={idx} className="flex justify-between text-slate-600">
+                                                                        <span className="flex items-center gap-1">
+                                                                            {p.receiptPdf && <a href={p.receiptPdf} target="_blank" className="text-orange-500 hover:underline"><FileIcon size={10}/></a>} 
+                                                                            {p.image && <a href={p.image} target="_blank" className="text-blue-500 hover:underline"><ImageIcon size={10}/></a>}
+                                                                            {p.name}
+                                                                        </span>
+                                                                        <span>฿{p.price}</span>
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             ))}
+                                            {(!item.history || item.history.length === 0) && <div className="text-center text-slate-400 py-4 text-sm">ยังไม่มีประวัติการซ่อม</div>}
                                         </div>
                                     </div>
                                 )}
@@ -405,21 +468,37 @@
                 );
             };
 
+            // --- Component: Admin Modal (ตั้งค่า URL) ---
             const AdminModal = () => (
                 showAdminModal ? (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white p-6 rounded-xl w-full max-w-sm">
-                        <h3 className="font-bold mb-4">ตั้งค่า URL</h3>
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg flex items-center gap-2"><Settings className="text-slate-700"/> ตั้งค่าระบบ</h3>
+                            <button onClick={()=>setShowAdminModal(false)}><X className="text-slate-400 hover:text-slate-600"/></button>
+                        </div>
+                        
                         {showAdminModal === 'login' ? (
-                            <form onSubmit={e => { e.preventDefault(); if(adminInputPassword===config.adminPassword) setShowAdminModal('settings'); else alert('ผิด'); }}>
-                                <input type="password" autoFocus className="border w-full p-2 rounded mb-2" placeholder="รหัสผ่าน (888)" onChange={e=>setAdminInputPassword(e.target.value)}/>
-                                <button className="bg-slate-800 text-white w-full py-2 rounded">เข้าสู่ระบบ</button>
+                            <form onSubmit={e => { e.preventDefault(); if(adminInputPassword===config.adminPassword) setShowAdminModal('settings'); else alert('รหัสผ่านไม่ถูกต้อง'); }}>
+                                <p className="text-sm text-slate-500 mb-3">กรุณาใส่รหัสผ่านเพื่อเข้าสู่การตั้งค่า</p>
+                                <div className="relative mb-4">
+                                    <Lock className="absolute left-3 top-2.5 text-slate-400" size={16}/>
+                                    <input type="password" autoFocus className="w-full border border-slate-300 pl-10 pr-4 py-2 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="รหัสผ่าน (เริ่มต้น: 888)" onChange={e=>setAdminInputPassword(e.target.value)}/>
+                                </div>
+                                <button className="bg-slate-800 text-white w-full py-3 rounded-xl font-medium hover:bg-slate-900 transition">เข้าสู่ระบบ</button>
                             </form>
                         ) : (
                             <div>
-                                <input className="border w-full p-2 rounded mb-2 text-xs" value={tempConfig.scriptUrl} onChange={e=>setTempConfig({...tempConfig, scriptUrl:e.target.value})}/>
-                                <button onClick={()=>{ setConfig(tempConfig); localStorage.setItem('assetTrackerConfig', JSON.stringify(tempConfig)); setShowAdminModal(false); alert('บันทึกแล้ว'); fetchFromGoogle(); }} className="bg-green-600 text-white w-full py-2 rounded mb-2">บันทึก</button>
-                                <button onClick={()=>setShowAdminModal(false)} className="text-slate-400 w-full text-sm">ปิด</button>
+                                <div className="mb-4">
+                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Google Web App URL</label>
+                                    <input className="w-full border border-slate-300 p-3 rounded-xl text-xs font-mono text-slate-600 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none break-all" value={tempConfig.scriptUrl} onChange={e=>setTempConfig({...tempConfig, scriptUrl:e.target.value})} placeholder="https://script.google.com/..."/>
+                                    <p className="text-[10px] text-slate-400 mt-1">URL ที่ได้จากการ Deploy ใน Apps Script</p>
+                                </div>
+                                <div className="mb-6">
+                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">เปลี่ยนรหัสผ่าน Admin</label>
+                                    <input className="w-full border border-slate-300 p-3 rounded-xl text-sm" value={tempConfig.adminPassword} onChange={e=>setTempConfig({...tempConfig, adminPassword:e.target.value})}/>
+                                </div>
+                                <button onClick={()=>{ setConfig(tempConfig); localStorage.setItem('assetTrackerConfig', JSON.stringify(tempConfig)); setShowAdminModal(false); alert('บันทึกการตั้งค่าแล้ว'); fetchFromGoogle(); }} className="bg-green-600 text-white w-full py-3 rounded-xl font-medium hover:bg-green-700 transition flex justify-center gap-2"><Check size={20}/> บันทึก</button>
                             </div>
                         )}
                     </div>
@@ -427,23 +506,52 @@
                 ) : null
             );
 
+            // --- Main Layout ---
             return (
                 <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
                     {isLoading && <LoadingOverlay/>}
-                    <header className="bg-white border-b sticky top-0 z-10 px-4 h-14 flex items-center justify-between">
-                        <div className="font-bold flex items-center gap-2"><FileText className="text-blue-600"/> Asset Cloud</div>
+                    
+                    {/* Header */}
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 h-16 flex items-center justify-between shadow-sm">
+                        <div className="font-bold flex items-center gap-2 text-lg text-slate-800"><div className="bg-blue-600 text-white p-1.5 rounded-lg"><FileText size={20}/></div> Asset Cloud</div>
                         <div className="flex gap-2">
-                             <button onClick={fetchFromGoogle} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full" title="รีเฟรชข้อมูล"><RefreshCw size={20}/></button>
-                             <button onClick={() => setShowAdminModal('login')} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><Settings size={20}/></button>
+                             <button onClick={fetchFromGoogle} className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-full transition relative group">
+                                <RefreshCw size={20}/>
+                                <span className="absolute top-full right-0 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none mt-1">รีเฟรชข้อมูล</span>
+                             </button>
+                             <button onClick={() => setShowAdminModal('login')} className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-full transition"><Settings size={20}/></button>
                         </div>
                     </header>
+                    
+                    {/* Content */}
                     <main className="max-w-5xl mx-auto px-4 pt-6">
+                        {(!config.scriptUrl) && (
+                            <div className="bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded-xl mb-6 flex items-start gap-3">
+                                <AlertTriangle className="flex-shrink-0 mt-0.5"/>
+                                <div>
+                                    <h3 className="font-bold">ยังไม่ได้เชื่อมต่อระบบ</h3>
+                                    <p className="text-sm mt-1">กรุณากดปุ่ม <b>ตั้งค่า (รูปฟันเฟือง)</b> ด้านบนขวา ใส่รหัส <b>888</b> แล้ววาง URL ของ Google Apps Script เพื่อเริ่มใช้งาน</p>
+                                </div>
+                            </div>
+                        )}
+                        
                         {view === 'dashboard' && <DashboardView />}
                         {view === 'departments' && <DepartmentListView />}
                         {view === 'departmentItems' && <DepartmentItemsView />}
                         {view === 'add' && <AddView />}
                         {view === 'detail' && <DetailView />}
                     </main>
+
+                    {/* Bottom Navigation (Mobile Friendly) */}
+                    <nav className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 h-16 flex justify-around items-center z-30 pb-safe">
+                        <button onClick={() => setView('dashboard')} className={`flex flex-col items-center gap-1 text-[10px] w-full h-full justify-center ${view==='dashboard'?'text-blue-600':'text-slate-400'}`}>
+                            <LayoutDashboard size={24}/> <span>ภาพรวม</span>
+                        </button>
+                        <button onClick={() => setView('departments')} className={`flex flex-col items-center gap-1 text-[10px] w-full h-full justify-center ${['departments','departmentItems','add','detail'].includes(view)?'text-blue-600':'text-slate-400'}`}>
+                            <List size={24}/> <span>รายการ</span>
+                        </button>
+                    </nav>
+
                     <AdminModal/>
                 </div>
             );
