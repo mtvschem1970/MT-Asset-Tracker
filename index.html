@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Tracker System (+PDF & Google Sync)</title>
+    <title>Asset Tracker System (Admin Config)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -30,11 +30,13 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect } from 'react';
         import { createRoot } from 'react-dom/client';
-        import { Camera, Plus, Save, Wrench, Clock, FileText, ChevronLeft, Search, Trash2, MapPin, Tag, ShoppingBag, DollarSign, X, LayoutDashboard, List, BarChart3, AlertTriangle, TrendingUp, Calendar, Folder, Image as ImageIcon, Building2, PlusCircle, Package, File as FileIcon, UploadCloud, Loader2 } from 'lucide-react';
+        import { Camera, Plus, Save, Wrench, Clock, FileText, ChevronLeft, Search, Trash2, MapPin, Tag, ShoppingBag, DollarSign, X, LayoutDashboard, List, BarChart3, AlertTriangle, TrendingUp, Calendar, Folder, Image as ImageIcon, Building2, PlusCircle, Package, File as FileIcon, UploadCloud, Loader2, Settings, Lock, Check } from 'lucide-react';
 
-        // --- CONFIGURATION ---
-        // ใส่ URL ที่ได้จากการ Deploy Google Apps Script ตรงนี้
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec'; 
+        // --- CONSTANTS ---
+        const DEFAULT_CONFIG = {
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec',
+            adminPassword: '888'
+        };
 
         // --- Mock Data ---
         const initialData = [
@@ -43,7 +45,7 @@
                 name: 'MacBook Pro 16"',
                 model: 'M1 Pro',
                 image: null,
-                receiptPdf: null, // เพิ่ม field ใบเสร็จ
+                receiptPdf: null,
                 purchaseDate: '2023-01-15',
                 status: 'active',
                 location: 'แผนก IT',
@@ -83,9 +85,21 @@
 
         // --- Main Component ---
         function App() {
+            // View State
             const [view, setView] = useState('dashboard');
             const [selectedDepartment, setSelectedDepartment] = useState(null);
             
+            // Config State (Load from LocalStorage or Default)
+            const [config, setConfig] = useState(() => {
+                const savedConfig = localStorage.getItem('assetTrackerConfig');
+                return savedConfig ? JSON.parse(savedConfig) : DEFAULT_CONFIG;
+            });
+
+            // Admin UI State
+            const [showAdminModal, setShowAdminModal] = useState(false); // false, 'login', 'settings'
+            const [adminInputPassword, setAdminInputPassword] = useState('');
+            const [tempConfig, setTempConfig] = useState(config);
+
             // Data State
             const [items, setItems] = useState(initialData);
             const [departmentList, setDepartmentList] = useState([...new Set(initialData.map(i => i.location))]);
@@ -93,18 +107,36 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [isSyncing, setIsSyncing] = useState(false);
 
+            // --- Admin Logic ---
+            const handleAdminLogin = (e) => {
+                e.preventDefault();
+                if (adminInputPassword === config.adminPassword) {
+                    setTempConfig(config); // Load current config to inputs
+                    setShowAdminModal('settings');
+                    setAdminInputPassword('');
+                } else {
+                    alert("รหัสผ่านไม่ถูกต้อง");
+                }
+            };
+
+            const saveConfig = (e) => {
+                e.preventDefault();
+                setConfig(tempConfig);
+                localStorage.setItem('assetTrackerConfig', JSON.stringify(tempConfig));
+                alert("บันทึกการตั้งค่าเรียบร้อยแล้ว");
+                setShowAdminModal(false);
+            };
+
             // --- Google Sync Logic ---
             const syncToGoogle = async (itemData) => {
-                if (GOOGLE_SCRIPT_URL === 'INSERT_YOUR_WEB_APP_URL_HERE') {
-                    alert("กรุณาใส่ Web App URL ในโค้ดก่อนใช้งานฟังก์ชั่นนี้");
+                if (!config.scriptUrl || config.scriptUrl.trim() === '') {
+                    alert("กรุณาตั้งค่า Web App URL ในเมนู Admin ก่อน");
                     return;
                 }
 
                 setIsSyncing(true);
                 try {
-                    // ใช้ mode: 'no-cors' เพื่อแก้ปัญหา CORS (แต่จะอ่าน response ไม่ได้)
-                    // หรือถ้าต้องการอ่าน response ต้องตั้งค่า server GAS ให้ถูกต้อง
-                    await fetch(GOOGLE_SCRIPT_URL, {
+                    await fetch(config.scriptUrl, {
                         method: 'POST',
                         mode: 'no-cors', 
                         headers: { 'Content-Type': 'application/json' },
@@ -113,7 +145,7 @@
                     alert(`ข้อมูล ${itemData.name} ถูกส่งไปที่ Google แล้ว (กำลังประมวลผลอยู่เบื้องหลัง)`);
                 } catch (error) {
                     console.error("Sync Error:", error);
-                    alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
+                    alert("เกิดข้อผิดพลาดในการส่งข้อมูล: " + error.message);
                 } finally {
                     setIsSyncing(false);
                 }
@@ -125,12 +157,9 @@
                 if (newItem.location && !departmentList.includes(newItem.location)) {
                     setDepartmentList([...departmentList, newItem.location]);
                 }
-                
-                // Trigger Sync
                 if(confirm("บันทึกในเครื่องเสร็จแล้ว ต้องการส่งข้อมูลไป Google Drive/Sheet เลยไหม?")) {
                     syncToGoogle(newItem);
                 }
-
                 setSelectedDepartment(newItem.location);
                 setView('departmentItems');
             };
@@ -139,8 +168,6 @@
                 const updatedList = items.map(item => item.id === updatedItem.id ? updatedItem : item);
                 setItems(updatedList);
                 setSelectedItem(updatedItem);
-                
-                // Trigger Sync Update (ส่งข้อมูลล่าสุดไป)
                 if(confirm("บันทึกการแก้ไขแล้ว อัปเดตข้อมูลไปที่ Google ด้วยหรือไม่?")) {
                     syncToGoogle(updatedItem);
                 }
@@ -173,7 +200,6 @@
 
             // --- Views ---
             const DashboardView = () => {
-                // (คงเดิมจากโค้ดเก่า เพื่อความกระชับขอละไว้ แต่ใส่ Logic เดิมได้เลย)
                 const totalAssets = items.length;
                 const totalRepairs = items.reduce((sum, item) => sum + item.history.filter(h => h.type === 'repair').length, 0);
                 return (
@@ -188,9 +214,6 @@
                                 <div className="bg-orange-100 p-3 rounded-lg text-orange-600"><Wrench size={24} /></div>
                                 <div><div className="text-sm text-slate-500">ซ่อมไปแล้ว (ครั้ง)</div><div className="text-2xl font-bold text-slate-800">{totalRepairs}</div></div>
                             </div>
-                        </div>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                            💡 ระบบได้รับการอัปเกรดให้รองรับไฟล์ PDF ใบเสร็จ และเชื่อมต่อ Google Sheets แล้ว
                         </div>
                     </div>
                 );
@@ -298,7 +321,6 @@
                                         <datalist id="departments-list">{departmentList.map(d => <option key={d} value={d} />)}</datalist>
                                     </div>
                                     
-                                    {/* Upload Receipt PDF */}
                                     <div className="md:col-span-2 bg-orange-50 p-4 rounded-lg border border-orange-100">
                                         <label className="block text-sm font-medium text-orange-800 mb-1 flex items-center gap-2"><FileIcon size={16}/> ใบเสร็จรับเงิน (PDF) - ไม่บังคับ</label>
                                         <input type="file" accept="application/pdf" onChange={(e) => handleFileChange(e, 'receiptPdf')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200"/>
@@ -347,7 +369,6 @@
                         <button onClick={() => setView('departmentItems')} className="text-slate-500 mb-4 flex items-center gap-1 hover:text-slate-700"><ChevronLeft size={20} /> กลับ</button>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {/* Left Column: Asset Info */}
                             <div className="md:col-span-1 space-y-4">
                                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                                     <div className="h-48 bg-slate-200 flex items-center justify-center">
@@ -376,7 +397,6 @@
                                 </div>
                             </div>
 
-                            {/* Right Column: History & Actions */}
                             <div className="md:col-span-2">
                                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 min-h-[500px] flex flex-col">
                                     <div className="flex border-b border-slate-100">
@@ -452,14 +472,67 @@
                 );
             };
 
+            const AdminModal = () => {
+                if (!showAdminModal) return null;
+
+                return (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+                            <div className="p-4 bg-slate-800 text-white flex justify-between items-center">
+                                <h3 className="font-bold flex items-center gap-2"><Settings size={20}/> Admin Configuration</h3>
+                                <button onClick={() => setShowAdminModal(false)} className="text-slate-400 hover:text-white"><X size={20}/></button>
+                            </div>
+                            
+                            <div className="p-6">
+                                {showAdminModal === 'login' && (
+                                    <form onSubmit={handleAdminLogin} className="space-y-4">
+                                        <p className="text-slate-600 text-sm mb-4">กรุณาใส่รหัสผ่านเพื่อเข้าสู่การตั้งค่าระบบ</p>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">รหัสผ่าน Admin</label>
+                                            <div className="relative">
+                                                <input type="password" autoFocus value={adminInputPassword} onChange={e => setAdminInputPassword(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Default: 888"/>
+                                                <Lock className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                                            </div>
+                                        </div>
+                                        <button type="submit" className="w-full bg-slate-800 text-white py-2 rounded-lg font-medium hover:bg-slate-700">เข้าสู่ระบบ</button>
+                                    </form>
+                                )}
+
+                                {showAdminModal === 'settings' && (
+                                    <form onSubmit={saveConfig} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Google Web App URL</label>
+                                            <input type="text" value={tempConfig.scriptUrl} onChange={e => setTempConfig({...tempConfig, scriptUrl: e.target.value})} className="w-full p-2 border rounded-lg text-sm font-mono text-slate-600 break-all" />
+                                            <p className="text-[10px] text-slate-400 mt-1">URL ของ Google Apps Script ที่ Deploy แล้ว</p>
+                                        </div>
+                                        
+                                        <div className="pt-4 border-t border-slate-100">
+                                            <h4 className="font-medium text-slate-800 mb-2 flex items-center gap-1"><Lock size={14}/> เปลี่ยนรหัสผ่าน Admin</h4>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">รหัสผ่านใหม่</label>
+                                            <input type="text" value={tempConfig.adminPassword} onChange={e => setTempConfig({...tempConfig, adminPassword: e.target.value})} className="w-full p-2 border rounded-lg font-mono text-slate-600" />
+                                            <p className="text-[10px] text-orange-500 mt-1">คำเตือน: กรุณาจำรหัสผ่านใหม่ให้ได้ หากลืมต้อง Clear Cache Browser</p>
+                                        </div>
+
+                                        <button type="submit" className="w-full mt-2 bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 flex justify-center items-center gap-2"><Check size={18}/> บันทึกการตั้งค่า</button>
+                                    </form>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             return (
                 <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
                     <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
                         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
                             <div className="flex items-center gap-3"><div className="bg-blue-600 text-white p-2 rounded-lg"><FileText size={24} /></div><div><h1 className="font-bold text-lg leading-tight">Asset Tracker</h1><p className="text-xs text-slate-500">ระบบบันทึกอุปกรณ์ + Google Sync</p></div></div>
-                            <div className="flex bg-slate-100 p-1 rounded-lg">
-                                <button onClick={() => setView('dashboard')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${view === 'dashboard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}><LayoutDashboard size={16} /></button>
-                                <button onClick={() => setView('departments')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${['departments', 'departmentItems', 'add', 'detail'].includes(view) ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}><Building2 size={16} /></button>
+                            <div className="flex items-center gap-2">
+                                <div className="flex bg-slate-100 p-1 rounded-lg">
+                                    <button onClick={() => setView('dashboard')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${view === 'dashboard' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}><LayoutDashboard size={16} /></button>
+                                    <button onClick={() => setView('departments')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${['departments', 'departmentItems', 'add', 'detail'].includes(view) ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}><Building2 size={16} /></button>
+                                </div>
+                                <button onClick={() => setShowAdminModal('login')} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition" title="ตั้งค่า Admin"><Settings size={20}/></button>
                             </div>
                         </div>
                     </header>
@@ -470,6 +543,8 @@
                         {view === 'add' && <AddView />}
                         {view === 'detail' && <DetailView />}
                     </main>
+                    
+                    <AdminModal />
                 </div>
             );
         }
@@ -479,4 +554,3 @@
     </script>
 </body>
 </html>
-
