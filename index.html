@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asset Manager System</title>
+    <title>Asset Manager System (Full)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -13,27 +13,25 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
-        body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        /* Hide Scrollbar for cleaner UI */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; background-color: #f8fafc; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .input-box { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; background: white; outline: none; transition: all 0.2s; }
+        .input-box:focus { border-color: #3b82f6; ring: 2px solid #3b82f6; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
-        const { LayoutDashboard, List, PlusCircle, Wrench, Search, ChevronLeft, MapPin, Calendar, FileText, Image: ImageIcon, Save, Trash2, Loader2, RefreshCw, X, DollarSign } = lucide;
+        const { LayoutDashboard, Building2, Plus, ArrowLeft, Search, Save, Trash2, FileText, Image: ImageIcon, Loader2, RefreshCw, X, Calendar, MapPin, Wrench } = lucide;
 
-        // *** CONFIGURATION ***
         const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
 
-        // --- Helper: Generate Base64 ---
+        // --- Helpers ---
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
-            if (file.size > 5 * 1024 * 1024) return alert("ไฟล์ต้องไม่เกิน 5MB");
+            if (file.size > 5 * 1024 * 1024) return alert("ขนาดไฟล์ต้องไม่เกิน 5MB");
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => resolve(reader.result);
@@ -42,23 +40,24 @@
 
         // --- Main App ---
         function App() {
-            const [view, setView] = useState('dashboard'); // dashboard, list, add, detail
+            // State
+            const [view, setView] = useState('dashboard'); // dashboard, departments, assets, add, detail
             const [assets, setAssets] = useState([]);
+            const [departments, setDepartments] = useState([]); // List of unique departments
+            const [selectedDept, setSelectedDept] = useState(null);
+            const [selectedAsset, setSelectedAsset] = useState(null);
+            
+            // Loading & Form States
             const [loading, setLoading] = useState(false);
             const [submitting, setSubmitting] = useState(false);
-            const [selectedAsset, setSelectedAsset] = useState(null);
-            const [filterLoc, setFilterLoc] = useState('All');
 
-            // Initial Load
+            // Initial Fetch
             useEffect(() => {
                 fetchData();
                 lucide.createIcons();
             }, []);
 
-            // Re-render Icons when view changes
-            useEffect(() => {
-                setTimeout(() => lucide.createIcons(), 100);
-            }, [view, assets, selectedAsset]);
+            useEffect(() => { lucide.createIcons(); }, [view, assets]);
 
             const fetchData = async () => {
                 setLoading(true);
@@ -67,14 +66,12 @@
                     const data = await res.json();
                     if (Array.isArray(data)) {
                         setAssets(data);
-                    } else {
-                        console.error("Data Format Error:", data);
+                        // Extract unique departments
+                        const depts = [...new Set(data.map(i => i.location).filter(Boolean))];
+                        setDepartments(depts);
                     }
-                } catch (err) {
-                    alert("โหลดข้อมูลไม่สำเร็จ: " + err.message);
-                } finally {
-                    setLoading(false);
-                }
+                } catch (err) { console.error(err); } 
+                finally { setLoading(false); }
             };
 
             const postData = async (payload) => {
@@ -86,12 +83,11 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    // Wait for GAS to process
                     setTimeout(() => {
                         fetchData();
                         setSubmitting(false);
-                        if(view === 'add') setView('list');
-                        if(view === 'detail') alert("บันทึกข้อมูลเรียบร้อย");
+                        if(view === 'add') setView('departments');
+                        if(payload.action === 'save_log') alert("บันทึกประวัติเรียบร้อย");
                     }, 2500);
                 } catch (err) {
                     alert("Error: " + err.message);
@@ -104,43 +100,80 @@
             const Dashboard = () => {
                 const total = assets.length;
                 const repair = assets.filter(a => a.status === 'ส่งซ่อม').length;
-                const active = total - repair;
-                
+
                 return (
-                    <div className="p-4 space-y-4 fade-in pb-20">
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
-                            <h1 className="text-2xl font-bold">Asset Manager</h1>
-                            <p className="opacity-90 text-sm">ระบบจัดการอุปกรณ์</p>
+                    <div className="p-4 pb-24 fade-in">
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 rounded-3xl text-white shadow-xl mb-6">
+                            <h1 className="text-3xl font-bold mb-1">Asset Manager</h1>
+                            <p className="opacity-80">ภาพรวมระบบจัดการอุปกรณ์</p>
                         </div>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                                <p className="text-xs text-gray-500">อุปกรณ์ทั้งหมด</p>
-                                <p className="text-3xl font-bold text-gray-800">{total}</p>
+
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                                <p className="text-slate-400 text-xs uppercase font-bold">ทั้งหมด</p>
+                                <p className="text-4xl font-bold text-slate-800 mt-1">{total}</p>
                             </div>
-                            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                                <p className="text-xs text-gray-500">ส่งซ่อม</p>
-                                <p className="text-3xl font-bold text-orange-500">{repair}</p>
+                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                                <p className="text-slate-400 text-xs uppercase font-bold">ส่งซ่อม</p>
+                                <p className="text-4xl font-bold text-orange-500 mt-1">{repair}</p>
                             </div>
                         </div>
 
-                        <div className="flex justify-between items-center mt-6">
-                            <h3 className="font-bold text-gray-700">รายการล่าสุด</h3>
-                            <button onClick={()=>setView('list')} className="text-blue-600 text-sm">ดูทั้งหมด</button>
+                        <div className="flex justify-between items-end mb-4">
+                            <h2 className="text-lg font-bold text-slate-700">รายการล่าสุด</h2>
                         </div>
-                        
                         <div className="space-y-3">
                             {assets.slice(0, 5).map(item => (
-                                <div key={item.id} onClick={()=>{setSelectedAsset(item); setView('detail');}} className="bg-white p-3 rounded-xl border border-gray-100 flex gap-3 items-center active:scale-95 transition-transform">
-                                    <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                        {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-gray-400"><i data-lucide="image"></i></div>}
+                                <div key={item.id} onClick={()=>{setSelectedAsset(item); setView('detail');}} className="bg-white p-3 rounded-xl border border-slate-100 flex gap-4 items-center active:scale-95 transition cursor-pointer">
+                                    <div className="w-14 h-14 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+                                        {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon/></div>}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-semibold truncate">{item.name}</div>
-                                        <div className="text-xs text-gray-500">{item.location} • <span className={item.status === 'ปกติ' ? 'text-green-600' : 'text-orange-500'}>{item.status}</span></div>
+                                    <div>
+                                        <div className="font-bold text-slate-800">{item.name}</div>
+                                        <div className="text-xs text-slate-500">{item.location} • <span className={item.status==='ปกติ'?'text-green-600':'text-orange-500'}>{item.status}</span></div>
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                );
+            };
+
+            const DepartmentList = () => {
+                // Count items per department
+                const counts = assets.reduce((acc, item) => {
+                    acc[item.location] = (acc[item.location] || 0) + 1;
+                    return acc;
+                }, {});
+
+                const createDept = () => {
+                    const name = prompt("ชื่อแผนกใหม่:");
+                    if (name) {
+                        setDepartments(prev => [...prev, name]); // Add locally
+                        alert(`สร้างแผนก "${name}" แล้ว (กรุณาเพิ่มอุปกรณ์ลงในแผนกนี้เพื่อให้บันทึกถาวร)`);
+                    }
+                };
+
+                return (
+                    <div className="p-4 pb-24 fade-in">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold text-slate-800">แผนก</h2>
+                            <button onClick={createDept} className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 shadow-sm">
+                                <Plus size={16}/> สร้างแผนก
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3">
+                            {departments.map(dept => (
+                                <div key={dept} onClick={()=>{setSelectedDept(dept); setView('assets');}} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex justify-between items-center cursor-pointer hover:border-blue-400 transition active:bg-slate-50">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-blue-50 text-blue-600 p-3 rounded-xl"><Building2 size={24}/></div>
+                                        <span className="font-bold text-lg text-slate-700">{dept}</span>
+                                    </div>
+                                    <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-sm font-bold">{counts[dept] || 0}</span>
+                                </div>
+                            ))}
+                            {departments.length === 0 && <div className="text-center text-slate-400 py-10">ยังไม่มีแผนก</div>}
                         </div>
                     </div>
                 );
@@ -148,52 +181,44 @@
 
             const AssetList = () => {
                 const [term, setTerm] = useState('');
-                const locations = ['All', ...new Set(assets.map(a => a.location))];
-                
                 const filtered = assets.filter(a => 
-                    (filterLoc === 'All' || a.location === filterLoc) &&
+                    a.location === selectedDept && 
                     (a.name.toLowerCase().includes(term.toLowerCase()) || a.id.toLowerCase().includes(term.toLowerCase()))
                 );
 
                 return (
-                    <div className="p-4 h-screen flex flex-col pb-20 bg-gray-50 fade-in">
-                        <h2 className="text-xl font-bold mb-4">รายการอุปกรณ์</h2>
-                        
-                        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-2">
-                            {locations.map(loc => (
-                                <button key={loc} onClick={()=>setFilterLoc(loc)} className={`px-4 py-1.5 rounded-full text-sm whitespace-nowrap border transition ${filterLoc === loc ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'}`}>
-                                    {loc}
-                                </button>
-                            ))}
+                    <div className="p-4 pb-24 fade-in h-screen flex flex-col">
+                        <div className="flex items-center gap-2 mb-4">
+                            <button onClick={()=>setView('departments')} className="p-2 bg-white rounded-full border shadow-sm"><ArrowLeft size={20}/></button>
+                            <h2 className="text-xl font-bold text-slate-800 truncate">{selectedDept}</h2>
                         </div>
 
                         <div className="relative mb-4">
-                            <i data-lucide="search" className="absolute left-3 top-3 text-gray-400 w-5 h-5"></i>
-                            <input className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="ค้นหาชื่อ หรือ รหัส..." value={term} onChange={e=>setTerm(e.target.value)} />
+                            <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5"/>
+                            <input className="input-box pl-10" placeholder="ค้นหา..." value={term} onChange={e=>setTerm(e.target.value)}/>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto space-y-3 pb-20">
+                        <div className="flex-1 overflow-y-auto space-y-3 pb-24">
                             {filtered.map(item => (
-                                <div key={item.id} onClick={()=>{setSelectedAsset(item); setView('detail');}} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-2 active:bg-gray-50 transition">
-                                    <div className="flex gap-3">
-                                        <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                            {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-gray-300"><i data-lucide="image"></i></div>}
+                                <div key={item.id} onClick={()=>{setSelectedAsset(item); setView('detail');}} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex gap-4 cursor-pointer">
+                                    <div className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0">
+                                        {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-slate-300"><ImageIcon/></div>}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start">
+                                            <h3 className="font-bold text-slate-800 truncate">{item.name}</h3>
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${item.status==='ปกติ'?'bg-green-100 text-green-700':'bg-orange-100 text-orange-700'}`}>{item.status}</span>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between">
-                                                <h3 className="font-bold text-gray-800 truncate">{item.name}</h3>
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-full self-start ${item.status==='ปกติ'?'bg-green-100 text-green-700':'bg-orange-100 text-orange-700'}`}>{item.status}</span>
-                                            </div>
-                                            <p className="text-xs text-gray-500 mt-1">ID: {item.id}</p>
-                                            <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                                                <i data-lucide="map-pin" className="w-3 h-3"></i> {item.location}
-                                            </div>
-                                        </div>
+                                        <p className="text-xs text-slate-500 mt-1 font-mono">{item.id}</p>
                                     </div>
                                 </div>
                             ))}
-                            {filtered.length === 0 && <div className="text-center text-gray-400 mt-10">ไม่พบข้อมูล</div>}
+                            {filtered.length === 0 && <div className="text-center text-slate-400 mt-10">ไม่พบอุปกรณ์ในแผนกนี้</div>}
                         </div>
+                        
+                        <button onClick={()=>setView('add')} className="fixed bottom-24 right-4 bg-blue-600 text-white p-4 rounded-full shadow-xl shadow-blue-600/30 active:scale-90 transition">
+                            <Plus size={24}/>
+                        </button>
                     </div>
                 );
             };
@@ -201,254 +226,231 @@
             const AddAsset = () => {
                 const [form, setForm] = useState({
                     id: `EQ-${new Date().getFullYear()}-${Math.floor(Math.random()*10000)}`,
-                    name: '', model: '', location: '', status: 'ปกติ', purchaseDate: '', image: '', receiptPdf: ''
+                    name: '', model: '', location: selectedDept || '', status: 'ปกติ', purchaseDate: '', image: '', receiptPdf: ''
                 });
 
-                const handleSubmit = (e) => {
-                    e.preventDefault();
-                    if(!form.name) return alert("กรุณาใส่ชื่อ");
-                    postData({ action: 'save_asset', ...form });
-                };
-
-                const handleFile = async (e, key) => {
-                    const file = e.target.files[0];
-                    if(file) {
-                        try {
-                            const base64 = await fileToBase64(file);
-                            setForm({...form, [key]: base64});
-                        } catch(err) {}
-                    }
-                };
+                const handleFile = async (e, k) => { if(e.target.files[0]) setForm({...form, [k]: await fileToBase64(e.target.files[0])}) };
 
                 return (
-                    <div className="p-4 pb-20 fade-in">
+                    <div className="p-4 pb-24 fade-in">
                         <div className="flex items-center gap-2 mb-6">
-                            <button onClick={()=>setView('list')} className="p-2 bg-gray-100 rounded-full"><i data-lucide="chevron-left" className="w-5 h-5"></i></button>
-                            <h2 className="text-xl font-bold">เพิ่มอุปกรณ์ใหม่</h2>
+                            <button onClick={()=>setView('departments')} className="p-2 bg-white rounded-full border"><ArrowLeft size={20}/></button>
+                            <h2 className="text-xl font-bold">เพิ่มอุปกรณ์</h2>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {/* Image Upload */}
-                            <div className="w-full h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center relative overflow-hidden">
-                                {form.image ? <img src={form.image} className="w-full h-full object-cover"/> : <div className="text-gray-400 flex flex-col items-center"><i data-lucide="camera" className="w-8 h-8 mb-2"></i><span className="text-sm">เพิ่มรูปภาพ</span></div>}
-                                <input type="file" accept="image/*" onChange={e=>handleFile(e, 'image')} className="absolute inset-0 opacity-0 cursor-pointer"/>
+                        <div className="space-y-4">
+                            <div className="w-full h-48 bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group">
+                                {form.image ? <img src={form.image} className="w-full h-full object-cover"/> : <div className="text-slate-400 flex flex-col items-center"><ImageIcon size={32}/><span className="text-xs mt-2">เพิ่มรูปภาพ</span></div>}
+                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>handleFile(e,'image')}/>
                             </div>
 
-                            <input className="input-field" placeholder="ชื่ออุปกรณ์" value={form.name} onChange={e=>setForm({...form, name: e.target.value})} required/>
+                            <input className="input-box" placeholder="ชื่ออุปกรณ์ *" value={form.name} onChange={e=>setForm({...form, name:e.target.value})}/>
+                            <input className="input-box" placeholder="รุ่น / Model" value={form.model} onChange={e=>setForm({...form, model:e.target.value})}/>
+                            
                             <div className="grid grid-cols-2 gap-3">
-                                <input className="input-field" placeholder="รุ่น / Model" value={form.model} onChange={e=>setForm({...form, model: e.target.value})}/>
-                                <input className="input-field" placeholder="สถานที่" list="locs" value={form.location} onChange={e=>setForm({...form, location: e.target.value})}/>
-                                <datalist id="locs">{[...new Set(assets.map(a=>a.location))].map(l=><option key={l} value={l}/>)}</datalist>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <input type="date" className="input-field" value={form.purchaseDate} onChange={e=>setForm({...form, purchaseDate: e.target.value})}/>
-                                <select className="input-field" value={form.status} onChange={e=>setForm({...form, status: e.target.value})}>
-                                    <option value="ปกติ">ปกติ</option>
-                                    <option value="ส่งซ่อม">ส่งซ่อม</option>
-                                    <option value="เสีย">เสีย</option>
+                                <input className="input-box" list="depts" placeholder="แผนก" value={form.location} onChange={e=>setForm({...form, location:e.target.value})}/>
+                                <datalist id="depts">{departments.map(d=><option key={d} value={d}/>)}</datalist>
+                                
+                                <select className="input-box" value={form.status} onChange={e=>setForm({...form, status:e.target.value})}>
+                                    <option>ปกติ</option><option>ส่งซ่อม</option><option>เสีย</option>
                                 </select>
                             </div>
                             
-                            <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 flex items-center justify-between">
-                                <span className="text-sm text-orange-800 font-medium flex gap-2"><i data-lucide="file-text" className="w-4 h-4"></i> ใบเสร็จ (PDF)</span>
-                                <input type="file" accept="application/pdf" onChange={e=>handleFile(e, 'receiptPdf')} className="text-xs text-gray-500 w-32"/>
+                            <input type="date" className="input-box" value={form.purchaseDate} onChange={e=>setForm({...form, purchaseDate:e.target.value})}/>
+                            
+                            <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+                                <label className="flex items-center gap-2 text-sm font-bold text-orange-800 mb-2"><FileText size={16}/> ใบเสร็จ (PDF)</label>
+                                <input type="file" accept="application/pdf" className="text-xs w-full text-slate-500" onChange={e=>handleFile(e,'receiptPdf')}/>
                             </div>
 
-                            <button disabled={submitting} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg flex justify-center items-center gap-2 mt-4 active:scale-95 transition">
-                                {submitting ? <i data-lucide="loader-2" className="animate-spin"></i> : <i data-lucide="save"></i>} 
-                                {submitting ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                            <button onClick={()=>postData({action:'save_asset', ...form})} disabled={submitting} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg flex justify-center items-center gap-2 mt-4">
+                                {submitting ? <Loader2 className="animate-spin"/> : <Save size={20}/>} {submitting?'กำลังบันทึก...':'บันทึกข้อมูล'}
                             </button>
-                        </form>
+                        </div>
                     </div>
                 );
             };
 
-            const AssetDetail = () => {
+            const DetailAsset = () => {
                 const item = selectedAsset;
-                const [tab, setTab] = useState('info'); // info, history
-                // History Log State
-                const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
-                const [logType, setLogType] = useState('ซ่อมแซม');
-                const [logDesc, setLogDesc] = useState('');
-                const [logLabor, setLogLabor] = useState('');
-                const [parts, setParts] = useState([]);
-                // Temp Part
-                const [tempPart, setTempPart] = useState({ name: '', price: '', image: '', pdf: '' });
+                const [tab, setTab] = useState('info');
+                // History Form
+                const [log, setLog] = useState({ date: new Date().toISOString().split('T')[0], type: 'ซ่อมแซม', description: '', labor: '', parts: [] });
+                const [part, setPart] = useState({ name: '', price: '', image: '', pdf: '' });
+                const [selectedLog, setSelectedLog] = useState(null); // For popup
 
-                if (!item) return null;
+                if(!item) return null;
 
-                const handleDelete = () => {
-                    if(confirm("ยืนยันการลบ?")) {
-                        postData({ action: 'delete_asset', id: item.id });
-                        setView('list');
-                    }
-                };
-
-                const handlePartFile = async (e, key) => {
-                    const f = e.target.files[0];
-                    if(f) setTempPart({...tempPart, [key]: await fileToBase64(f)});
-                };
-
-                const addPart = () => {
-                    if(!tempPart.name) return;
-                    setParts([...parts, tempPart]);
-                    setTempPart({ name: '', price: '', image: '', pdf: '' });
-                };
+                const addPart = () => { if(part.name) { setLog({...log, parts:[...log.parts, part]}); setPart({name:'', price:'', image:'', pdf:''}); }};
+                const handlePartFile = async (e, k) => { if(e.target.files[0]) setPart({...part, [k]: await fileToBase64(e.target.files[0])}) };
 
                 const submitLog = () => {
-                    if(!logDesc) return alert("ใส่รายละเอียด");
-                    const totalCost = Number(logLabor) + parts.reduce((s,p) => s + Number(p.price), 0);
-                    const logData = {
-                        id: Date.now(),
-                        date: logDate, type: logType, description: logDesc, laborCost: logLabor, totalCost: totalCost,
-                        parts: parts
+                    const total = Number(log.labor) + log.parts.reduce((s,p)=>s+Number(p.price),0);
+                    const newLog = { 
+                        id: Date.now(), 
+                        date: log.date, type: log.type, description: log.description, 
+                        laborCost: log.labor, totalCost: total, parts: log.parts 
                     };
-                    postData({ action: 'save_log', assetId: item.id, log: logData });
+                    postData({ action: 'save_log', assetId: item.id, log: newLog });
+                };
+
+                const deleteLog = (logId) => {
+                     if(confirm("ลบประวัตินี้?")) {
+                         postData({ action: 'delete_log', assetId: item.id, logId: logId });
+                         setSelectedLog(null);
+                     }
                 };
 
                 return (
-                    <div className="pb-20 fade-in bg-white min-h-screen">
-                        {/* Header Image */}
-                        <div className="h-64 bg-gray-200 relative">
-                            {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-gray-400"><i data-lucide="image" className="w-12 h-12"></i></div>}
-                            <button onClick={()=>setView('list')} className="absolute top-4 left-4 p-2 bg-white/80 rounded-full backdrop-blur-sm"><i data-lucide="chevron-left"></i></button>
-                            <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/80 to-transparent p-6 text-white">
-                                <h1 className="text-2xl font-bold">{item.name}</h1>
-                                <p className="opacity-80 text-sm font-mono">{item.id}</p>
-                            </div>
+                    <div className="pb-24 fade-in bg-white min-h-screen">
+                        {/* Header */}
+                        <div className="relative h-72 bg-slate-200">
+                             {item.image ? <img src={item.image} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-slate-400"><ImageIcon size={64}/></div>}
+                             <button onClick={()=>setView('assets')} className="absolute top-4 left-4 bg-white/80 p-2 rounded-full backdrop-blur-sm"><ArrowLeft/></button>
+                             <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/80 to-transparent p-6 pt-20 text-white">
+                                 <h1 className="text-2xl font-bold">{item.name}</h1>
+                                 <p className="font-mono text-sm opacity-80">{item.id}</p>
+                             </div>
                         </div>
 
                         {/* Tabs */}
                         <div className="flex border-b">
-                            <button onClick={()=>setTab('info')} className={`flex-1 py-4 text-sm font-medium border-b-2 ${tab==='info'?'border-blue-600 text-blue-600':'border-transparent text-gray-500'}`}>รายละเอียด</button>
-                            <button onClick={()=>setTab('history')} className={`flex-1 py-4 text-sm font-medium border-b-2 ${tab==='history'?'border-blue-600 text-blue-600':'border-transparent text-gray-500'}`}>ประวัติซ่อม ({item.history?.length||0})</button>
+                            <button onClick={()=>setTab('info')} className={`flex-1 py-4 font-bold text-sm border-b-2 ${tab==='info'?'border-blue-600 text-blue-600':'border-transparent text-slate-500'}`}>ข้อมูล</button>
+                            <button onClick={()=>setTab('history')} className={`flex-1 py-4 font-bold text-sm border-b-2 ${tab==='history'?'border-blue-600 text-blue-600':'border-transparent text-slate-500'}`}>ประวัติ ({item.history?.length||0})</button>
                         </div>
 
                         <div className="p-6">
                             {tab === 'info' && (
-                                <div className="space-y-5">
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div><label className="text-xs text-gray-400">รุ่น</label><div className="font-medium">{item.model||'-'}</div></div>
-                                        <div><label className="text-xs text-gray-400">วันที่ซื้อ</label><div className="font-medium">{item.purchaseDate}</div></div>
-                                        <div><label className="text-xs text-gray-400">สถานะ</label><div className="font-medium">{item.status}</div></div>
-                                        <div><label className="text-xs text-gray-400">สถานที่</label><div className="font-medium">{item.location}</div></div>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-6 text-sm">
+                                        <div><label className="text-xs text-slate-400 uppercase">รุ่น</label><div className="font-bold">{item.model||'-'}</div></div>
+                                        <div><label className="text-xs text-slate-400 uppercase">วันที่ซื้อ</label><div className="font-bold">{item.purchaseDate}</div></div>
+                                        <div><label className="text-xs text-slate-400 uppercase">แผนก</label><div className="font-bold">{item.location}</div></div>
+                                        <div><label className="text-xs text-slate-400 uppercase">สถานะ</label><div className="font-bold">{item.status}</div></div>
                                     </div>
                                     {item.receiptPdf && (
-                                        <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 p-3 bg-orange-50 text-orange-700 rounded-xl border border-orange-100 text-sm font-medium">
-                                            <i data-lucide="file-text" className="w-4 h-4"></i> ดูใบเสร็จ PDF
+                                        <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 p-4 bg-orange-50 text-orange-700 rounded-xl border border-orange-100 font-bold mt-4">
+                                            <FileText size={20}/> ดูใบเสร็จ PDF
                                         </a>
                                     )}
-                                    <button onClick={handleDelete} className="w-full py-3 text-red-500 border border-red-100 bg-red-50 rounded-xl text-sm font-medium mt-6">ลบอุปกรณ์</button>
+                                    <button onClick={()=>{if(confirm('ลบอุปกรณ์?')) {postData({action:'delete_asset', id:item.id}); setView('assets');}}} className="w-full py-4 text-red-500 bg-red-50 rounded-xl font-bold mt-8">ลบอุปกรณ์</button>
                                 </div>
                             )}
 
                             {tab === 'history' && (
                                 <div className="space-y-6">
-                                    {/* Add Log Form */}
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                        <h3 className="font-bold text-sm mb-3 text-gray-700">บันทึกการซ่อม</h3>
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                        <h3 className="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2"><Wrench size={16}/> บันทึกการซ่อม</h3>
                                         <div className="grid grid-cols-2 gap-2 mb-2">
-                                            <input type="date" className="input-sm" value={logDate} onChange={e=>setLogDate(e.target.value)}/>
-                                            <select className="input-sm" value={logType} onChange={e=>setLogType(e.target.value)}>
-                                                <option>ซ่อมแซม</option><option>บำรุงรักษา</option>
-                                            </select>
+                                            <input type="date" className="input-box text-xs" value={log.date} onChange={e=>setLog({...log, date:e.target.value})}/>
+                                            <select className="input-box text-xs" value={log.type} onChange={e=>setLog({...log, type:e.target.value})}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select>
                                         </div>
-                                        <textarea className="input-sm w-full mb-2" placeholder="รายละเอียด..." rows="2" value={logDesc} onChange={e=>setLogDesc(e.target.value)}></textarea>
+                                        <textarea className="input-box text-sm mb-2" rows="2" placeholder="รายละเอียด..." value={log.description} onChange={e=>setLog({...log, description:e.target.value})}></textarea>
                                         
-                                        {/* Parts Section */}
-                                        <div className="bg-white p-3 rounded-lg border mb-2">
-                                            <p className="text-xs font-bold mb-2">เพิ่มอะไหล่</p>
+                                        {/* Parts */}
+                                        <div className="bg-white p-3 rounded-xl border mb-2">
+                                            <div className="text-xs font-bold mb-2">เพิ่มอะไหล่</div>
                                             <div className="flex gap-2 mb-2">
-                                                <input className="input-sm flex-1" placeholder="ชื่อ" value={tempPart.name} onChange={e=>setTempPart({...tempPart, name:e.target.value})}/>
-                                                <input className="input-sm w-20" type="number" placeholder="ราคา" value={tempPart.price} onChange={e=>setTempPart({...tempPart, price:e.target.value})}/>
+                                                <input className="input-box p-1 text-xs flex-1" placeholder="ชื่อ" value={part.name} onChange={e=>setPart({...part, name:e.target.value})}/>
+                                                <input className="input-box p-1 text-xs w-20" type="number" placeholder="฿" value={part.price} onChange={e=>setPart({...part, price:e.target.value})}/>
                                             </div>
-                                            <div className="flex gap-2 mb-2 text-xs">
-                                                <label className={`flex-1 border py-1.5 text-center rounded cursor-pointer ${tempPart.image?'bg-green-100 text-green-700':'bg-gray-50'}`}>
-                                                    {tempPart.image ? '✓ รูป' : '+ รูป'} <input type="file" className="hidden" accept="image/*" onChange={e=>handlePartFile(e,'image')}/>
-                                                </label>
-                                                <label className={`flex-1 border py-1.5 text-center rounded cursor-pointer ${tempPart.pdf?'bg-green-100 text-green-700':'bg-gray-50'}`}>
-                                                    {tempPart.pdf ? '✓ PDF' : '+ PDF'} <input type="file" className="hidden" accept="application/pdf" onChange={e=>handlePartFile(e,'pdf')}/>
-                                                </label>
-                                                <button onClick={addPart} className="bg-gray-800 text-white px-3 rounded">+</button>
+                                            <div className="flex gap-2 text-xs mb-2">
+                                                <label className={`flex-1 border py-1.5 text-center rounded cursor-pointer ${part.image?'bg-green-100':'bg-slate-50'}`}>{part.image?'✓ รูป':'+ รูป'} <input type="file" className="hidden" accept="image/*" onChange={e=>handlePartFile(e,'image')}/></label>
+                                                <label className={`flex-1 border py-1.5 text-center rounded cursor-pointer ${part.pdf?'bg-green-100':'bg-slate-50'}`}>{part.pdf?'✓ PDF':'+ PDF'} <input type="file" className="hidden" accept="application/pdf" onChange={e=>handlePartFile(e,'pdf')}/></label>
+                                                <button onClick={addPart} className="bg-slate-800 text-white px-3 rounded">+</button>
                                             </div>
-                                            {parts.map((p,i)=>(
-                                                <div key={i} className="flex justify-between text-xs p-1 border-b last:border-0">
-                                                    <span>{p.name}</span><span>{p.price}</span>
-                                                </div>
-                                            ))}
+                                            {log.parts.map((p,i)=><div key={i} className="text-xs flex justify-between p-1 bg-slate-50 mb-1">{p.name} <span>{p.price}</span></div>)}
                                         </div>
 
-                                        <input type="number" className="input-sm w-full mb-3" placeholder="ค่าแรง (บาท)" value={logLabor} onChange={e=>setLogLabor(e.target.value)}/>
-                                        
-                                        <button onClick={submitLog} disabled={submitting} className="w-full bg-blue-600 text-white py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2">
-                                            {submitting ? <i data-lucide="loader-2" className="animate-spin w-4 h-4"></i> : <i data-lucide="save" className="w-4 h-4"></i>} บันทึก
-                                        </button>
+                                        <input type="number" className="input-box text-sm mb-3" placeholder="ค่าแรง" value={log.labor} onChange={e=>setLog({...log, labor:e.target.value})}/>
+                                        <button onClick={submitLog} disabled={submitting} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg text-sm">{submitting?'กำลังบันทึก...':'บันทึก'}</button>
                                     </div>
 
-                                    {/* Timeline */}
-                                    <div className="space-y-4 relative pl-4 border-l-2 border-gray-100">
+                                    <div className="space-y-4">
                                         {item.history && item.history.map((h, i) => (
-                                            <div key={i} className="relative mb-6">
-                                                <div className="absolute -left-[21px] top-0 w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></div>
-                                                <div className="flex justify-between items-start">
-                                                    <span className="font-bold text-gray-800 text-sm">{h.description}</span>
-                                                    <span className="font-bold text-blue-600 text-sm">฿{Number(h.totalCost).toLocaleString()}</span>
+                                            <div key={i} onClick={()=>setSelectedLog(h)} className="flex gap-4 relative cursor-pointer group">
+                                                <div className="flex flex-col items-center">
+                                                    <div className="w-3 h-3 rounded-full bg-blue-500 mt-1.5 ring-4 ring-blue-50"></div>
+                                                    <div className="w-0.5 bg-slate-200 flex-1 my-1"></div>
                                                 </div>
-                                                <div className="text-xs text-gray-400 mt-1">{h.date} • {h.type}</div>
-                                                {h.parts && h.parts.length > 0 && (
-                                                    <div className="mt-2 bg-gray-50 p-2 rounded text-xs space-y-1">
-                                                        {h.parts.map((p, idx) => (
-                                                            <div key={idx} className="flex justify-between text-gray-600">
-                                                                <div className="flex items-center gap-2">
-                                                                    {p.name}
-                                                                    {p.image && <a href={p.image} target="_blank" className="text-blue-500"><i data-lucide="image" className="w-3 h-3"></i></a>}
-                                                                    {p.pdf && <a href={p.pdf} target="_blank" className="text-orange-500"><i data-lucide="file-text" className="w-3 h-3"></i></a>}
-                                                                </div>
-                                                                <span>฿{p.price}</span>
-                                                            </div>
-                                                        ))}
+                                                <div className="flex-1 pb-4 border-b border-slate-50 last:border-0">
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="font-bold text-slate-800 text-sm">{h.description}</span>
+                                                        <span className="font-bold text-blue-600 text-sm">฿{Number(h.totalCost).toLocaleString()}</span>
                                                     </div>
-                                                )}
+                                                    <div className="text-xs text-slate-400 mt-1">{h.date} • {h.type}</div>
+                                                </div>
                                             </div>
                                         ))}
-                                        {(!item.history || item.history.length === 0) && <p className="text-xs text-gray-400">ยังไม่มีประวัติ</p>}
                                     </div>
                                 </div>
                             )}
                         </div>
+
+                        {/* Log Detail Popup */}
+                        {selectedLog && (
+                            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm fade-in">
+                                <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-bold text-lg">รายละเอียด</h3>
+                                        <button onClick={()=>setSelectedLog(null)}><X/></button>
+                                    </div>
+                                    <div className="space-y-3 text-sm">
+                                        <div><label className="text-xs text-slate-400">วันที่</label><div className="font-bold">{selectedLog.date}</div></div>
+                                        <div><label className="text-xs text-slate-400">รายละเอียด</label><div className="font-bold">{selectedLog.description}</div></div>
+                                        {selectedLog.parts?.length > 0 && (
+                                            <div className="bg-slate-50 p-3 rounded-xl">
+                                                <label className="text-xs font-bold block mb-2">อะไหล่</label>
+                                                {selectedLog.parts.map((p,i)=>(
+                                                    <div key={i} className="flex justify-between items-center py-1 border-b last:border-0 border-slate-200">
+                                                        <div className="flex items-center gap-2">
+                                                            {p.name}
+                                                            {p.image && <a href={p.image} target="_blank" className="text-blue-500"><ImageIcon size={14}/></a>}
+                                                            {p.pdf && <a href={p.pdf} target="_blank" className="text-orange-500"><FileText size={14}/></a>}
+                                                        </div>
+                                                        <span className="font-mono">฿{p.price}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between pt-2 border-t font-bold text-lg">
+                                            <span>รวม</span>
+                                            <span className="text-blue-600">฿{Number(selectedLog.totalCost).toLocaleString()}</span>
+                                        </div>
+                                        <button onClick={()=>deleteLog(selectedLog.id)} className="w-full py-3 bg-red-50 text-red-500 font-bold rounded-xl mt-4">ลบประวัตินี้</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             };
 
-            // --- Main Layout ---
+            // --- Navigation Bar ---
             return (
-                <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative">
+                <div className="bg-white min-h-screen max-w-md mx-auto shadow-2xl relative">
                     {loading && (
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 overflow-hidden z-50">
-                            <div className="h-full bg-blue-600 animate-pulse w-1/2"></div>
-                        </div>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-slate-100 z-50 overflow-hidden"><div className="h-full bg-blue-600 animate-pulse w-1/2"></div></div>
                     )}
                     
                     {view === 'dashboard' && <Dashboard />}
-                    {view === 'list' && <AssetList />}
+                    {view === 'departments' && <DepartmentList />}
+                    {view === 'assets' && <AssetList />}
                     {view === 'add' && <AddAsset />}
-                    {view === 'detail' && <AssetDetail />}
+                    {view === 'detail' && <DetailAsset />}
 
-                    {/* Bottom Nav */}
-                    <div className="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-100 flex justify-around py-3 pb-safe z-40 text-[10px] font-medium text-gray-400 shadow-[0_-5px_10px_rgba(0,0,0,0.02)]">
+                    <div className="fixed bottom-0 w-full max-w-md bg-white border-t border-slate-100 flex justify-around py-3 z-40 text-[10px] font-medium text-slate-400 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
                         <button onClick={()=>setView('dashboard')} className={`flex flex-col items-center gap-1 ${view==='dashboard'?'text-blue-600':''}`}>
-                            <i data-lucide="layout-dashboard" className="w-6 h-6"></i> ภาพรวม
+                            <LayoutDashboard size={24}/> <span>ภาพรวม</span>
                         </button>
-                        <button onClick={()=>setView('list')} className={`flex flex-col items-center gap-1 ${['list','detail'].includes(view)?'text-blue-600':''}`}>
-                            <i data-lucide="list" className="w-6 h-6"></i> รายการ
+                        <button onClick={()=>setView('departments')} className={`flex flex-col items-center gap-1 ${['departments','assets','detail'].includes(view)?'text-blue-600':''}`}>
+                            <Building2 size={24}/> <span>แผนก</span>
                         </button>
                         <button onClick={()=>setView('add')} className={`flex flex-col items-center gap-1 ${view==='add'?'text-blue-600':''}`}>
-                            <div className="bg-blue-600 text-white p-3 rounded-full -mt-6 shadow-lg border-4 border-white">
-                                <i data-lucide="plus" className="w-6 h-6"></i>
-                            </div>
+                             <div className="bg-blue-600 text-white p-3 rounded-full -mt-6 shadow-lg shadow-blue-500/40 border-4 border-white"><Plus size={24}/></div>
                         </button>
-                        <button onClick={fetchData} className="flex flex-col items-center gap-1">
-                            <i data-lucide="refresh-cw" className={`w-6 h-6 ${loading?'animate-spin':''}`}></i> รีเฟรช
+                        <button onClick={fetchData} className="flex flex-col items-center gap-1 active:scale-95 transition">
+                            <RefreshCw size={24} className={loading?'animate-spin':''}/> <span>รีเฟรช</span>
                         </button>
                     </div>
                 </div>
@@ -458,11 +460,5 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-    
-    <style>
-        .input-field { @apply w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm; }
-        .input-sm { @apply w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-blue-500 text-sm; }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-    </style>
 </body>
 </html>
