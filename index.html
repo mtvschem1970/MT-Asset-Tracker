@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MTA Asset Maintenance</title>
+    <title>MTA Asset Maintenance (Desktop Only)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -28,10 +28,7 @@
         .nav-item:hover { background-color: #f3f4f6; color: #111827; }
         .nav-item.active { background-color: #eff6ff; color: #2563eb; font-weight: 600; }
         
-        .mobile-nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.75rem; color: #9ca3af; padding: 0.5rem; transition: all 0.2s; }
-        .mobile-nav-item.active { color: #2563eb; }
-        
-        .pb-safe { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+        .pb-safe { padding-bottom: calc(20px + env(safe-area-inset-bottom)); } /* ลด Padding เพราะไม่มี Mobile Nav แล้ว */
         .scroll-container { -webkit-overflow-scrolling: touch; }
         
         .modal-enter { animation: modalIn 0.3s ease-out forwards; }
@@ -43,8 +40,7 @@
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
     </style>
 </head>
-<body class="text-gray-800 h-screen overflow-hidden flex flex-col md:flex-row">
-    <div id="root" class="w-full h-full"></div>
+<body class="text-gray-800 h-screen overflow-hidden flex flex-row"> <div id="root" class="w-full h-full"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
@@ -112,7 +108,7 @@
 
         // --- COMPONENTS ---
 
-        // 🟢🟢🟢 (NEW) ส่วนที่เพิ่มเข้ามาใหม่: Sidebar 🟢🟢🟢
+        // 🟢 Sidebar (Always Visible now)
         const Sidebar = ({ setView, view }) => {
             const menus = [
                 { id: 'dashboard', label: 'Dashboard', icon: Icons.Dashboard },
@@ -120,7 +116,8 @@
                 { id: 'departments', label: 'แผนก & อุปกรณ์', icon: Icons.Building },
             ];
             return (
-                <div className="hidden md:flex flex-col w-64 bg-white h-full border-r border-gray-200 p-4 shrink-0 shadow-sm z-20">
+                // ลบ hidden md:flex ออก เพื่อให้แสดงตลอด
+                <div className="flex flex-col w-64 bg-white h-full border-r border-gray-200 p-4 shrink-0 shadow-sm z-20">
                     <div className="flex items-center gap-3 px-4 py-6 mb-4">
                        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
                          <Icon path={Icons.Wrench} size={24} />
@@ -142,33 +139,13 @@
                         ))}
                     </div>
                     <div className="mt-auto pt-4 border-t border-gray-100">
-                        <div className="text-xs text-gray-400 text-center">Version 1.0.0</div>
+                        <div className="text-xs text-gray-400 text-center">Version 1.0.0 (Desktop)</div>
                     </div>
                 </div>
             );
         };
 
-        // 🟢🟢🟢 (NEW) ส่วนที่เพิ่มเข้ามาใหม่: MobileNav 🟢🟢🟢
-        const MobileNav = ({ setView, view }) => {
-             const menus = [
-                { id: 'dashboard', label: 'Dashboard', icon: Icons.Dashboard },
-                { id: 'pm_dashboard', label: 'แผน PM', icon: Icons.Calendar },
-                { id: 'departments', label: 'อุปกรณ์', icon: Icons.Building },
-            ];
-            return (
-                <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe z-50 flex justify-around items-center px-2 py-2 shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
-                     {menus.map(m => (
-                        <div key={m.id} 
-                            onClick={() => setView(m.id)}
-                            className={`mobile-nav-item ${view === m.id || (view.includes('asset') && m.id==='departments') || (view==='detail' && m.id==='departments') ? 'active' : ''}`}
-                        >
-                            <Icon path={m.icon} size={24} />
-                            <span>{m.label}</span>
-                        </div>
-                    ))}
-                </div>
-            );
-        };
+        // ❌ MobileNav (REMOVED) - ลบ Component นี้ทิ้งแล้ว
 
         const DashboardView = ({ data, setView }) => {
             const totalAssets = data.assets.length;
@@ -176,7 +153,13 @@
             const active = totalAssets - repairing;
             return (
                 <div className="p-6 md:p-10 w-full max-w-7xl mx-auto space-y-8 fade-in pb-safe">
-                    <div className="flex justify-between items-end"><div><h2 className="text-3xl font-bold text-gray-800">Dashboard</h2><p className="text-gray-500 mt-1">ภาพรวมสถานะทรัพย์สินทั้งหมด</p></div><button onClick={() => setView('add_asset')} className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-200 transition active:scale-95"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์ใหม่</button></div>
+                    <div className="flex justify-between items-end">
+                        <div><h2 className="text-3xl font-bold text-gray-800">Dashboard</h2><p className="text-gray-500 mt-1">ภาพรวมสถานะทรัพย์สินทั้งหมด</p></div>
+                        {/* ลบ hidden md:flex ออก */}
+                        <button onClick={() => setView('add_asset')} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-200 transition active:scale-95">
+                            <Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์ใหม่
+                        </button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-blue-50 text-blue-600 rounded-2xl"><Icon path={Icons.Building} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">ทั้งหมด</p><p className="text-3xl font-bold text-gray-800 mt-1">{totalAssets}</p></div></div>
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-orange-50 text-orange-600 rounded-2xl"><Icon path={Icons.Wrench} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">กำลังซ่อม</p><p className="text-3xl font-bold text-orange-600 mt-1">{repairing}</p></div></div>
@@ -288,7 +271,12 @@
             const [newDept, setNewDept] = useState({ name: '', code: '' });
             return (
                 <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-safe fade-in">
-                    <div className="flex justify-between items-center mb-8"><div><h2 className="text-2xl md:text-3xl font-bold text-gray-800">แผนก (Departments)</h2><p className="text-gray-500 text-sm mt-1">เลือกแผนกเพื่อดูอุปกรณ์ภายใน</p></div><button onClick={() => setShowDeptModal(true)} className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 px-4 py-2 rounded-xl text-sm font-bold flex gap-2 shadow-sm transition items-center"><Icon path={Icons.Add} size={18}/> <span className="hidden sm:inline">เพิ่มแผนก</span></button></div>
+                    <div className="flex justify-between items-center mb-8">
+                        <div><h2 className="text-2xl md:text-3xl font-bold text-gray-800">แผนก (Departments)</h2><p className="text-gray-500 text-sm mt-1">เลือกแผนกเพื่อดูอุปกรณ์ภายใน</p></div>
+                        <button onClick={() => setShowDeptModal(true)} className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 px-4 py-2 rounded-xl text-sm font-bold flex gap-2 shadow-sm transition items-center">
+                            <Icon path={Icons.Add} size={18}/> <span>เพิ่มแผนก</span>
+                        </button>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-10">
                         {data.departments.map(dept => (
                             <div key={dept.name} onClick={() => { setSelectedDept(dept.name); setView('assets'); }} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer card-hover gap-3 h-48 relative group"><div className="absolute top-3 right-3 text-[10px] font-mono font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded border border-gray-100 group-hover:bg-blue-50 group-hover:text-blue-500 transition">{dept.code}</div><div className="bg-blue-50 text-blue-500 p-4 rounded-full mb-2 group-hover:scale-110 transition"><Icon path={Icons.Building} size={32}/></div><span className="font-bold text-gray-800 text-lg text-center">{dept.name}</span><span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-500">{data.assets.filter(a => a.location === dept.name).length} อุปกรณ์</span></div>
@@ -311,8 +299,20 @@
 
             return (
                 <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-safe fade-in">
-                    <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8"><div className="flex items-center gap-4 flex-1"><button onClick={() => setView('departments')} className="p-2.5 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50 transition"><Icon path={Icons.ArrowLeft} size={20}/></button><h2 className="text-2xl font-bold truncate text-gray-800">{selectedDept}</h2></div><div className="relative w-full md:w-96"><div className="absolute left-4 top-3.5 text-gray-400"><Icon path={Icons.Search} size={18}/></div><input className="input-box pl-11 shadow-sm border-0" placeholder="ค้นหาชื่อ หรือ รหัส..." value={term} onChange={e => setTerm(e.target.value)}/></div><button onClick={() => setView('add_asset')} className="hidden md:flex bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition items-center gap-2"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์</button></div>
-                    <div className="md:hidden mb-4"><button onClick={() => setView('add_asset')} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์ใหม่</button></div>
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
+                        <div className="flex items-center gap-4 flex-1">
+                            <button onClick={() => setView('departments')} className="p-2.5 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50 transition"><Icon path={Icons.ArrowLeft} size={20}/></button>
+                            <h2 className="text-2xl font-bold truncate text-gray-800">{selectedDept}</h2>
+                        </div>
+                        <div className="relative w-full md:w-96"><div className="absolute left-4 top-3.5 text-gray-400"><Icon path={Icons.Search} size={18}/></div><input className="input-box pl-11 shadow-sm border-0" placeholder="ค้นหาชื่อ หรือ รหัส..." value={term} onChange={e => setTerm(e.target.value)}/></div>
+                        {/* ลบ hidden md:flex ออก */}
+                        <button onClick={() => setView('add_asset')} className="flex bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition items-center gap-2">
+                            <Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์
+                        </button>
+                    </div>
+                    
+                    {/* ลบปุ่ม Mobile Only Add Asset ออก */}
+                    
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-10">
                         {filtered.map(item => (
                             <div key={item.id} onClick={() => { setSelectedAsset(item); setView('detail'); }} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-3 cursor-pointer card-hover h-full group relative overflow-hidden">
@@ -514,10 +514,13 @@
             };
 
             return (
+                // 🟢 Flex Row เพื่อให้ Sidebar อยู่ซ้ายเสมอ
                 <div className="flex h-screen w-full bg-slate-50 overflow-hidden text-gray-800">
                     {(loading || submitting) && <LoadingOverlay text={submitting ? 'กำลังบันทึกและอัปโหลด...' : 'กำลังดึงข้อมูล...'}/>}
-                    {/* ตอนนี้มี Sidebar แล้ว ไม่ error แล้วครับ */}
+                    
+                    {/* Sidebar จะแสดงตลอดเวลา */}
                     <Sidebar setView={setView} view={view} fetchData={fetchData} />
+                    
                     <main className="flex-1 h-full relative overflow-hidden flex flex-col bg-[#f8fafc]">
                         {view === 'dashboard' && <DashboardView data={data} setView={setView} />}
                         {view === 'departments' && <DepartmentView data={data} setSelectedDept={setSelectedDept} setView={setView} postData={postData} />}
@@ -526,8 +529,8 @@
                         {view === 'detail' && <DetailAssetView item={selectedAsset} setView={setView} postData={postData} />}
                         {view === 'pm_dashboard' && <PmDashboardView assets={data.assets} setSelectedAsset={setSelectedAsset} setView={setView} />}
                     </main>
-                    {/* ตอนนี้มี MobileNav แล้ว ไม่ error แล้วครับ */}
-                    <MobileNav setView={setView} view={view} fetchData={fetchData} />
+                    
+                    {/* ❌ MobileNav ถูกลบออกแล้ว */}
                 </div>
             );
         };
