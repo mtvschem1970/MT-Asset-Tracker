@@ -36,7 +36,7 @@
         const { useState, useEffect, useMemo } = React;
 
         // ***************************************************************
-        // 🔴🔴🔴 สำคัญมาก: ลบข้อความข้างล่างนี้ แล้วใส่ URL ของคุณ 🔴🔴🔴
+        // 🔴🔴🔴 สำคัญมาก: ใส่ URL ของ Web App (Google Apps Script) ที่คุณ Deploy ล่าสุดตรงนี้ 🔴🔴🔴
         const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec"; 
         // ***************************************************************
 
@@ -109,20 +109,27 @@
             const postData = async (payload) => {
                 setSubmitting(true);
                 try {
+                    // ใช้ standard fetch แบบ POST (ลบ no-cors เพื่อให้รองรับการอ่าน response ในบางกรณี ถ้า backend รองรับ)
+                    // หมายเหตุ: โดยปกติ GAS 'doPost' จะต้องมีการ setup ให้ return JSON และ deploy เป็น "Anyone" ถึงจะอ่าน response ได้ดีที่สุด
                     await fetch(API_URL, {
                         method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
+                    
                     setTimeout(() => {
-                        fetchData();
+                        // ถ้าเป็นการ Save Asset/Log/Dept ให้ refresh ข้อมูลหลัก
+                        if (!['save_pm_schedule', 'delete_pm_schedule'].includes(payload.action)) {
+                            fetchData();
+                        }
+                        
                         setSubmitting(false);
                         if(payload.action === 'save_asset') { setView('assets'); alert('บันทึกอุปกรณ์เรียบร้อย'); }
                         if(payload.action === 'save_log') alert('บันทึกประวัติการซ่อมเรียบร้อย');
                         if(payload.action === 'save_dept') { setShowDeptModal(false); alert('สร้างแผนกเรียบร้อย'); }
-                        if(payload.action.includes('delete')) { setView('assets'); alert('ลบข้อมูลเรียบร้อย'); }
-                    }, 4000);
+                        if(payload.action.includes('delete') && !payload.action.includes('pm')) { setView('assets'); alert('ลบข้อมูลเรียบร้อย'); }
+                        if(payload.action === 'save_pm_schedule') alert('บันทึกตารางงานเรียบร้อย');
+                        if(payload.action === 'delete_pm_schedule') alert('ลบตารางงานเรียบร้อย');
+                    }, 2500);
                 } catch (err) {
                     alert("Error: " + err.message);
                     setSubmitting(false);
@@ -207,11 +214,11 @@
                     location: selectedDept || '', 
                     status: 'ปกติ', 
                     purchaseDate: new Date().toISOString().split('T')[0], 
-                    vendor: '', // เพิ่มฟิลด์ผู้จำหน่าย
-                    pmType: 'ภายใน', // เพิ่มชนิด PM
-                    pmVendorName: '', // ชื่อเจ้าที่รับ PM
-                    pmVendorContact: '', // เบอร์ติดต่อ PM
-                    nextPmDate: '', // วันที่ต้องทำ PM
+                    vendor: '', 
+                    pmType: 'ภายใน', 
+                    pmVendorName: '', 
+                    pmVendorContact: '', 
+                    nextPmDate: '', 
                     image: '', 
                     receiptPdf: '' 
                 });
@@ -282,11 +289,62 @@
 
             const DetailAssetView = () => {
                 const item = selectedAsset;
-                const [tab, setTab] = useState('history');
+                const [tab, setTab] = useState('history'); // history, newlog, pmschedule
                 const [log, setLog] = useState({ date: new Date().toISOString().split('T')[0], type: 'ซ่อมแซม', description: '', labor: '', parts: [] });
                 const [part, setPart] = useState({ name: '', price: '', image: '', pdf: '' });
                 const [selLog, setSelLog] = useState(null);
                 const [fileLoading, setFileLoading] = useState(false);
+
+                // --- PM Schedule States (Tab 3) ---
+                const [pmList, setPmList] = useState([]);
+                const [pmLoading, setPmLoading] = useState(false);
+                const [pmForm, setPmForm] = useState({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' });
+                const [isEditingPm, setIsEditingPm] = useState(false);
+
+                useEffect(() => {
+                    if (tab === 'pmschedule') {
+                        fetchPmSchedules();
+                    }
+                }, [tab, item.id]);
+
+                const fetchPmSchedules = async () => {
+                    setPmLoading(true);
+                    try {
+                        const response = await fetch(API_URL, {
+                            method: 'POST',
+                            body: JSON.stringify({ action: 'get_pm_schedules', assetId: item.id })
+                        });
+                        const json = await response.json();
+                        if (json.pmSchedules) setPmList(json.pmSchedules);
+                    } catch (err) { console.error(err); }
+                    setPmLoading(false);
+                };
+
+                const savePm = async () => {
+                    if (!pmForm.topic || !pmForm.planDate) return alert("ระบุหัวข้อและวันที่");
+                    setPmLoading(true);
+                    // *สำคัญ* ส่ง assetName ไปด้วยเพื่อให้ Backend สร้าง Sheet หัวตารางได้
+                    await postData({ 
+                        action: 'save_pm_schedule', 
+                        assetId: item.id, 
+                        assetName: item.name, 
+                        schedule: pmForm 
+                    });
+                    setPmForm({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' });
+                    setIsEditingPm(false);
+                    setTimeout(fetchPmSchedules, 2000); 
+                };
+
+                const deletePm = async (schId) => {
+                    if(!confirm("ลบรายการนี้?")) return;
+                    setPmLoading(true);
+                    await postData({ 
+                        action: 'delete_pm_schedule', 
+                        assetId: item.id,
+                        schId: schId 
+                    });
+                    setTimeout(fetchPmSchedules, 2000);
+                };
 
                 const handlePartFile = async (e, k) => {
                     if (e.target.files[0]) {
@@ -323,7 +381,7 @@
                                         <div className="flex justify-between"><span>ผู้จำหน่าย</span><span className="font-bold text-gray-900">{item.vendor || '-'}</span></div>
                                         
                                         <div className="pt-2 border-t mt-2">
-                                            <div className="text-xs font-bold text-gray-400 uppercase mb-2">ข้อมูลการ PM</div>
+                                            <div className="text-xs font-bold text-gray-400 uppercase mb-2">ข้อมูลการ PM (เบื้องต้น)</div>
                                             <div className="flex justify-between mb-1"><span>รอบถัดไป</span><span className="font-bold text-blue-600 bg-blue-50 px-2 rounded">{item.nextPmDate || '-'}</span></div>
                                             <div className="flex justify-between mb-1"><span>รูปแบบ</span><span className="font-bold text-gray-900">{item.pmType || '-'}</span></div>
                                             {item.pmType === 'ภายนอก' && (
@@ -340,9 +398,65 @@
                                 </div>
                             </div>
                             
-                            <div className="w-full lg:w-2/3"><div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]"><div className="flex border-b border-gray-100"><button onClick={() => setTab('history')} className={`flex-1 py-4 text-sm font-bold border-b-2 transition ${tab === 'history' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>ประวัติการซ่อม ({item.history?.length || 0})</button><button onClick={() => setTab('newlog')} className={`flex-1 py-4 text-sm font-bold border-b-2 transition ${tab === 'newlog' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>+ บันทึกซ่อมใหม่</button></div><div className="p-6">{tab === 'newlog' && (<div className="animate-[fadeIn_0.3s_ease-out]"><div className="grid grid-cols-2 gap-4 mb-4"><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">วันที่</label><input type="date" className="input-box" value={log.date} onChange={e => setLog({ ...log, date: e.target.value })} /></div><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ประเภท</label><select className="input-box" value={log.type} onChange={e => setLog({ ...log, type: e.target.value })}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select></div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">อาการ / รายละเอียด</label><textarea className="input-box" rows="3" placeholder="ระบุอาการ..." onChange={e => setLog({ ...log, description: e.target.value })}></textarea></div><div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-6 relative"><p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">เพิ่มรายการอะไหล่</p><div className="flex flex-wrap gap-2 mb-3 items-center"><input className="input-box p-2 text-sm flex-1 min-w-[120px]" placeholder="ชื่ออะไหล่" value={part.name} onChange={e => setPart({ ...part, name: e.target.value })} /><input className="input-box p-2 text-sm w-24" type="number" placeholder="ราคา" value={part.price} onChange={e => setPart({ ...part, price: e.target.value })} /><label className={`border p-2 rounded-lg cursor-pointer transition ${part.image ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบรูป"><Icon path={Icons.Image} size={18}/><input type="file" className="hidden" accept="image/*" onChange={e => handlePartFile(e, 'image')} /></label><label className={`border p-2 rounded-lg cursor-pointer transition ${part.pdf ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบ PDF"><Icon path={Icons.File} size={18}/><input type="file" className="hidden" accept="application/pdf" onChange={e => handlePartFile(e, 'pdf')} /></label><button onClick={addPart} className="bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-black flex items-center justify-center gap-1 transition text-xs font-bold min-w-[60px]"><Icon path={Icons.Add} size={16}/> เพิ่ม</button></div>{fileLoading && <div className="text-xs text-blue-500 animate-pulse mb-2 font-bold">กำลังอัปโหลดไฟล์...</div>}<div className="space-y-2">{log.parts.map((p, i) => (<div key={i} className="text-xs flex justify-between p-3 bg-white rounded-xl border font-medium shadow-sm items-center"><div className="flex items-center gap-2"><span className="font-bold text-gray-700">{p.name}</span>{p.image && <Icon path={Icons.Image} size={12} className="text-blue-500"/>}{p.pdf && <Icon path={Icons.File} size={12} className="text-orange-500"/>}</div><span>฿{Number(p.price).toLocaleString()}</span></div>))}</div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">ค่าแรงช่าง (บาท)</label><input type="number" className="input-box" placeholder="0.00" onChange={e => setLog({ ...log, labor: e.target.value })} /></div><button onClick={submitLog} disabled={fileLoading} className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition ${fileLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>บันทึกประวัติ</button></div>)}
-                            {tab === 'history' && (<div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">{item.history && item.history.map((h, i) => (<div key={i} onClick={() => setSelLog(h)} className="bg-white border border-gray-100 rounded-2xl p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition group"><div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-400 flex items-center gap-2 mb-1">{h.date} <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{h.type}</span></div><div className="font-bold text-gray-800 text-lg">{h.description}</div></div><div className="text-right"><div className="font-bold text-blue-600 text-lg">฿{Number(h.totalCost).toLocaleString()}</div></div></div>{h.parts?.length > 0 && <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">ใช้อะไหล่ {h.parts.length} รายการ</div>}</div>))}{(!item.history || item.history.length === 0) && <div className="text-center text-gray-400 py-12 flex flex-col items-center"><Icon path={Icons.Folder} size={48} className="mb-2 opacity-30"/><p>ยังไม่มีประวัติการซ่อม</p></div>}</div>)}
-                            </div></div></div>
+                            <div className="w-full lg:w-2/3"><div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
+                                <div className="flex border-b border-gray-100 overflow-x-auto">
+                                    <button onClick={() => setTab('history')} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition whitespace-nowrap ${tab === 'history' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>ประวัติซ่อม ({item.history?.length || 0})</button>
+                                    <button onClick={() => setTab('newlog')} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition whitespace-nowrap ${tab === 'newlog' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>+ บันทึกซ่อม</button>
+                                    <button onClick={() => setTab('pmschedule')} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition whitespace-nowrap ${tab === 'pmschedule' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>📅 ตาราง PM</button>
+                                </div>
+
+                                <div className="p-6">
+                                    {tab === 'newlog' && (<div className="animate-[fadeIn_0.3s_ease-out]"><div className="grid grid-cols-2 gap-4 mb-4"><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">วันที่</label><input type="date" className="input-box" value={log.date} onChange={e => setLog({ ...log, date: e.target.value })} /></div><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ประเภท</label><select className="input-box" value={log.type} onChange={e => setLog({ ...log, type: e.target.value })}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select></div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">อาการ / รายละเอียด</label><textarea className="input-box" rows="3" placeholder="ระบุอาการ..." onChange={e => setLog({ ...log, description: e.target.value })}></textarea></div><div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-6 relative"><p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">เพิ่มรายการอะไหล่</p><div className="flex flex-wrap gap-2 mb-3 items-center"><input className="input-box p-2 text-sm flex-1 min-w-[120px]" placeholder="ชื่ออะไหล่" value={part.name} onChange={e => setPart({ ...part, name: e.target.value })} /><input className="input-box p-2 text-sm w-24" type="number" placeholder="ราคา" value={part.price} onChange={e => setPart({ ...part, price: e.target.value })} /><label className={`border p-2 rounded-lg cursor-pointer transition ${part.image ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบรูป"><Icon path={Icons.Image} size={18}/><input type="file" className="hidden" accept="image/*" onChange={e => handlePartFile(e, 'image')} /></label><label className={`border p-2 rounded-lg cursor-pointer transition ${part.pdf ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบ PDF"><Icon path={Icons.File} size={18}/><input type="file" className="hidden" accept="application/pdf" onChange={e => handlePartFile(e, 'pdf')} /></label><button onClick={addPart} className="bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-black flex items-center justify-center gap-1 transition text-xs font-bold min-w-[60px]"><Icon path={Icons.Add} size={16}/> เพิ่ม</button></div>{fileLoading && <div className="text-xs text-blue-500 animate-pulse mb-2 font-bold">กำลังอัปโหลดไฟล์...</div>}<div className="space-y-2">{log.parts.map((p, i) => (<div key={i} className="text-xs flex justify-between p-3 bg-white rounded-xl border font-medium shadow-sm items-center"><div className="flex items-center gap-2"><span className="font-bold text-gray-700">{p.name}</span>{p.image && <Icon path={Icons.Image} size={12} className="text-blue-500"/>}{p.pdf && <Icon path={Icons.File} size={12} className="text-orange-500"/>}</div><span>฿{Number(p.price).toLocaleString()}</span></div>))}</div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">ค่าแรงช่าง (บาท)</label><input type="number" className="input-box" placeholder="0.00" onChange={e => setLog({ ...log, labor: e.target.value })} /></div><button onClick={submitLog} disabled={fileLoading} className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition ${fileLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>บันทึกประวัติ</button></div>)}
+                                    
+                                    {tab === 'history' && (<div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">{item.history && item.history.map((h, i) => (<div key={i} onClick={() => setSelLog(h)} className="bg-white border border-gray-100 rounded-2xl p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition group"><div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-400 flex items-center gap-2 mb-1">{h.date} <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{h.type}</span></div><div className="font-bold text-gray-800 text-lg">{h.description}</div></div><div className="text-right"><div className="font-bold text-blue-600 text-lg">฿{Number(h.totalCost).toLocaleString()}</div></div></div>{h.parts?.length > 0 && <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">ใช้อะไหล่ {h.parts.length} รายการ</div>}</div>))}{(!item.history || item.history.length === 0) && <div className="text-center text-gray-400 py-12 flex flex-col items-center"><Icon path={Icons.Folder} size={48} className="mb-2 opacity-30"/><p>ยังไม่มีประวัติการซ่อม</p></div>}</div>)}
+                                    
+                                    {tab === 'pmschedule' && (
+                                        <div className="animate-[fadeIn_0.3s_ease-out]">
+                                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6">
+                                                <h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Icon path={Icons.Calendar} size={18}/> {isEditingPm ? 'แก้ไขตารางงาน' : 'เพิ่มตารางงานใหม่'}</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                    <input type="date" className="input-box" value={pmForm.planDate} onChange={e => setPmForm({...pmForm, planDate: e.target.value})} />
+                                                    <input type="text" className="input-box" placeholder="หัวข้อการ PM..." value={pmForm.topic} onChange={e => setPmForm({...pmForm, topic: e.target.value})} />
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                    <select className="input-box" value={pmForm.status} onChange={e => setPmForm({...pmForm, status: e.target.value})}>
+                                                        <option>รอเป้าหมาย</option>
+                                                        <option>ดำเนินการแล้ว</option>
+                                                        <option>ยกเลิก</option>
+                                                    </select>
+                                                    <input type="text" className="input-box" placeholder="หมายเหตุ (ถ้ามี)" value={pmForm.note} onChange={e => setPmForm({...pmForm, note: e.target.value})} />
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={savePm} disabled={pmLoading} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition flex-1">บันทึก</button>
+                                                    {isEditingPm && <button onClick={() => { setIsEditingPm(false); setPmForm({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' }); }} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-300 transition">ยกเลิก</button>}
+                                                </div>
+                                            </div>
+
+                                            {pmLoading ? <div className="text-center py-10 text-gray-400 animate-pulse">กำลังโหลดตารางงาน...</div> : (
+                                                <div className="space-y-3">
+                                                    {pmList.length === 0 && <div className="text-center text-gray-400 py-10">ยังไม่มีตารางงาน</div>}
+                                                    {pmList.map((pm, i) => (
+                                                        <div key={i} className="bg-white border border-gray-100 p-4 rounded-xl flex justify-between items-center hover:shadow-md transition group">
+                                                            <div>
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-sm font-bold">{pm.planDate}</span>
+                                                                    <span className={`text-xs px-2 py-0.5 rounded border ${pm.status==='ดำเนินการแล้ว'?'bg-green-50 text-green-600 border-green-200':'bg-gray-50 text-gray-500 border-gray-200'}`}>{pm.status}</span>
+                                                                </div>
+                                                                <div className="font-bold text-gray-800">{pm.topic}</div>
+                                                                {pm.note && <div className="text-xs text-gray-400 mt-1">{pm.note}</div>}
+                                                            </div>
+                                                            <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition">
+                                                                <button onClick={() => { setPmForm(pm); setIsEditingPm(true); }} className="p-2 hover:bg-gray-100 rounded text-blue-500"><Icon path={Icons.Wrench} size={16}/></button>
+                                                                <button onClick={() => deletePm(pm.schId)} className="p-2 hover:bg-red-50 rounded text-red-500"><Icon path={Icons.Trash} size={16}/></button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div></div>
                         </div></div>
                         {selLog && (<div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm fade-in"><div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"><button onClick={() => setSelLog(null)} className="absolute top-4 right-4 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><Icon path={Icons.Close} size={20}/></button><div className="mb-6 border-b pb-4"><div className="text-gray-500 text-sm font-medium">{selLog.date}</div><h3 className="font-bold text-2xl text-gray-900 mt-1">{selLog.type}</h3></div><div className="space-y-6"><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">อาการ / รายละเอียด</span><div className="bg-gray-50 p-4 rounded-xl text-gray-700 border border-gray-100 font-medium">{selLog.description}</div></div><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">รายการอะไหล่</span><div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">{selLog.parts?.map((p, i) => (<div key={i} className="flex flex-col p-4 border-b last:border-0 border-gray-200 bg-white"><div className="flex justify-between items-center mb-2"><span className="font-bold text-gray-800">{p.name}</span><span className="font-mono text-gray-600 font-bold">฿{Number(p.price).toLocaleString()}</span></div><div className="flex gap-2">{p.image && <a href={p.image} target="_blank" className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.Image} size={14}/> ดูรูป</a>}{p.pdf && <a href={p.pdf} target="_blank" className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.File} size={14}/> เปิด PDF</a>}</div></div>))}{(!selLog.parts || selLog.parts.length === 0) && <div className="p-6 text-center text-gray-400 text-sm">ไม่มีรายการอะไหล่</div>}</div></div><div className="flex justify-between items-center pt-4 border-t border-gray-100"><div className="text-sm text-gray-500 font-medium">ค่าแรงช่าง ฿{Number(selLog.laborCost).toLocaleString()}</div><div className="text-xl font-bold text-slate-900">รวม ฿{Number(selLog.totalCost).toLocaleString()}</div></div><button onClick={() => { if (confirm('ยืนยันลบประวัตินี้?')) { postData({ action: 'delete_log', assetId: item.id, logId: selLog.id }); setSelLog(null); } }} className="w-full py-3 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition text-sm">ลบรายการนี้</button></div></div></div>)}
                     </div>
