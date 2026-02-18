@@ -1,4 +1,4 @@
-// --- Google Apps Script (Backend V.14 - Auto Sync PM Date) ---
+// --- Google Apps Script (Backend V.Final - Fully Compatible) ---
 
 // *****************************************************************
 // 🔴🔴🔴 ใส่ ID ของ Google Sheet ไฟล์ PM (Sheet B) ตรงนี้ 🔴🔴🔴
@@ -8,340 +8,354 @@ var PM_SPREADSHEET_ID = "1KtIut4L03s-Der5Co5xAu9SvC5FgTEh3MGnXiUb0_7M";
 function doGet(e) { return getAllData(); }
 
 function doPost(e) {
-  var lock = LockService.getScriptLock();
-  if (lock.tryLock(30000)) { 
-    try {
-      var data = JSON.parse(e.postData.contents);
-      var action = data.action;
-      
-      // Asset Actions
-      if (action === 'save_asset') return saveAsset(data);
-      if (action === 'save_log') return saveLog(data);
-      if (action === 'save_dept') return saveDepartment(data);
-      if (action === 'delete_asset') return deleteAsset(data);
-      if (action === 'delete_log') return deleteLog(data);
+  var lock = LockService.getScriptLock();
+  // รอคิวทำงานสูงสุด 30 วินาที ป้องกันข้อมูลชนกัน
+  if (lock.tryLock(30000)) { 
+    try {
+      var data = JSON.parse(e.postData.contents);
+      var action = data.action;
+      
+      // === Asset Management (Sheet หลัก) ===
+      if (action === 'save_asset') return saveAsset(data);
+      if (action === 'save_log') return saveLog(data);
+      if (action === 'save_dept') return saveDepartment(data);
+      if (action === 'delete_asset') return deleteAsset(data);
+      if (action === 'delete_log') return deleteLog(data);
 
-      // PM Actions
-      if (action === 'get_pm_schedules') return getPmSchedules(data);
-      if (action === 'save_pm_schedule') return savePmSchedule(data);
-      if (action === 'delete_pm_schedule') return deletePmSchedule(data);
-      if (action === 'get_all_pm_dashboard') return getAllPmDashboard(); 
-      
-      return responseJSON({ status: 'error', message: 'Unknown Action' });
-    } catch (err) { 
-      return responseJSON({ status: 'error', message: err.toString() + "\n" + err.stack }); 
-    } finally { 
-      lock.releaseLock(); 
-    }
-  }
-  return responseJSON({ status: 'error', message: 'Server Busy' });
+      // === PM Schedule Management (Sheet แยก) ===
+      if (action === 'get_pm_schedules') return getPmSchedules(data);
+      if (action === 'save_pm_schedule') return savePmSchedule(data);
+      if (action === 'delete_pm_schedule') return deletePmSchedule(data);
+      if (action === 'get_all_pm_dashboard') return getAllPmDashboard(); 
+      
+      return responseJSON({ status: 'error', message: 'Unknown Action: ' + action });
+    } catch (err) { 
+      return responseJSON({ status: 'error', message: err.toString() + "\n" + err.stack }); 
+    } finally { 
+      lock.releaseLock(); 
+    }
+  }
+  return responseJSON({ status: 'error', message: 'Server Busy' });
 }
 
 // ==========================================
-// SECTION 1: ASSET MANAGEMENT
+// SECTION 1: ASSET MANAGEMENT (Main Sheet)
 // ==========================================
 
 function getAllData() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  // 1. Assets
-  var sheetAsset = getOrInsertSheet(ss, "Assets");
-  var dataAsset = sheetAsset.getDataRange().getValues();
-  var assets = [];
-  
-  for (var i = 1; i < dataAsset.length; i++) {
-    var row = dataAsset[i];
-    if(!row[0]) continue; 
-    var history = [];
-    try { if (row[7]) history = JSON.parse(row[7]); } catch (e) { history = []; }
-    
-    assets.push({ 
-      id: row[0], name: row[1], model: row[2], location: row[3], 
-      status: row[4], purchaseDate: formatDate(row[5]), 
-      image: row[6], history: history, receiptPdf: row[8] || "",
-      vendor: row[9] || "",
-      // 🟢 นำ Next PM Date กลับมา เพื่อใช้แสดงป้ายเตือนหน้าแรก
-      nextPmDate: formatDate(row[10]) || "" 
-    });
-  }
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // 1. ดึงข้อมูล Assets
+  var sheetAsset = getOrInsertSheet(ss, "Assets");
+  var dataAsset = sheetAsset.getDataRange().getValues();
+  var assets = [];
+  
+  for (var i = 1; i < dataAsset.length; i++) {
+    var row = dataAsset[i];
+    if(!row[0]) continue; 
+    var history = [];
+    try { if (row[7]) history = JSON.parse(row[7]); } catch (e) { history = []; }
+    
+    // ดึงข้อมูลพื้นฐาน (ตัดส่วน PM เก่าออก เหลือแค่ Vendor)
+    assets.push({ 
+      id: row[0], name: row[1], model: row[2], location: row[3], 
+      status: row[4], purchaseDate: formatDate(row[5]), 
+      image: row[6], history: history, receiptPdf: row[8] || "",
+      vendor: row[9] || ""
+    });
+  }
 
-  // 2. Departments
-  var sheetDept = getOrInsertSheet(ss, "Departments");
-  var dataDept = sheetDept.getDataRange().getValues();
-  var departments = [];
-  for (var j = 1; j < dataDept.length; j++) {
-    if(dataDept[j][0]) {
-      departments.push({ name: dataDept[j][0], code: dataDept[j][1] });
-    }
-  }
+  // 2. ดึงข้อมูล Departments
+  var sheetDept = getOrInsertSheet(ss, "Departments");
+  var dataDept = sheetDept.getDataRange().getValues();
+  var departments = [];
+  for (var j = 1; j < dataDept.length; j++) {
+    if(dataDept[j][0]) {
+      departments.push({ name: dataDept[j][0], code: dataDept[j][1] });
+    }
+  }
 
-  return responseJSON({ assets: assets, departments: departments });
+  return responseJSON({ assets: assets, departments: departments });
 }
 
 function saveAsset(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = getOrInsertSheet(ss, "Assets");
-  var rootFolder = getOrCreateFolder(DriveApp.getRootFolder(), "ประวัติอุปกรณ์สำหรับงานซ่อมบำรุง");
-  var deptFolder = getOrCreateFolder(rootFolder, data.location || "ส่วนกลาง");
-  var assetFolder = getOrCreateFolder(deptFolder, sanitizeName(data.name) + "_" + data.id);
-  var imgUrl = processFileUpload(data.image, assetFolder, "IMG_" + data.id);
-  var pdfUrl = processFileUpload(data.receiptPdf, assetFolder, "RECEIPT_" + data.id);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getOrInsertSheet(ss, "Assets");
+  
+  // จัดการ Folder รูปภาพ
+  var rootFolder = getOrCreateFolder(DriveApp.getRootFolder(), "ประวัติอุปกรณ์สำหรับงานซ่อมบำรุง");
+  var deptFolder = getOrCreateFolder(rootFolder, data.location || "ส่วนกลาง");
+  var assetFolder = getOrCreateFolder(deptFolder, sanitizeName(data.name) + "_" + data.id);
+  
+  // อัปโหลดไฟล์
+  var imgUrl = processFileUpload(data.image, assetFolder, "IMG_" + data.id);
+  var pdfUrl = processFileUpload(data.receiptPdf, assetFolder, "RECEIPT_" + data.id);
 
-  var found = sheet.createTextFinder(data.id).findNext();
-  if (found) {
-    var row = found.getRow();
-    sheet.getRange(row, 2).setValue(data.name);
-    sheet.getRange(row, 3).setValue(data.model);
-    sheet.getRange(row, 4).setValue(data.location);
-    sheet.getRange(row, 5).setValue(data.status);
-    sheet.getRange(row, 6).setValue(data.purchaseDate);
-    if(imgUrl.startsWith("http")) sheet.getRange(row, 7).setValue(imgUrl);
-    if(pdfUrl.startsWith("http")) sheet.getRange(row, 9).setValue(pdfUrl);
-    sheet.getRange(row, 10).setValue(data.vendor || ""); 
-    // Col 11 (nextPmDate) ไม่ต้องแก้ที่นี่ ให้ระบบ Auto Sync จาก PM Schedule แทน
-  } else {
-    sheet.appendRow([
-      data.id, data.name, data.model, data.location, data.status, 
-      data.purchaseDate, imgUrl, "[]", pdfUrl, data.vendor||"", "" 
-    ]);
-  }
-  return responseJSON({ status: 'success' });
+  var textFinder = sheet.createTextFinder(data.id);
+  var found = textFinder.findNext();
+  
+  if (found) {
+    // แก้ไขข้อมูลเดิม (Edit)
+    var row = found.getRow();
+    sheet.getRange(row, 2).setValue(data.name);
+    sheet.getRange(row, 3).setValue(data.model);
+    sheet.getRange(row, 4).setValue(data.location);
+    sheet.getRange(row, 5).setValue(data.status);
+    sheet.getRange(row, 6).setValue(data.purchaseDate);
+    if(imgUrl.startsWith("http")) sheet.getRange(row, 7).setValue(imgUrl);
+    if(pdfUrl.startsWith("http")) sheet.getRange(row, 9).setValue(pdfUrl);
+    sheet.getRange(row, 10).setValue(data.vendor || ""); // อัปเดต Vendor
+  } else {
+    // เพิ่มข้อมูลใหม่ (New)
+    sheet.appendRow([
+      data.id, data.name, data.model, data.location, data.status, 
+      data.purchaseDate, imgUrl, "[]", pdfUrl, 
+      data.vendor||"" // บันทึก Vendor
+    ]);
+  }
+  return responseJSON({ status: 'success' });
 }
 
 function saveLog(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = getOrInsertSheet(ss, "Assets");
-  var found = sheet.createTextFinder(data.assetId).findNext();
-  if (!found) return responseJSON({ status: 'error', message: 'Asset ID not found' });
-  var row = found.getRow();
-  var historyCell = sheet.getRange(row, 8);
-  var currentHistory = JSON.parse(historyCell.getValue() || "[]");
-  currentHistory.unshift(data.log);
-  historyCell.setValue(JSON.stringify(currentHistory));
-  return responseJSON({ status: 'success' });
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getOrInsertSheet(ss, "Assets");
+  var found = sheet.createTextFinder(data.assetId).findNext();
+  if (!found) return responseJSON({ status: 'error', message: 'Asset ID not found' });
+  var row = found.getRow();
+  var historyCell = sheet.getRange(row, 8);
+  var currentHistory = JSON.parse(historyCell.getValue() || "[]");
+  currentHistory.unshift(data.log);
+  historyCell.setValue(JSON.stringify(currentHistory));
+  return responseJSON({ status: 'success' });
 }
 
 function saveDepartment(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = getOrInsertSheet(ss, "Departments");
-  if (!sheet.createTextFinder(data.name).findNext()) sheet.appendRow([data.name, data.code]);
-  return responseJSON({ status: 'success' });
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getOrInsertSheet(ss, "Departments");
+  if (!sheet.createTextFinder(data.name).findNext()) {
+    sheet.appendRow([data.name, data.code]);
+  }
+  return responseJSON({ status: 'success' });
 }
 
 function deleteAsset(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Assets");
-  var found = sheet.createTextFinder(data.id).findNext();
-  if (found) sheet.deleteRow(found.getRow());
-  return responseJSON({ status: 'success' });
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Assets");
+  var found = sheet.createTextFinder(data.id).findNext();
+  if (found) sheet.deleteRow(found.getRow());
+  return responseJSON({ status: 'success' });
 }
 
 function deleteLog(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Assets");
-  var found = sheet.createTextFinder(data.assetId).findNext();
-  if(found) {
-    var cell = sheet.getRange(found.getRow(), 8);
-    var history = JSON.parse(cell.getValue() || "[]");
-    cell.setValue(JSON.stringify(history.filter(function(h) { return h.id != data.logId; })));
-  }
-  return responseJSON({ status: 'success' });
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Assets");
+  var found = sheet.createTextFinder(data.assetId).findNext();
+  if(found) {
+    var cell = sheet.getRange(found.getRow(), 8);
+    var history = JSON.parse(cell.getValue() || "[]");
+    cell.setValue(JSON.stringify(history.filter(function(h) { return h.id != data.logId; })));
+  }
+  return responseJSON({ status: 'success' });
 }
 
 // ==========================================
-// SECTION 2: PM SCHEDULES (SHEET B)
+// SECTION 2: PM SCHEDULES (External Sheet)
 // ==========================================
 
 function getOrCreateAssetPmSheet(ss, assetId, assetName) {
-  var sheetName = "PM_" + sanitizeName(assetId);
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(sheetName);
-    sheet.getRange("A1").setValue("Asset Name:").setFontWeight("bold");
-    sheet.getRange("B1").setValue(assetName || "Unknown");
-    sheet.getRange("C1").setValue("Asset ID:").setFontWeight("bold");
-    sheet.getRange("D1").setValue(assetId);
-    sheet.getRange("A1:D1").setBackground("#fef9c3");
-    
-    var headers = ["Plan Date", "Topic", "Status", "Note", "PM Type", "Vendor Name", "Vendor Contact", "ID"];
-    var range = sheet.getRange(2, 1, 1, headers.length);
-    range.setValues([headers]);
-    range.setFontWeight("bold").setBackground("#dbeafe").setBorder(true, true, true, true, true, true);
-    
-    sheet.getRange("A3:A").setNumberFormat("@"); 
-    sheet.setColumnWidth(1, 120); sheet.setColumnWidth(2, 250); sheet.setColumnWidth(4, 200);
-  }
-  return sheet;
+  var sheetName = "PM_" + sanitizeName(assetId);
+  var sheet = ss.getSheetByName(sheetName);
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    // สร้าง Header แถว 1: ข้อมูลเครื่องจักร
+    sheet.getRange("A1").setValue("Asset Name:").setFontWeight("bold");
+    sheet.getRange("B1").setValue(assetName || "Unknown");
+    sheet.getRange("C1").setValue("Asset ID:").setFontWeight("bold");
+    sheet.getRange("D1").setValue(assetId);
+    sheet.getRange("A1:D1").setBackground("#fef9c3");
+    
+    // สร้าง Header แถว 2: หัวตารางข้อมูล
+    var headers = ["Plan Date", "Topic", "Status", "Note", "PM Type", "Vendor Name", "Vendor Contact", "ID"];
+    var range = sheet.getRange(2, 1, 1, headers.length);
+    range.setValues([headers]);
+    range.setFontWeight("bold").setBackground("#dbeafe").setBorder(true, true, true, true, true, true);
+    
+    sheet.getRange("A3:A").setNumberFormat("@"); // บังคับวันที่เป็น Text
+    sheet.setColumnWidth(1, 120); 
+    sheet.setColumnWidth(2, 250); 
+    sheet.setColumnWidth(4, 200);
+  }
+  return sheet;
 }
 
+// ดึงข้อมูลทั้งหมดไปแสดงที่ Dashboard
 function getAllPmDashboard() {
-  try {
-    var ss = SpreadsheetApp.openById(PM_SPREADSHEET_ID);
-    var sheets = ss.getSheets();
-    var allTasks = [];
-    for (var i = 0; i < sheets.length; i++) {
-      var sheet = sheets[i];
-      if (sheet.getName().indexOf("PM_") === 0) {
-        var data = sheet.getDataRange().getValues();
-        if (data.length > 2) {
-          var assetName = data[0][1]; 
-          var assetId = data[0][3];   
-          for (var r = 2; r < data.length; r++) {
-            if (data[r][7]) {
-              allTasks.push({
-                assetName: assetName, assetId: assetId,
-                planDate: formatDate(data[r][0]), 
-                topic: data[r][1],
-                status: data[r][2], 
-                note: data[r][3], 
-                pmType: data[r][4] || "ภายใน",
-                pmVendorName: data[r][5] || "",
-                pmVendorContact: data[r][6] || "",
-                schId: data[r][7]
-              });
-            }
-          }
-        }
-      }
-    }
-    return responseJSON({ allPm: allTasks });
-  } catch(e) { return responseJSON({ status: 'error', message: e.toString() }); }
+  try {
+    var ss = SpreadsheetApp.openById(PM_SPREADSHEET_ID);
+    var sheets = ss.getSheets();
+    var allTasks = [];
+    
+    for (var i = 0; i < sheets.length; i++) {
+      var sheet = sheets[i];
+      // อ่านเฉพาะ Sheet ที่ขึ้นต้นด้วย PM_
+      if (sheet.getName().indexOf("PM_") === 0) {
+        var data = sheet.getDataRange().getValues();
+        // ต้องมีข้อมูลมากกว่า 2 แถว
+        if (data.length > 2) {
+          var assetName = data[0][1]; // Cell B1
+          var assetId = data[0][3];   // Cell D1
+          
+          for (var r = 2; r < data.length; r++) {
+            // เช็คว่ามี ID (Col H) ไหม
+            if (data[r][7]) {
+              allTasks.push({
+                assetName: assetName, 
+                assetId: assetId,
+                planDate: formatDate(data[r][0]), // A: Date
+                topic: data[r][1],                // B: Topic
+                status: data[r][2],               // C: Status
+                note: data[r][3],                 // D: Note
+                pmType: data[r][4] || "ภายใน",     // E: Type
+                pmVendorName: data[r][5] || "",   // F: Vendor
+                pmVendorContact: data[r][6] || "",// G: Contact
+                schId: data[r][7]                 // H: ID
+              });
+            }
+          }
+        }
+      }
+    }
+    return responseJSON({ allPm: allTasks });
+  } catch(e) { 
+    return responseJSON({ status: 'error', message: e.toString() }); 
+  }
 }
 
+// ดึงข้อมูลรายเครื่อง (สำหรับหน้า Detail)
 function getPmSchedules(data) {
-  try {
-    var ss = SpreadsheetApp.openById(PM_SPREADSHEET_ID);
-    var sheetName = "PM_" + sanitizeName(data.assetId);
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) return responseJSON({ pmSchedules: [] });
+  try {
+    var ss = SpreadsheetApp.openById(PM_SPREADSHEET_ID);
+    var sheetName = "PM_" + sanitizeName(data.assetId);
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return responseJSON({ pmSchedules: [] });
 
-    var values = sheet.getDataRange().getValues();
-    var results = [];
-    for (var i = 2; i < values.length; i++) {
-      if (values[i][7]) { 
-        results.push({ 
-          planDate: formatDate(values[i][0]), 
-          topic: values[i][1], 
-          status: values[i][2], 
-          note: values[i][3], 
-          pmType: values[i][4] || "ภายใน",
-          pmVendorName: values[i][5] || "",
-          pmVendorContact: values[i][6] || "",
-          schId: values[i][7] 
-        });
-      }
-    }
-    results.sort(function(a,b){ return new Date(a.planDate) - new Date(b.planDate); });
-    return responseJSON({ pmSchedules: results });
-  } catch(e) { return responseJSON({ status: 'error', message: e.message }); }
+    var values = sheet.getDataRange().getValues();
+    var results = [];
+    for (var i = 2; i < values.length; i++) {
+      if (values[i][7]) { 
+        results.push({ 
+          planDate: formatDate(values[i][0]), 
+          topic: values[i][1], 
+          status: values[i][2], 
+          note: values[i][3], 
+          pmType: values[i][4] || "ภายใน",
+          pmVendorName: values[i][5] || "",
+          pmVendorContact: values[i][6] || "",
+          schId: values[i][7] 
+        });
+      }
+    }
+    // เรียงวันที่ น้อย -> มาก
+    results.sort(function(a,b){ return new Date(a.planDate) - new Date(b.planDate); });
+    return responseJSON({ pmSchedules: results });
+  } catch(e) { return responseJSON({ status: 'error', message: e.message }); }
 }
 
+// บันทึกข้อมูล PM (สร้าง/แก้ไข)
 function savePmSchedule(data) {
-  try {
-    var ss = SpreadsheetApp.openById(PM_SPREADSHEET_ID);
-    var item = data.schedule;
-    if (!item) return responseJSON({ status: 'error', message: 'No data' });
+  try {
+    var ss = SpreadsheetApp.openById(PM_SPREADSHEET_ID);
+    var item = data.schedule;
+    if (!item) return responseJSON({ status: 'error', message: 'No data' });
 
-    var sheet = getOrCreateAssetPmSheet(ss, data.assetId, data.assetName);
-    
-    var rowValues = [
-      "'" + (item.planDate || ""), 
-      String(item.topic || ""),    
-      String(item.status || ""),   
-      String(item.note || ""),     
-      String(item.pmType || "ภายใน"),     
-      String(item.pmVendorName || ""),    
-      String(item.pmVendorContact || ""), 
-      String(item.schId || ("SCH-" + Date.now())) 
-    ];
+    var sheet = getOrCreateAssetPmSheet(ss, data.assetId, data.assetName);
+    
+    // เตรียมข้อมูลลงแถว
+    var rowValues = [
+      "'" + (item.planDate || ""),        // A: Date (ใส่ ' กันเพี้ยน)
+      String(item.topic || ""),           // B: Topic
+      String(item.status || ""),          // C: Status
+      String(item.note || ""),            // D: Note
+      String(item.pmType || "ภายใน"),     // E: Type
+      String(item.pmVendorName || ""),    // F: Vendor
+      String(item.pmVendorContact || ""), // G: Contact
+      String(item.schId || ("SCH-" + Date.now())) // H: ID
+    ];
 
-    if (item.schId) {
-      var textFinder = sheet.getRange("H:H").createTextFinder(String(item.schId));
-      var found = textFinder.findNext();
-      if (found) {
-        var row = found.getRow();
-        sheet.getRange(row, 1, 1, 8).setValues([rowValues]);
-      }
-    } else {
-      sheet.appendRow(rowValues);
-    }
-    
-    SpreadsheetApp.flush(); 
-    
-    // 🟢 NEW: อัปเดตวันที่ PM ครั้งถัดไปที่ Sheet หลักทันที
-    updateAssetMasterPmDate(data.assetId, sheet);
-
-    return responseJSON({ status: 'success' });
-  } catch(e) { return responseJSON({ status: 'error', message: e.toString() }); }
+    if (item.schId) {
+      // แก้ไข: หา ID เดิมในคอลัมน์ H
+      var textFinder = sheet.getRange("H:H").createTextFinder(String(item.schId));
+      var found = textFinder.findNext();
+      if (found) {
+        var row = found.getRow();
+        sheet.getRange(row, 1, 1, 8).setValues([rowValues]);
+      }
+    } else {
+      // เพิ่มใหม่
+      sheet.appendRow(rowValues);
+    }
+    
+    SpreadsheetApp.flush(); // บังคับบันทึกทันที
+    return responseJSON({ status: 'success' });
+  } catch(e) { return responseJSON({ status: 'error', message: e.toString() }); }
 }
 
 function deletePmSchedule(data) {
-  var ss = SpreadsheetApp.openById(PM_SPREADSHEET_ID);
-  var sheetName = "PM_" + sanitizeName(data.assetId);
-  var sheet = ss.getSheetByName(sheetName);
-  if (sheet) {
-    var textFinder = sheet.getRange("H:H").createTextFinder(String(data.schId));
-    var found = textFinder.findNext();
-    if (found) {
-        sheet.deleteRow(found.getRow());
-        SpreadsheetApp.flush();
-        // 🟢 NEW: อัปเดตวันที่ PM ครั้งถัดไปที่ Sheet หลักทันที (กรณีลบงานทิ้ง วันที่ต้องเปลี่ยน)
-        updateAssetMasterPmDate(data.assetId, sheet);
-    }
-  }
-  return responseJSON({ status: 'success' });
+  var ss = SpreadsheetApp.openById(PM_SPREADSHEET_ID);
+  var sheetName = "PM_" + sanitizeName(data.assetId);
+  var sheet = ss.getSheetByName(sheetName);
+  if (sheet) {
+    var textFinder = sheet.getRange("H:H").createTextFinder(String(data.schId));
+    var found = textFinder.findNext();
+    if (found) sheet.deleteRow(found.getRow());
+  }
+  return responseJSON({ status: 'success' });
 }
 
-// 🟢 NEW: ฟังก์ชันช่วยอัปเดตวันที่ PM ที่หน้าแรก
-function updateAssetMasterPmDate(assetId, pmSheet) {
-    try {
-        var data = pmSheet.getDataRange().getValues();
-        var today = new Date();
-        today.setHours(0,0,0,0);
-        var upcomingDates = [];
-        
-        // หา date ที่ยังมาไม่ถึง และสถานะไม่ใช่ "ยกเลิก"
-        for (var i = 2; i < data.length; i++) {
-            var d = new Date(data[i][0]);
-            var status = data[i][2];
-            if (!isNaN(d) && d >= today && status !== "ยกเลิก") {
-                upcomingDates.push(d);
-            }
-        }
-        
-        // เรียงวันที่ หาอันที่ใกล้ที่สุด
-        upcomingDates.sort(function(a,b){ return a - b });
-        var nextDate = upcomingDates.length > 0 ? formatDate(upcomingDates[0]) : "";
-        
-        // ไปอัปเดตที่ Sheet หลัก
-        var ssMain = SpreadsheetApp.getActiveSpreadsheet();
-        var sheetMain = ssMain.getSheetByName("Assets");
-        var found = sheetMain.createTextFinder(assetId).findNext();
-        if (found) {
-            // Col 11 คือ Next PM Date
-            sheetMain.getRange(found.getRow(), 11).setValue(nextDate); 
-        }
-    } catch(e) {
-        Logger.log("Error updating master date: " + e.toString());
-    }
-}
+// ==========================================
+// SECTION 3: UTILITIES
+// ==========================================
 
-// --- Helper Functions ---
 function getOrInsertSheet(ss, name) {
-  var s = ss.getSheetByName(name);
-  if (!s) {
-    s = ss.insertSheet(name);
-    if(name==="Assets") { 
-      // 🟢 เพิ่ม Header "Next PM Date" กลับมา
-      s.appendRow(["ID","Name","Model","Location","Status","Purchase Date","Image URL","History JSON","Receipt URL","Vendor", "Next PM Date"]); 
-      s.setFrozenRows(1); 
-    }
-    if(name==="Departments") { s.appendRow(["Department Name","Code"]); s.setFrozenRows(1); }
-  }
-  return s;
+  var s = ss.getSheetByName(name);
+  if (!s) {
+    s = ss.insertSheet(name);
+    if(name==="Assets") { 
+      // Header สำหรับ Sheet หลัก (เหลือแค่ Vendor)
+      s.appendRow(["ID","Name","Model","Location","Status","Purchase Date","Image URL","History JSON","Receipt URL","Vendor"]); 
+      s.setFrozenRows(1); 
+    }
+    if(name==="Departments") { s.appendRow(["Department Name","Code"]); s.setFrozenRows(1); }
+  }
+  return s;
 }
-function getOrCreateFolder(parent, name) { var folders = parent.getFoldersByName(name); return folders.hasNext() ? folders.next() : parent.createFolder(name); }
-function sanitizeName(name) { return (name || "Unknown").toString().replace(/[\/\\?%*:|"<>]/g, '-'); }
-function formatDate(d) { try { return new Date(d).toISOString().split('T')[0]; } catch(e) { return d; } }
-function processFileUpload(base64Data, folder, fileNamePrefix) { if(!base64Data || !base64Data.startsWith("data")) return base64Data || ""; try{ var split=base64Data.split(','); var type=split[0].split(':')[1].split(';')[0]; var blob=Utilities.newBlob(Utilities.base64Decode(split[1]), type, fileNamePrefix + (type.includes("image")?".png":".pdf")); var file=folder.createFile(blob); file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); return type.includes("image") ? "https://drive.google.com/thumbnail?id="+file.getId()+"&sz=w1000" : "https://drive.google.com/file/d/"+file.getId()+"/view?usp=sharing"; } catch(e){ return "Error: " + e.message; } }
-function responseJSON(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
+function getOrCreateFolder(parent, name) { 
+  var folders = parent.getFoldersByName(name); 
+  return folders.hasNext() ? folders.next() : parent.createFolder(name); 
+}
+
+function sanitizeName(name) { 
+  return (name || "Unknown").toString().replace(/[\/\\?%*:|"<>]/g, '-'); 
+}
+
+function formatDate(d) { 
+  try { return new Date(d).toISOString().split('T')[0]; } catch(e) { return d; } 
+}
+
+function processFileUpload(base64Data, folder, fileNamePrefix) { 
+  if(!base64Data || !base64Data.startsWith("data")) return base64Data || ""; 
+  try{ 
+    var split=base64Data.split(','); 
+    var type=split[0].split(':')[1].split(';')[0]; 
+    var blob=Utilities.newBlob(Utilities.base64Decode(split[1]), type, fileNamePrefix + (type.includes("image")?".png":".pdf")); 
+    var file=folder.createFile(blob); 
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); 
+    return type.includes("image") ? "https://drive.google.com/thumbnail?id="+file.getId()+"&sz=w1000" : "https://drive.google.com/file/d/"+file.getId()+"/view?usp=sharing"; 
+  } catch(e){ return "Error: " + e.message; } 
+}
+
+function responseJSON(o) { 
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); 
+}
