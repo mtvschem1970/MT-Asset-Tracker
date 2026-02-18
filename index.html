@@ -58,7 +58,10 @@
             Wrench: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></>,
             Trash: <><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></>,
             Loader: <><path d="M21 12a9 9 0 1 1-6.219-8.56"/></>,
-            Folder: <><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></>
+            Folder: <><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></>,
+            User: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></>,
+            Phone: <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></>,
+            Calendar: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></>
         };
 
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
@@ -69,7 +72,6 @@
             reader.onerror = error => reject(error);
         });
 
-        // --- Components Defined OUTSIDE App to prevent ReferenceError ---
         const LoadingOverlay = ({ text }) => (
             <div className="fixed inset-0 bg-white/80 z-[60] flex flex-col items-center justify-center fade-in backdrop-blur-sm">
                 <div className="animate-spin text-blue-600 mb-4"><Icon path={Icons.Loader} size={48} /></div>
@@ -117,10 +119,7 @@
                         fetchData();
                         setSubmitting(false);
                         if(payload.action === 'save_asset') { setView('assets'); alert('บันทึกอุปกรณ์เรียบร้อย'); }
-                        if(payload.action === 'save_log') {
-                            // Clear log form logic could be here, but we re-fetch anyway
-                            alert('บันทึกประวัติการซ่อมเรียบร้อย');
-                        }
+                        if(payload.action === 'save_log') alert('บันทึกประวัติการซ่อมเรียบร้อย');
                         if(payload.action === 'save_dept') { setShowDeptModal(false); alert('สร้างแผนกเรียบร้อย'); }
                         if(payload.action.includes('delete')) { setView('assets'); alert('ลบข้อมูลเรียบร้อย'); }
                     }, 4000);
@@ -201,8 +200,24 @@
             };
 
             const AddAssetView = () => {
-                const [form, setForm] = useState({ id: 'รอสร้างอัตโนมัติ...', name: '', model: '', location: selectedDept || '', status: 'ปกติ', purchaseDate: new Date().toISOString().split('T')[0], image: '', receiptPdf: '' });
+                const [form, setForm] = useState({ 
+                    id: 'รอสร้างอัตโนมัติ...', 
+                    name: '', 
+                    model: '', 
+                    location: selectedDept || '', 
+                    status: 'ปกติ', 
+                    purchaseDate: new Date().toISOString().split('T')[0], 
+                    vendor: '', // เพิ่มฟิลด์ผู้จำหน่าย
+                    pmType: 'ภายใน', // เพิ่มชนิด PM
+                    pmVendorName: '', // ชื่อเจ้าที่รับ PM
+                    pmVendorContact: '', // เบอร์ติดต่อ PM
+                    nextPmDate: '', // วันที่ต้องทำ PM
+                    image: '', 
+                    receiptPdf: '' 
+                });
+
                 const handleFile = async (e, k) => { if (e.target.files[0]) setForm({ ...form, [k]: await fileToBase64(e.target.files[0]) }) };
+                
                 useEffect(() => {
                     if (form.location) {
                         const deptObj = data.departments.find(d => d.name === form.location);
@@ -216,10 +231,51 @@
                         }
                     }
                 }, [form.location]);
+
                 return (
                     <div className="p-6 md:p-10 w-full max-w-4xl mx-auto h-full flex flex-col pb-24 md:pb-10 fade-in overflow-y-auto">
                         <div className="flex items-center gap-4 mb-8"><button onClick={() => setView('departments')} className="p-3 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50"><Icon path={Icons.ArrowLeft} size={20}/></button><h2 className="text-2xl font-bold text-gray-800">เพิ่มอุปกรณ์ใหม่</h2></div>
-                        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8"><div className="w-full md:w-1/3"><div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden hover:bg-gray-100 transition group cursor-pointer">{form.image ? <img src={form.image} className="w-full h-full object-cover" /> : <div className="text-gray-400 text-sm flex flex-col items-center font-bold gap-2"><Icon path={Icons.Image} size={48} className="text-gray-300 group-hover:text-blue-400 transition"/>คลิกเพิ่มรูปภาพ</div>}<input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleFile(e, 'image')} /></div></div><div className="flex-1 space-y-5"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ชื่ออุปกรณ์ *</label><input className="input-box" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รหัสทรัพย์สิน (Auto)</label><input className="input-box bg-gray-100 text-gray-500 font-mono font-bold border-transparent" value={form.id} disabled /></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รุ่น / Model</label><input className="input-box" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} /></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">แผนก</label><select className="input-box" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}><option value="">-- เลือกแผนก --</option>{data.departments.map(d => <option key={d.name} value={d.name}>{d.name} ({d.code})</option>)}</select></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">สถานะ</label><select className="input-box" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}><option>ปกติ</option><option>ส่งซ่อม</option><option>เสีย</option></select></div></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">วันที่ซื้อ</label><input type="date" className="input-box" value={form.purchaseDate} onChange={e => setForm({ ...form, purchaseDate: e.target.value })} /></div><div className="bg-orange-50 p-4 rounded-xl border border-orange-100 text-sm text-orange-800 flex items-center justify-between"><span className="font-bold flex items-center gap-2"><Icon path={Icons.File} size={18}/> แนบใบเสร็จ (PDF)</span><label className="bg-white border border-orange-200 text-orange-600 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-orange-50 transition text-xs font-bold shadow-sm">{form.receiptPdf ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}<input type="file" accept="application/pdf" className="hidden" onChange={e => handleFile(e, 'receiptPdf')} /></label></div><button onClick={() => postData({ action: 'save_asset', ...form })} className="w-full bg-slate-900 hover:bg-black text-white py-4 rounded-xl font-bold shadow-lg shadow-gray-300 transition mt-4 text-lg">บันทึกข้อมูล</button></div></div>
+                        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
+                            <div className="w-full md:w-1/3">
+                                <div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden hover:bg-gray-100 transition group cursor-pointer">{form.image ? <img src={form.image} className="w-full h-full object-cover" /> : <div className="text-gray-400 text-sm flex flex-col items-center font-bold gap-2"><Icon path={Icons.Image} size={48} className="text-gray-300 group-hover:text-blue-400 transition"/>คลิกเพิ่มรูปภาพ</div>}<input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleFile(e, 'image')} /></div>
+                            </div>
+                            <div className="flex-1 space-y-5">
+                                <div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ชื่ออุปกรณ์ *</label><input className="input-box" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รหัสทรัพย์สิน (Auto)</label><input className="input-box bg-gray-100 text-gray-500 font-mono font-bold border-transparent" value={form.id} disabled /></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รุ่น / Model</label><input className="input-box" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} /></div></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">แผนก</label><select className="input-box" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}><option value="">-- เลือกแผนก --</option>{data.departments.map(d => <option key={d.name} value={d.name}>{d.name} ({d.code})</option>)}</select></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">สถานะ</label><select className="input-box" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}><option>ปกติ</option><option>ส่งซ่อม</option><option>เสีย</option></select></div></div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div><label className="text-sm font-bold text-gray-600 mb-1.5 block">วันที่ซื้อ</label><input type="date" className="input-box" value={form.purchaseDate} onChange={e => setForm({ ...form, purchaseDate: e.target.value })} /></div>
+                                    <div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ผู้จำหน่าย</label><input className="input-box" placeholder="ร้านค้า/บริษัทที่ซื้อ" value={form.vendor} onChange={e => setForm({ ...form, vendor: e.target.value })} /></div>
+                                </div>
+
+                                {/* ส่วนเพิ่มใหม่: ข้อมูลการ PM */}
+                                <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 mt-4">
+                                    <h3 className="font-bold text-blue-700 mb-4 flex items-center gap-2"><Icon path={Icons.Wrench} size={18}/> ข้อมูลการบำรุงรักษา (PM)</h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">คิว PM ครั้งถัดไป</label><input type="date" className="input-box" value={form.nextPmDate} onChange={e => setForm({ ...form, nextPmDate: e.target.value })} /></div>
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-500 mb-1.5 block">รูปแบบการ PM</label>
+                                            <select className="input-box" value={form.pmType} onChange={e => setForm({ ...form, pmType: e.target.value })}>
+                                                <option value="ภายใน">ภายใน (ทีมงานบริษัท)</option>
+                                                <option value="ภายนอก">ภายนอก (Supplier)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {form.pmType === 'ภายนอก' && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-[fadeIn_0.3s_ease-out]">
+                                            <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ชื่อบริษัท/ช่างรับ PM</label><input className="input-box" placeholder="ระบุชื่อ..." value={form.pmVendorName} onChange={e => setForm({ ...form, pmVendorName: e.target.value })} /></div>
+                                            <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">เบอร์ติดต่อ</label><input className="input-box" placeholder="0xx-xxx-xxxx" value={form.pmVendorContact} onChange={e => setForm({ ...form, pmVendorContact: e.target.value })} /></div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 text-sm text-orange-800 flex items-center justify-between"><span className="font-bold flex items-center gap-2"><Icon path={Icons.File} size={18}/> แนบใบเสร็จ (PDF)</span><label className="bg-white border border-orange-200 text-orange-600 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-orange-50 transition text-xs font-bold shadow-sm">{form.receiptPdf ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}<input type="file" accept="application/pdf" className="hidden" onChange={e => handleFile(e, 'receiptPdf')} /></label></div>
+                                <button onClick={() => postData({ action: 'save_asset', ...form })} className="w-full bg-slate-900 hover:bg-black text-white py-4 rounded-xl font-bold shadow-lg shadow-gray-300 transition mt-4 text-lg">บันทึกข้อมูล</button>
+                            </div>
+                        </div>
                     </div>
                 );
             };
@@ -243,15 +299,7 @@
                     }
                 };
                 
-                // แก้ไขจุดนี้: ฟังก์ชันสำหรับเพิ่มรายการอะไหล่เข้าสู่ list ชั่วคราว
-                const addPart = () => { 
-                    if (part.name) { 
-                        setLog(prev => ({ ...prev, parts: [...prev.parts, part] })); 
-                        setPart({ name: '', price: '', image: '', pdf: '' }); 
-                    } else { 
-                        alert("กรุณาระบุชื่ออะไหล่"); 
-                    } 
-                };
+                const addPart = () => { if (part.name) { setLog(prev => ({ ...prev, parts: [...prev.parts, part] })); setPart({ name: '', price: '', image: '', pdf: '' }); } else { alert("กรุณาระบุชื่ออะไหล่"); } };
                 
                 const submitLog = () => {
                     const total = Number(log.labor) + log.parts.reduce((s, p) => s + Number(p.price), 0);
@@ -264,18 +312,38 @@
                 return (
                     <div className="w-full h-full flex flex-col bg-gray-50 relative overflow-y-auto pb-24 md:pb-0 fade-in">
                         <div className="relative h-64 md:h-80 bg-slate-900 flex-shrink-0">{item.image ? <img src={item.image} className="w-full h-full object-cover opacity-70" /> : <div className="w-full h-full flex items-center justify-center text-white/20"><Icon path={Icons.Image} size={80}/></div>}<div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div><button onClick={() => setView('assets')} className="absolute top-4 left-4 bg-white/20 p-2.5 rounded-full backdrop-blur-md text-white hover:bg-white/30 transition"><Icon path={Icons.ArrowLeft} size={24}/></button><div className="absolute bottom-0 w-full p-6 md:p-10 text-white max-w-7xl mx-auto"><h1 className="text-3xl md:text-5xl font-bold mb-2">{item.name}</h1><div className="flex flex-wrap gap-3 items-center opacity-90 font-mono text-sm md:text-base"><span className="bg-white/20 px-2 py-1 rounded border border-white/10">{item.id}</span><span>{item.model}</span><span>• {item.location}</span><span className={`px-2 py-1 rounded font-bold text-black ${item.status === 'ปกติ' ? 'bg-green-400' : 'bg-orange-400'}`}>{item.status}</span></div></div></div>
-                        <div className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8 -mt-8 relative z-10"><div className="flex flex-col lg:flex-row gap-6"><div className="w-full lg:w-1/3 space-y-4"><div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"><h3 className="font-bold text-gray-800 mb-4 text-lg border-b pb-3">ข้อมูลทั่วไป</h3><div className="space-y-4 text-sm text-gray-600"><div className="flex justify-between"><span>วันที่ซื้อ</span><span className="font-bold text-gray-900">{item.purchaseDate}</span></div><div className="flex justify-between"><span>รุ่น</span><span className="font-bold text-gray-900">{item.model || '-'}</span></div>{item.receiptPdf && <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 w-full py-3 mt-2 bg-orange-50 text-orange-700 rounded-xl font-bold hover:bg-orange-100 transition"><Icon path={Icons.File} size={18}/> ดูใบเสร็จ</a>}</div><button onClick={() => { if (confirm('ลบอุปกรณ์นี้ถาวร?')) postData({ action: 'delete_asset', id: item.id }); }} className="w-full mt-6 text-red-500 text-sm font-bold hover:bg-red-50 py-3 rounded-xl transition flex justify-center gap-2"><Icon path={Icons.Trash} size={18}/> ลบอุปกรณ์</button></div></div><div className="w-full lg:w-2/3"><div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]"><div className="flex border-b border-gray-100"><button onClick={() => setTab('history')} className={`flex-1 py-4 text-sm font-bold border-b-2 transition ${tab === 'history' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>ประวัติการซ่อม ({item.history?.length || 0})</button><button onClick={() => setTab('newlog')} className={`flex-1 py-4 text-sm font-bold border-b-2 transition ${tab === 'newlog' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>+ บันทึกซ่อมใหม่</button></div><div className="p-6">{tab === 'newlog' && (<div className="animate-[fadeIn_0.3s_ease-out]"><div className="grid grid-cols-2 gap-4 mb-4"><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">วันที่</label><input type="date" className="input-box" value={log.date} onChange={e => setLog({ ...log, date: e.target.value })} /></div><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ประเภท</label><select className="input-box" value={log.type} onChange={e => setLog({ ...log, type: e.target.value })}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select></div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">อาการ / รายละเอียด</label><textarea className="input-box" rows="3" placeholder="ระบุอาการ..." onChange={e => setLog({ ...log, description: e.target.value })}></textarea></div><div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-6 relative"><p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">เพิ่มรายการอะไหล่</p><div className="flex flex-wrap gap-2 mb-3 items-center"><input className="input-box p-2 text-sm flex-1 min-w-[120px]" placeholder="ชื่ออะไหล่" value={part.name} onChange={e => setPart({ ...part, name: e.target.value })} /><input className="input-box p-2 text-sm w-24" type="number" placeholder="ราคา" value={part.price} onChange={e => setPart({ ...part, price: e.target.value })} /><label className={`border p-2 rounded-lg cursor-pointer transition ${part.image ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบรูป"><Icon path={Icons.Image} size={18}/><input type="file" className="hidden" accept="image/*" onChange={e => handlePartFile(e, 'image')} /></label><label className={`border p-2 rounded-lg cursor-pointer transition ${part.pdf ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบ PDF"><Icon path={Icons.File} size={18}/><input type="file" className="hidden" accept="application/pdf" onChange={e => handlePartFile(e, 'pdf')} /></label>
-                        
-                        {/* 🔴 แก้ไข: ปุ่มเพิ่มรายการอะไหล่ เปลี่ยนเป็น Icon.Add และใส่ข้อความ "เพิ่ม" ให้ชัดเจน */}
-                        <button onClick={addPart} className="bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-black flex items-center justify-center gap-1 transition text-xs font-bold min-w-[60px]"><Icon path={Icons.Add} size={16}/> เพิ่ม</button>
-                        
-                        </div>{fileLoading && <div className="text-xs text-blue-500 animate-pulse mb-2 font-bold">กำลังอัปโหลดไฟล์...</div>}<div className="space-y-2">{log.parts.map((p, i) => (<div key={i} className="text-xs flex justify-between p-3 bg-white rounded-xl border font-medium shadow-sm items-center"><div className="flex items-center gap-2"><span className="font-bold text-gray-700">{p.name}</span>{p.image && <Icon path={Icons.Image} size={12} className="text-blue-500"/>}{p.pdf && <Icon path={Icons.File} size={12} className="text-orange-500"/>}</div><span>฿{Number(p.price).toLocaleString()}</span></div>))}</div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">ค่าแรงช่าง (บาท)</label><input type="number" className="input-box" placeholder="0.00" onChange={e => setLog({ ...log, labor: e.target.value })} /></div><button onClick={submitLog} disabled={fileLoading} className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition ${fileLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>บันทึกประวัติ</button></div>)}
-                                                            {tab === 'history' && (<div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">{item.history && item.history.map((h, i) => (<div key={i} onClick={() => setSelLog(h)} className="bg-white border border-gray-100 rounded-2xl p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition group"><div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-400 flex items-center gap-2 mb-1">{h.date} <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{h.type}</span></div><div className="font-bold text-gray-800 text-lg">{h.description}</div></div><div className="text-right"><div className="font-bold text-blue-600 text-lg">฿{Number(h.totalCost).toLocaleString()}</div></div></div>{h.parts?.length > 0 && <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">ใช้อะไหล่ {h.parts.length} รายการ</div>}</div>))}{(!item.history || item.history.length === 0) && <div className="text-center text-gray-400 py-12 flex flex-col items-center"><Icon path={Icons.Folder} size={48} className="mb-2 opacity-30"/><p>ยังไม่มีประวัติการซ่อม</p></div>}</div>)}
-                                                    </div>
+                        <div className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8 -mt-8 relative z-10"><div className="flex flex-col lg:flex-row gap-6">
+                            
+                            <div className="w-full lg:w-1/3 space-y-4">
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                                    <h3 className="font-bold text-gray-800 mb-4 text-lg border-b pb-3">ข้อมูลทั่วไป</h3>
+                                    <div className="space-y-4 text-sm text-gray-600">
+                                        <div className="flex justify-between"><span>วันที่ซื้อ</span><span className="font-bold text-gray-900">{item.purchaseDate}</span></div>
+                                        <div className="flex justify-between"><span>รุ่น</span><span className="font-bold text-gray-900">{item.model || '-'}</span></div>
+                                        <div className="flex justify-between"><span>ผู้จำหน่าย</span><span className="font-bold text-gray-900">{item.vendor || '-'}</span></div>
+                                        
+                                        <div className="pt-2 border-t mt-2">
+                                            <div className="text-xs font-bold text-gray-400 uppercase mb-2">ข้อมูลการ PM</div>
+                                            <div className="flex justify-between mb-1"><span>รอบถัดไป</span><span className="font-bold text-blue-600 bg-blue-50 px-2 rounded">{item.nextPmDate || '-'}</span></div>
+                                            <div className="flex justify-between mb-1"><span>รูปแบบ</span><span className="font-bold text-gray-900">{item.pmType || '-'}</span></div>
+                                            {item.pmType === 'ภายนอก' && (
+                                                <div className="bg-gray-50 p-3 rounded-xl mt-2 border text-xs">
+                                                    <div className="font-bold text-gray-800 flex items-center gap-1 mb-1"><Icon path={Icons.User} size={14}/> {item.pmVendorName}</div>
+                                                    <div className="text-gray-500 flex items-center gap-1"><Icon path={Icons.Phone} size={14}/> {item.pmVendorContact}</div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {item.receiptPdf && <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 w-full py-3 mt-2 bg-orange-50 text-orange-700 rounded-xl font-bold hover:bg-orange-100 transition"><Icon path={Icons.File} size={18}/> ดูใบเสร็จ</a>}
                                     </div>
+                                    <button onClick={() => { if (confirm('ลบอุปกรณ์นี้ถาวร?')) postData({ action: 'delete_asset', id: item.id }); }} className="w-full mt-6 text-red-500 text-sm font-bold hover:bg-red-50 py-3 rounded-xl transition flex justify-center gap-2"><Icon path={Icons.Trash} size={18}/> ลบอุปกรณ์</button>
                                 </div>
                             </div>
-                        </div>
+                            
+                            <div className="w-full lg:w-2/3"><div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]"><div className="flex border-b border-gray-100"><button onClick={() => setTab('history')} className={`flex-1 py-4 text-sm font-bold border-b-2 transition ${tab === 'history' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>ประวัติการซ่อม ({item.history?.length || 0})</button><button onClick={() => setTab('newlog')} className={`flex-1 py-4 text-sm font-bold border-b-2 transition ${tab === 'newlog' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>+ บันทึกซ่อมใหม่</button></div><div className="p-6">{tab === 'newlog' && (<div className="animate-[fadeIn_0.3s_ease-out]"><div className="grid grid-cols-2 gap-4 mb-4"><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">วันที่</label><input type="date" className="input-box" value={log.date} onChange={e => setLog({ ...log, date: e.target.value })} /></div><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ประเภท</label><select className="input-box" value={log.type} onChange={e => setLog({ ...log, type: e.target.value })}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select></div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">อาการ / รายละเอียด</label><textarea className="input-box" rows="3" placeholder="ระบุอาการ..." onChange={e => setLog({ ...log, description: e.target.value })}></textarea></div><div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-6 relative"><p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">เพิ่มรายการอะไหล่</p><div className="flex flex-wrap gap-2 mb-3 items-center"><input className="input-box p-2 text-sm flex-1 min-w-[120px]" placeholder="ชื่ออะไหล่" value={part.name} onChange={e => setPart({ ...part, name: e.target.value })} /><input className="input-box p-2 text-sm w-24" type="number" placeholder="ราคา" value={part.price} onChange={e => setPart({ ...part, price: e.target.value })} /><label className={`border p-2 rounded-lg cursor-pointer transition ${part.image ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบรูป"><Icon path={Icons.Image} size={18}/><input type="file" className="hidden" accept="image/*" onChange={e => handlePartFile(e, 'image')} /></label><label className={`border p-2 rounded-lg cursor-pointer transition ${part.pdf ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบ PDF"><Icon path={Icons.File} size={18}/><input type="file" className="hidden" accept="application/pdf" onChange={e => handlePartFile(e, 'pdf')} /></label><button onClick={addPart} className="bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-black flex items-center justify-center gap-1 transition text-xs font-bold min-w-[60px]"><Icon path={Icons.Add} size={16}/> เพิ่ม</button></div>{fileLoading && <div className="text-xs text-blue-500 animate-pulse mb-2 font-bold">กำลังอัปโหลดไฟล์...</div>}<div className="space-y-2">{log.parts.map((p, i) => (<div key={i} className="text-xs flex justify-between p-3 bg-white rounded-xl border font-medium shadow-sm items-center"><div className="flex items-center gap-2"><span className="font-bold text-gray-700">{p.name}</span>{p.image && <Icon path={Icons.Image} size={12} className="text-blue-500"/>}{p.pdf && <Icon path={Icons.File} size={12} className="text-orange-500"/>}</div><span>฿{Number(p.price).toLocaleString()}</span></div>))}</div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">ค่าแรงช่าง (บาท)</label><input type="number" className="input-box" placeholder="0.00" onChange={e => setLog({ ...log, labor: e.target.value })} /></div><button onClick={submitLog} disabled={fileLoading} className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition ${fileLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>บันทึกประวัติ</button></div>)}
+                            {tab === 'history' && (<div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">{item.history && item.history.map((h, i) => (<div key={i} onClick={() => setSelLog(h)} className="bg-white border border-gray-100 rounded-2xl p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition group"><div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-400 flex items-center gap-2 mb-1">{h.date} <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{h.type}</span></div><div className="font-bold text-gray-800 text-lg">{h.description}</div></div><div className="text-right"><div className="font-bold text-blue-600 text-lg">฿{Number(h.totalCost).toLocaleString()}</div></div></div>{h.parts?.length > 0 && <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">ใช้อะไหล่ {h.parts.length} รายการ</div>}</div>))}{(!item.history || item.history.length === 0) && <div className="text-center text-gray-400 py-12 flex flex-col items-center"><Icon path={Icons.Folder} size={48} className="mb-2 opacity-30"/><p>ยังไม่มีประวัติการซ่อม</p></div>}</div>)}
+                            </div></div></div>
+                        </div></div>
                         {selLog && (<div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm fade-in"><div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"><button onClick={() => setSelLog(null)} className="absolute top-4 right-4 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><Icon path={Icons.Close} size={20}/></button><div className="mb-6 border-b pb-4"><div className="text-gray-500 text-sm font-medium">{selLog.date}</div><h3 className="font-bold text-2xl text-gray-900 mt-1">{selLog.type}</h3></div><div className="space-y-6"><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">อาการ / รายละเอียด</span><div className="bg-gray-50 p-4 rounded-xl text-gray-700 border border-gray-100 font-medium">{selLog.description}</div></div><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">รายการอะไหล่</span><div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">{selLog.parts?.map((p, i) => (<div key={i} className="flex flex-col p-4 border-b last:border-0 border-gray-200 bg-white"><div className="flex justify-between items-center mb-2"><span className="font-bold text-gray-800">{p.name}</span><span className="font-mono text-gray-600 font-bold">฿{Number(p.price).toLocaleString()}</span></div><div className="flex gap-2">{p.image && <a href={p.image} target="_blank" className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.Image} size={14}/> ดูรูป</a>}{p.pdf && <a href={p.pdf} target="_blank" className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.File} size={14}/> เปิด PDF</a>}</div></div>))}{(!selLog.parts || selLog.parts.length === 0) && <div className="p-6 text-center text-gray-400 text-sm">ไม่มีรายการอะไหล่</div>}</div></div><div className="flex justify-between items-center pt-4 border-t border-gray-100"><div className="text-sm text-gray-500 font-medium">ค่าแรงช่าง ฿{Number(selLog.laborCost).toLocaleString()}</div><div className="text-xl font-bold text-slate-900">รวม ฿{Number(selLog.totalCost).toLocaleString()}</div></div><button onClick={() => { if (confirm('ยืนยันลบประวัตินี้?')) { postData({ action: 'delete_log', assetId: item.id, logId: selLog.id }); setSelLog(null); } }} className="w-full py-3 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition text-sm">ลบรายการนี้</button></div></div></div>)}
                     </div>
                 );
