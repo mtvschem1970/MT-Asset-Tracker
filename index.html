@@ -36,7 +36,7 @@
         const { useState, useEffect, useMemo } = React;
 
         // ***************************************************************
-        // 🔴🔴🔴 สำคัญมาก: ใส่ URL ของ Web App (Google Apps Script) ที่คุณ Deploy ล่าสุดตรงนี้ 🔴🔴🔴
+        // 🔴🔴🔴 เปลี่ยน URL ตรงนี้เป็นของ Web App ใหม่ที่คุณ Deploy 🔴🔴🔴
         const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec"; 
         // ***************************************************************
 
@@ -109,19 +109,15 @@
             const postData = async (payload) => {
                 setSubmitting(true);
                 try {
-                    // ใช้ standard fetch แบบ POST (ลบ no-cors เพื่อให้รองรับการอ่าน response ในบางกรณี ถ้า backend รองรับ)
-                    // หมายเหตุ: โดยปกติ GAS 'doPost' จะต้องมีการ setup ให้ return JSON และ deploy เป็น "Anyone" ถึงจะอ่าน response ได้ดีที่สุด
                     await fetch(API_URL, {
                         method: 'POST',
                         body: JSON.stringify(payload)
                     });
                     
                     setTimeout(() => {
-                        // ถ้าเป็นการ Save Asset/Log/Dept ให้ refresh ข้อมูลหลัก
                         if (!['save_pm_schedule', 'delete_pm_schedule'].includes(payload.action)) {
                             fetchData();
                         }
-                        
                         setSubmitting(false);
                         if(payload.action === 'save_asset') { setView('assets'); alert('บันทึกอุปกรณ์เรียบร้อย'); }
                         if(payload.action === 'save_log') alert('บันทึกประวัติการซ่อมเรียบร้อย');
@@ -256,7 +252,6 @@
                                     <div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ผู้จำหน่าย</label><input className="input-box" placeholder="ร้านค้า/บริษัทที่ซื้อ" value={form.vendor} onChange={e => setForm({ ...form, vendor: e.target.value })} /></div>
                                 </div>
 
-                                {/* ส่วนเพิ่มใหม่: ข้อมูลการ PM */}
                                 <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 mt-4">
                                     <h3 className="font-bold text-blue-700 mb-4 flex items-center gap-2"><Icon path={Icons.Wrench} size={18}/> ข้อมูลการบำรุงรักษา (PM)</h3>
                                     
@@ -295,7 +290,7 @@
                 const [selLog, setSelLog] = useState(null);
                 const [fileLoading, setFileLoading] = useState(false);
 
-                // --- PM Schedule States (Tab 3) ---
+                // --- PM Schedule States ---
                 const [pmList, setPmList] = useState([]);
                 const [pmLoading, setPmLoading] = useState(false);
                 const [pmForm, setPmForm] = useState({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' });
@@ -323,7 +318,6 @@
                 const savePm = async () => {
                     if (!pmForm.topic || !pmForm.planDate) return alert("ระบุหัวข้อและวันที่");
                     setPmLoading(true);
-                    // *สำคัญ* ส่ง assetName ไปด้วยเพื่อให้ Backend สร้าง Sheet หัวตารางได้
                     await postData({ 
                         action: 'save_pm_schedule', 
                         assetId: item.id, 
