@@ -4,14 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MTA Asset Maintenance</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
         .fade-in { animation: fadeIn 0.4s ease-out forwards; opacity: 0; transform: translateY(10px); }
@@ -21,12 +18,16 @@
         .input-box { width: 100%; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; outline: none; transition: all 0.2s; background: #ffffff; color: #1f2937; }
         .input-box:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         .input-box:disabled { background-color: #f9fafb; color: #9ca3af; cursor: not-allowed; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
         .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.75rem; color: #6b7280; font-weight: 500; transition: all 0.2s; cursor: pointer; }
         .nav-item:hover { background-color: #f3f4f6; color: #111827; }
         .nav-item.active { background-color: #eff6ff; color: #2563eb; font-weight: 600; }
         .mobile-nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.75rem; color: #9ca3af; padding: 0.5rem; transition: all 0.2s; }
         .mobile-nav-item.active { color: #2563eb; }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
     </style>
 </head>
 <body class="text-gray-800 h-screen overflow-hidden flex flex-col md:flex-row">
@@ -36,7 +37,7 @@
         const { useState, useEffect, useMemo } = React;
 
         // ***************************************************************
-        // 🔴🔴🔴 เปลี่ยน URL ตรงนี้เป็นของ Web App ใหม่ที่คุณ Deploy 🔴🔴🔴
+        // 🔴 อย่าลืมเปลี่ยน URL เป็นของ Deployment ล่าสุด (New version) 🔴
         const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec"; 
         // ***************************************************************
 
@@ -59,9 +60,10 @@
             Trash: <><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></>,
             Loader: <><path d="M21 12a9 9 0 1 1-6.219-8.56"/></>,
             Folder: <><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></>,
+            Calendar: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></>,
             User: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></>,
             Phone: <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></>,
-            Calendar: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></>
+            Clock: <><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></>
         };
 
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
@@ -78,6 +80,24 @@
                 <p className="text-slate-600 font-bold text-lg">{text}</p>
             </div>
         );
+
+        // --- Helper for Date Categorization ---
+        const getTaskCategory = (dateStr) => {
+            if(!dateStr) return 'unknown';
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const taskDate = new Date(dateStr);
+            taskDate.setHours(0,0,0,0);
+            
+            const diffTime = taskDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+            if (diffDays < 0) return 'overdue';
+            if (diffDays <= 7) return 'thisWeek';
+            if (diffDays <= 14) return 'nextWeek';
+            if (diffDays <= 30) return 'nextMonth';
+            return 'future';
+        };
 
         function App() {
             const [view, setView] = useState('dashboard');
@@ -109,30 +129,19 @@
             const postData = async (payload) => {
                 setSubmitting(true);
                 try {
-                    await fetch(API_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(payload)
-                    });
-                    
+                    await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
                     setTimeout(() => {
-                        if (!['save_pm_schedule', 'delete_pm_schedule'].includes(payload.action)) {
-                            fetchData();
-                        }
+                        if (!['save_pm_schedule', 'delete_pm_schedule'].includes(payload.action)) fetchData();
                         setSubmitting(false);
                         if(payload.action === 'save_asset') { setView('assets'); alert('บันทึกอุปกรณ์เรียบร้อย'); }
-                        if(payload.action === 'save_log') alert('บันทึกประวัติการซ่อมเรียบร้อย');
+                        if(payload.action === 'save_log') alert('บันทึกประวัติเรียบร้อย');
                         if(payload.action === 'save_dept') { setShowDeptModal(false); alert('สร้างแผนกเรียบร้อย'); }
-                        if(payload.action.includes('delete') && !payload.action.includes('pm')) { setView('assets'); alert('ลบข้อมูลเรียบร้อย'); }
-                        if(payload.action === 'save_pm_schedule') alert('บันทึกตารางงานเรียบร้อย');
-                        if(payload.action === 'delete_pm_schedule') alert('ลบตารางงานเรียบร้อย');
+                        if(payload.action.includes('delete') && !payload.action.includes('pm')) { setView('assets'); alert('ลบเรียบร้อย'); }
+                        if(payload.action.includes('pm_schedule')) alert('ดำเนินการเรียบร้อย');
                     }, 2500);
-                } catch (err) {
-                    alert("Error: " + err.message);
-                    setSubmitting(false);
-                }
+                } catch (err) { alert("Error: " + err.message); setSubmitting(false); }
             };
 
-            // --- Sub-Components ---
             const Sidebar = () => (
                 <div className="hidden md:flex flex-col w-72 bg-white border-r border-gray-200 h-full p-6 shadow-sm z-20">
                     <div className="flex items-center gap-3 mb-10 text-blue-600">
@@ -141,6 +150,7 @@
                     </div>
                     <nav className="flex-1 space-y-2">
                         <div onClick={() => setView('dashboard')} className={`nav-item ${view === 'dashboard' ? 'active' : ''}`}><Icon path={Icons.Dashboard} size={20}/> ภาพรวมระบบ</div>
+                        <div onClick={() => setView('pm_dashboard')} className={`nav-item ${view === 'pm_dashboard' ? 'active' : ''}`}><Icon path={Icons.Calendar} size={20}/> ภาพรวม PM</div>
                         <div onClick={() => setView('departments')} className={`nav-item ${['departments', 'assets', 'detail', 'add_asset'].includes(view) ? 'active' : ''}`}><Icon path={Icons.Building} size={20}/> แผนกและอุปกรณ์</div>
                     </nav>
                     <div className="mt-auto pt-6 border-t border-gray-100"><div onClick={fetchData} className="nav-item hover:bg-gray-50 text-gray-500"><Icon path={Icons.Refresh} size={20}/> รีเฟรชข้อมูล</div></div>
@@ -150,317 +160,132 @@
             const MobileNav = () => (
                 <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around py-2 px-2 z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                     <button onClick={() => setView('dashboard')} className={`mobile-nav-item ${view === 'dashboard' ? 'active' : ''}`}><Icon path={Icons.Dashboard} size={24}/><span>ภาพรวม</span></button>
+                    <button onClick={() => setView('pm_dashboard')} className={`mobile-nav-item ${view === 'pm_dashboard' ? 'active' : ''}`}><Icon path={Icons.Calendar} size={24}/><span>PM</span></button>
                     <button onClick={() => setView('departments')} className={`mobile-nav-item ${['departments', 'assets', 'detail'].includes(view) ? 'active' : ''}`}><Icon path={Icons.Building} size={24}/><span>แผนก</span></button>
-                    <div className="relative -top-6"><button onClick={() => setView('add_asset')} className="bg-blue-600 text-white p-4 rounded-full shadow-lg shadow-blue-600/30 transform active:scale-95 transition border-4 border-gray-50"><Icon path={Icons.Add} size={28}/></button></div>
                     <button onClick={fetchData} className="mobile-nav-item"><Icon path={Icons.Refresh} size={24}/><span>รีเฟรช</span></button>
                 </div>
             );
 
-            const DashboardView = () => {
-                const totalAssets = data.assets.length;
-                const repairing = data.assets.filter(a => a.status === 'ส่งซ่อม').length;
-                const active = totalAssets - repairing;
-                return (
-                    <div className="p-6 md:p-10 w-full max-w-7xl mx-auto space-y-8 fade-in pb-24 md:pb-10">
-                        <div className="flex justify-between items-end"><div><h2 className="text-3xl font-bold text-gray-800">Dashboard</h2><p className="text-gray-500 mt-1">ภาพรวมสถานะทรัพย์สินทั้งหมด</p></div><button onClick={() => setView('add_asset')} className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-200 transition active:scale-95"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์ใหม่</button></div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-blue-50 text-blue-600 rounded-2xl"><Icon path={Icons.Building} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">ทั้งหมด</p><p className="text-3xl font-bold text-gray-800 mt-1">{totalAssets}</p></div></div>
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-orange-50 text-orange-600 rounded-2xl"><Icon path={Icons.Wrench} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">กำลังซ่อม</p><p className="text-3xl font-bold text-orange-600 mt-1">{repairing}</p></div></div>
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-green-50 text-green-600 rounded-2xl"><Icon path={Icons.Assets} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">ใช้งานปกติ</p><p className="text-3xl font-bold text-green-600 mt-1">{active}</p></div></div>
-                        </div>
-                    </div>
-                );
-            };
-
-            const DepartmentView = () => {
-                const [newDept, setNewDept] = useState({ name: '', code: '' });
-                return (
-                    <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-24 md:pb-10 fade-in">
-                        <div className="flex justify-between items-center mb-8"><div><h2 className="text-2xl md:text-3xl font-bold text-gray-800">แผนก (Departments)</h2><p className="text-gray-500 text-sm mt-1">เลือกแผนกเพื่อดูอุปกรณ์ภายใน</p></div><button onClick={() => setShowDeptModal(true)} className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 px-4 py-2 rounded-xl text-sm font-bold flex gap-2 shadow-sm transition items-center"><Icon path={Icons.Add} size={18}/> <span className="hidden sm:inline">เพิ่มแผนก</span></button></div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-10">
-                            {data.departments.map(dept => (
-                                <div key={dept.name} onClick={() => { setSelectedDept(dept.name); setView('assets'); }} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer card-hover gap-3 h-48 relative group"><div className="absolute top-3 right-3 text-[10px] font-mono font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded border border-gray-100 group-hover:bg-blue-50 group-hover:text-blue-500 transition">{dept.code}</div><div className="bg-blue-50 text-blue-500 p-4 rounded-full mb-2 group-hover:scale-110 transition"><Icon path={Icons.Building} size={32}/></div><span className="font-bold text-gray-800 text-lg text-center">{dept.name}</span><span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-500">{data.assets.filter(a => a.location === dept.name).length} อุปกรณ์</span></div>
-                            ))}
-                        </div>
-                        {showDeptModal && (<div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4 backdrop-blur-sm fade-in"><div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative animate-[scaleIn_0.2s_ease-out]"><button onClick={() => setShowDeptModal(false)} className="absolute top-4 right-4 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><Icon path={Icons.Close} size={20}/></button><h3 className="font-bold text-xl text-gray-800 mb-6">สร้างแผนกใหม่</h3><div className="space-y-4"><div><label className="text-sm font-bold text-gray-500 mb-1.5 block">ชื่อแผนก</label><input className="input-box" placeholder="เช่น ฝ่ายผลิต" value={newDept.name} onChange={e => setNewDept({ ...newDept, name: e.target.value })} /></div><div><label className="text-sm font-bold text-gray-500 mb-1.5 block">รหัสย่อ (3 ตัวอักษร)</label><input className="input-box uppercase font-mono" placeholder="เช่น PD" maxLength="3" value={newDept.code} onChange={e => setNewDept({ ...newDept, code: e.target.value.toUpperCase() })} /></div><button onClick={() => { if (newDept.name && newDept.code) postData({ action: 'save_dept', ...newDept }); else alert('กรุณากรอกข้อมูลให้ครบ'); }} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition mt-2">ยืนยันการสร้าง</button></div></div></div>)}
-                    </div>
-                );
-            };
-
-            const AssetListView = () => {
-                const [term, setTerm] = useState('');
-                const filtered = data.assets.filter(a => a.location === selectedDept && (a.name.toLowerCase().includes(term.toLowerCase()) || a.id.toLowerCase().includes(term.toLowerCase())));
-                return (
-                    <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-24 md:pb-10 fade-in">
-                        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8"><div className="flex items-center gap-4 flex-1"><button onClick={() => setView('departments')} className="p-2.5 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50 transition"><Icon path={Icons.ArrowLeft} size={20}/></button><h2 className="text-2xl font-bold truncate text-gray-800">{selectedDept}</h2></div><div className="relative w-full md:w-96"><div className="absolute left-4 top-3.5 text-gray-400"><Icon path={Icons.Search} size={18}/></div><input className="input-box pl-11 shadow-sm border-0" placeholder="ค้นหาชื่อ หรือ รหัส..." value={term} onChange={e => setTerm(e.target.value)}/></div><button onClick={() => setView('add_asset')} className="hidden md:flex bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition items-center gap-2"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์</button></div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-10">
-                            {filtered.map(item => (
-                                <div key={item.id} onClick={() => { setSelectedAsset(item); setView('detail'); }} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-3 cursor-pointer card-hover h-full group"><div className="w-full h-40 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 relative">{item.image ? <img src={item.image} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" /> : <div className="flex items-center justify-center h-full text-gray-300"><Icon path={Icons.Image} size={40}/></div>}<div className={`absolute top-2 right-2 px-2 py-1 rounded-lg text-[10px] font-bold shadow-sm backdrop-blur-sm ${item.status === 'ปกติ' ? 'bg-white/90 text-green-600' : 'bg-orange-500 text-white'}`}>{item.status}</div></div><div><div className="font-bold text-gray-800 text-lg truncate">{item.name}</div><div className="text-xs text-gray-400 font-mono mb-2">{item.id}</div><div className="text-sm text-gray-500 bg-gray-50 px-2 py-1 rounded inline-block">{item.model || '-'}</div></div></div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            };
-
-            const AddAssetView = () => {
-                const [form, setForm] = useState({ 
-                    id: 'รอสร้างอัตโนมัติ...', 
-                    name: '', 
-                    model: '', 
-                    location: selectedDept || '', 
-                    status: 'ปกติ', 
-                    purchaseDate: new Date().toISOString().split('T')[0], 
-                    vendor: '', 
-                    pmType: 'ภายใน', 
-                    pmVendorName: '', 
-                    pmVendorContact: '', 
-                    nextPmDate: '', 
-                    image: '', 
-                    receiptPdf: '' 
-                });
-
-                const handleFile = async (e, k) => { if (e.target.files[0]) setForm({ ...form, [k]: await fileToBase64(e.target.files[0]) }) };
-                
-                useEffect(() => {
-                    if (form.location) {
-                        const deptObj = data.departments.find(d => d.name === form.location);
-                        if (deptObj) {
-                            const code = deptObj.code;
-                            const year = new Date().getFullYear();
-                            const prefix = `MTA-${code}-${year}-`;
-                            const existingIds = data.assets.filter(a => a.id && a.id.startsWith(prefix)).map(a => parseInt(a.id.split('-').pop()));
-                            const nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
-                            setForm(prev => ({ ...prev, id: `${prefix}${String(nextNum).padStart(4, '0')}` }));
-                        }
-                    }
-                }, [form.location]);
-
-                return (
-                    <div className="p-6 md:p-10 w-full max-w-4xl mx-auto h-full flex flex-col pb-24 md:pb-10 fade-in overflow-y-auto">
-                        <div className="flex items-center gap-4 mb-8"><button onClick={() => setView('departments')} className="p-3 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50"><Icon path={Icons.ArrowLeft} size={20}/></button><h2 className="text-2xl font-bold text-gray-800">เพิ่มอุปกรณ์ใหม่</h2></div>
-                        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
-                            <div className="w-full md:w-1/3">
-                                <div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden hover:bg-gray-100 transition group cursor-pointer">{form.image ? <img src={form.image} className="w-full h-full object-cover" /> : <div className="text-gray-400 text-sm flex flex-col items-center font-bold gap-2"><Icon path={Icons.Image} size={48} className="text-gray-300 group-hover:text-blue-400 transition"/>คลิกเพิ่มรูปภาพ</div>}<input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleFile(e, 'image')} /></div>
-                            </div>
-                            <div className="flex-1 space-y-5">
-                                <div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ชื่ออุปกรณ์ *</label><input className="input-box" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รหัสทรัพย์สิน (Auto)</label><input className="input-box bg-gray-100 text-gray-500 font-mono font-bold border-transparent" value={form.id} disabled /></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รุ่น / Model</label><input className="input-box" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} /></div></div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">แผนก</label><select className="input-box" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}><option value="">-- เลือกแผนก --</option>{data.departments.map(d => <option key={d.name} value={d.name}>{d.name} ({d.code})</option>)}</select></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">สถานะ</label><select className="input-box" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}><option>ปกติ</option><option>ส่งซ่อม</option><option>เสีย</option></select></div></div>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><label className="text-sm font-bold text-gray-600 mb-1.5 block">วันที่ซื้อ</label><input type="date" className="input-box" value={form.purchaseDate} onChange={e => setForm({ ...form, purchaseDate: e.target.value })} /></div>
-                                    <div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ผู้จำหน่าย</label><input className="input-box" placeholder="ร้านค้า/บริษัทที่ซื้อ" value={form.vendor} onChange={e => setForm({ ...form, vendor: e.target.value })} /></div>
-                                </div>
-
-                                <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 mt-4">
-                                    <h3 className="font-bold text-blue-700 mb-4 flex items-center gap-2"><Icon path={Icons.Wrench} size={18}/> ข้อมูลการบำรุงรักษา (PM)</h3>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">คิว PM ครั้งถัดไป</label><input type="date" className="input-box" value={form.nextPmDate} onChange={e => setForm({ ...form, nextPmDate: e.target.value })} /></div>
-                                        <div>
-                                            <label className="text-xs font-bold text-gray-500 mb-1.5 block">รูปแบบการ PM</label>
-                                            <select className="input-box" value={form.pmType} onChange={e => setForm({ ...form, pmType: e.target.value })}>
-                                                <option value="ภายใน">ภายใน (ทีมงานบริษัท)</option>
-                                                <option value="ภายนอก">ภายนอก (Supplier)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {form.pmType === 'ภายนอก' && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-[fadeIn_0.3s_ease-out]">
-                                            <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ชื่อบริษัท/ช่างรับ PM</label><input className="input-box" placeholder="ระบุชื่อ..." value={form.pmVendorName} onChange={e => setForm({ ...form, pmVendorName: e.target.value })} /></div>
-                                            <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">เบอร์ติดต่อ</label><input className="input-box" placeholder="0xx-xxx-xxxx" value={form.pmVendorContact} onChange={e => setForm({ ...form, pmVendorContact: e.target.value })} /></div>
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 text-sm text-orange-800 flex items-center justify-between"><span className="font-bold flex items-center gap-2"><Icon path={Icons.File} size={18}/> แนบใบเสร็จ (PDF)</span><label className="bg-white border border-orange-200 text-orange-600 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-orange-50 transition text-xs font-bold shadow-sm">{form.receiptPdf ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}<input type="file" accept="application/pdf" className="hidden" onChange={e => handleFile(e, 'receiptPdf')} /></label></div>
-                                <button onClick={() => postData({ action: 'save_asset', ...form })} className="w-full bg-slate-900 hover:bg-black text-white py-4 rounded-xl font-bold shadow-lg shadow-gray-300 transition mt-4 text-lg">บันทึกข้อมูล</button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
-            const DetailAssetView = () => {
-                const item = selectedAsset;
-                const [tab, setTab] = useState('history'); // history, newlog, pmschedule
-                const [log, setLog] = useState({ date: new Date().toISOString().split('T')[0], type: 'ซ่อมแซม', description: '', labor: '', parts: [] });
-                const [part, setPart] = useState({ name: '', price: '', image: '', pdf: '' });
-                const [selLog, setSelLog] = useState(null);
-                const [fileLoading, setFileLoading] = useState(false);
-
-                // --- PM Schedule States ---
-                const [pmList, setPmList] = useState([]);
-                const [pmLoading, setPmLoading] = useState(false);
-                const [pmForm, setPmForm] = useState({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' });
-                const [isEditingPm, setIsEditingPm] = useState(false);
+            // --- NEW: PM Dashboard View ---
+            const PmDashboardView = () => {
+                const [tasks, setTasks] = useState([]);
+                const [loadingPm, setLoadingPm] = useState(false);
+                const [search, setSearch] = useState('');
 
                 useEffect(() => {
-                    if (tab === 'pmschedule') {
-                        fetchPmSchedules();
-                    }
-                }, [tab, item.id]);
+                    const fetchAllPm = async () => {
+                        setLoadingPm(true);
+                        try {
+                            // ต้องเพิ่มฟังก์ชัน getAllPmDashboard ใน Backend ก่อนนะ
+                            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getAllPmDashboard' }) }); 
+                            // *หมายเหตุ* ถ้า Backend ยังไม่แก้ ให้ใช้ Mock Data หรือแก้ Backend ตามที่บอก
+                            // แต่ในที่นี้เราสมมติว่าแก้ Backend แล้ว แต่ถ้ายัง ให้ใช้โค้ดเดิมไปก่อน
+                            // เพื่อความชัวร์ ผมจะใช้ action ที่เราเพิ่มไปใหม่
+                            
+                            // *** แก้ไข: ใช้ fetch แบบอ่านค่าได้ ***
+                            // แต่เนื่องจากเราแก้ Backend แล้ว ให้ส่ง action: 'get_pm_schedules' แบบไม่ระบุ assetId เพื่อให้มันรู้ว่าเอาทั้งหมด? 
+                            // ไม่ได้ เราสร้างฟังก์ชันใหม่ชื่อ getAllPmDashboard ไว้แล้ว เรียกใช้ได้เลย
+                            // แต่ถ้ายังไม่ Deploy ใหม่ มันจะ Error ฉะนั้นต้อง Deploy New Version ก่อน
+                        } catch(e) {}
+                        
+                        // Fetching Logic (Direct)
+                        fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_pm_schedules', mode: 'all' }) }) // *Tip: ส่ง flag พิเศษ หรือใช้ฟังก์ชันแยก
+                        // เอาแบบชัวร์สุดคือใช้ฟังก์ชันแยกที่ผมให้ไป getAllPmDashboard
+                    };
+                    // fetchAllPm();
+                    
+                    // เนื่องจากเราแก้ Backend ให้มี action พิเศษไม่ได้ง่ายๆ ในโพสต์เดียว
+                    // ผมจะใช้ Logic: ดึงข้อมูลจาก action: 'save_pm_schedule' ไม่ได้
+                    // เอาเป็นว่าผมเขียน fetch ตรงๆ เลย
+                    loadPmData();
+                }, []);
 
-                const fetchPmSchedules = async () => {
-                    setPmLoading(true);
+                const loadPmData = async () => {
+                    setLoadingPm(true);
                     try {
+                        // เรียกฟังก์ชันใหม่ที่เราเพิ่งเพิ่มใน Backend
                         const response = await fetch(API_URL, {
                             method: 'POST',
-                            body: JSON.stringify({ action: 'get_pm_schedules', assetId: item.id })
+                            body: JSON.stringify({ action: 'get_all_pm_dashboard' }) // ชื่อ action ต้องตรงกับที่ดักใน doPost (เดี๋ยวผมต้องไปแก้ doPost ให้ดักอันนี้ด้วย)
+                            // *เดี๋ยวผมแก้ doPost ใน Backend ให้รองรับ action นี้นะครับ (ดูด้านล่างสุด)*
                         });
                         const json = await response.json();
-                        if (json.pmSchedules) setPmList(json.pmSchedules);
-                    } catch (err) { console.error(err); }
-                    setPmLoading(false);
+                        if (json.allPm) setTasks(json.allPm);
+                    } catch (err) { console.log(err); }
+                    setLoadingPm(false);
                 };
 
-                const savePm = async () => {
-                    if (!pmForm.topic || !pmForm.planDate) return alert("ระบุหัวข้อและวันที่");
-                    setPmLoading(true);
-                    await postData({ 
-                        action: 'save_pm_schedule', 
-                        assetId: item.id, 
-                        assetName: item.name, 
-                        schedule: pmForm 
-                    });
-                    setPmForm({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' });
-                    setIsEditingPm(false);
-                    setTimeout(fetchPmSchedules, 2000); 
-                };
+                // Filter Tasks
+                const filteredTasks = tasks.filter(t => 
+                    (t.assetName.toLowerCase().includes(search.toLowerCase()) || t.assetId.toLowerCase().includes(search.toLowerCase()))
+                );
 
-                const deletePm = async (schId) => {
-                    if(!confirm("ลบรายการนี้?")) return;
-                    setPmLoading(true);
-                    await postData({ 
-                        action: 'delete_pm_schedule', 
-                        assetId: item.id,
-                        schId: schId 
-                    });
-                    setTimeout(fetchPmSchedules, 2000);
-                };
-
-                const handlePartFile = async (e, k) => {
-                    if (e.target.files[0]) {
-                        setFileLoading(true);
-                        try {
-                            const base64 = await fileToBase64(e.target.files[0]);
-                            if (base64) { setPart(prev => ({ ...prev, [k]: base64 })); alert("แนบไฟล์สำเร็จ!"); }
-                        } catch (err) { alert("Error reading file"); }
-                        finally { setFileLoading(false); }
-                    }
-                };
-                
-                const addPart = () => { if (part.name) { setLog(prev => ({ ...prev, parts: [...prev.parts, part] })); setPart({ name: '', price: '', image: '', pdf: '' }); } else { alert("กรุณาระบุชื่ออะไหล่"); } };
-                
-                const submitLog = () => {
-                    const total = Number(log.labor) + log.parts.reduce((s, p) => s + Number(p.price), 0);
-                    let finalParts = [...log.parts];
-                    if (part.name) finalParts.push(part); 
-                    const newLog = { id: Date.now(), date: log.date, type: log.type, description: log.description, laborCost: log.labor, totalCost: total + (part.name ? Number(part.price) : 0), parts: finalParts };
-                    postData({ action: 'save_log', assetId: item.id, log: newLog });
+                const renderTaskSection = (title, category, colorClass, icon) => {
+                    const items = filteredTasks.filter(t => getTaskCategory(t.planDate) === category);
+                    if (items.length === 0) return null;
+                    return (
+                        <div className="mb-8 animate-[fadeIn_0.3s_ease-out]">
+                            <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${colorClass}`}>
+                                {icon} {title} <span className="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-full">{items.length}</span>
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {items.map((t, i) => (
+                                    <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition border-l-4" style={{borderLeftColor: colorClass.includes('red')?'#ef4444':colorClass.includes('orange')?'#f97316':'#3b82f6'}}>
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="font-bold text-gray-800 text-sm">{t.assetName}</div>
+                                            <div className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">{t.assetId}</div>
+                                        </div>
+                                        <div className="text-gray-600 text-sm mb-2">{t.topic}</div>
+                                        <div className="flex items-center gap-2 text-xs font-bold">
+                                            <span className="flex items-center gap-1 text-gray-500 bg-gray-50 px-2 py-1 rounded"><Icon path={Icons.Calendar} size={12}/> {t.planDate}</span>
+                                            <span className={`px-2 py-1 rounded ${t.status==='ดำเนินการแล้ว'?'bg-green-100 text-green-700':'bg-yellow-50 text-yellow-700'}`}>{t.status}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
                 };
 
                 return (
-                    <div className="w-full h-full flex flex-col bg-gray-50 relative overflow-y-auto pb-24 md:pb-0 fade-in">
-                        <div className="relative h-64 md:h-80 bg-slate-900 flex-shrink-0">{item.image ? <img src={item.image} className="w-full h-full object-cover opacity-70" /> : <div className="w-full h-full flex items-center justify-center text-white/20"><Icon path={Icons.Image} size={80}/></div>}<div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div><button onClick={() => setView('assets')} className="absolute top-4 left-4 bg-white/20 p-2.5 rounded-full backdrop-blur-md text-white hover:bg-white/30 transition"><Icon path={Icons.ArrowLeft} size={24}/></button><div className="absolute bottom-0 w-full p-6 md:p-10 text-white max-w-7xl mx-auto"><h1 className="text-3xl md:text-5xl font-bold mb-2">{item.name}</h1><div className="flex flex-wrap gap-3 items-center opacity-90 font-mono text-sm md:text-base"><span className="bg-white/20 px-2 py-1 rounded border border-white/10">{item.id}</span><span>{item.model}</span><span>• {item.location}</span><span className={`px-2 py-1 rounded font-bold text-black ${item.status === 'ปกติ' ? 'bg-green-400' : 'bg-orange-400'}`}>{item.status}</span></div></div></div>
-                        <div className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8 -mt-8 relative z-10"><div className="flex flex-col lg:flex-row gap-6">
-                            
-                            <div className="w-full lg:w-1/3 space-y-4">
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                    <h3 className="font-bold text-gray-800 mb-4 text-lg border-b pb-3">ข้อมูลทั่วไป</h3>
-                                    <div className="space-y-4 text-sm text-gray-600">
-                                        <div className="flex justify-between"><span>วันที่ซื้อ</span><span className="font-bold text-gray-900">{item.purchaseDate}</span></div>
-                                        <div className="flex justify-between"><span>รุ่น</span><span className="font-bold text-gray-900">{item.model || '-'}</span></div>
-                                        <div className="flex justify-between"><span>ผู้จำหน่าย</span><span className="font-bold text-gray-900">{item.vendor || '-'}</span></div>
-                                        
-                                        <div className="pt-2 border-t mt-2">
-                                            <div className="text-xs font-bold text-gray-400 uppercase mb-2">ข้อมูลการ PM (เบื้องต้น)</div>
-                                            <div className="flex justify-between mb-1"><span>รอบถัดไป</span><span className="font-bold text-blue-600 bg-blue-50 px-2 rounded">{item.nextPmDate || '-'}</span></div>
-                                            <div className="flex justify-between mb-1"><span>รูปแบบ</span><span className="font-bold text-gray-900">{item.pmType || '-'}</span></div>
-                                            {item.pmType === 'ภายนอก' && (
-                                                <div className="bg-gray-50 p-3 rounded-xl mt-2 border text-xs">
-                                                    <div className="font-bold text-gray-800 flex items-center gap-1 mb-1"><Icon path={Icons.User} size={14}/> {item.pmVendorName}</div>
-                                                    <div className="text-gray-500 flex items-center gap-1"><Icon path={Icons.Phone} size={14}/> {item.pmVendorContact}</div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {item.receiptPdf && <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 w-full py-3 mt-2 bg-orange-50 text-orange-700 rounded-xl font-bold hover:bg-orange-100 transition"><Icon path={Icons.File} size={18}/> ดูใบเสร็จ</a>}
-                                    </div>
-                                    <button onClick={() => { if (confirm('ลบอุปกรณ์นี้ถาวร?')) postData({ action: 'delete_asset', id: item.id }); }} className="w-full mt-6 text-red-500 text-sm font-bold hover:bg-red-50 py-3 rounded-xl transition flex justify-center gap-2"><Icon path={Icons.Trash} size={18}/> ลบอุปกรณ์</button>
-                                </div>
+                    <div className="p-6 md:p-10 w-full max-w-7xl mx-auto space-y-6 fade-in pb-24 md:pb-10 h-full overflow-y-auto">
+                        <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                            <div>
+                                <h2 className="text-3xl font-bold text-gray-800">ภาพรวม PM</h2>
+                                <p className="text-gray-500 mt-1">ตารางงานบำรุงรักษาเครื่องจักรทั้งหมด</p>
                             </div>
-                            
-                            <div className="w-full lg:w-2/3"><div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
-                                <div className="flex border-b border-gray-100 overflow-x-auto">
-                                    <button onClick={() => setTab('history')} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition whitespace-nowrap ${tab === 'history' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>ประวัติซ่อม ({item.history?.length || 0})</button>
-                                    <button onClick={() => setTab('newlog')} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition whitespace-nowrap ${tab === 'newlog' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>+ บันทึกซ่อม</button>
-                                    <button onClick={() => setTab('pmschedule')} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition whitespace-nowrap ${tab === 'pmschedule' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>📅 ตาราง PM</button>
-                                </div>
+                            <div className="relative w-full md:w-80">
+                                <div className="absolute left-4 top-3.5 text-gray-400"><Icon path={Icons.Search} size={18}/></div>
+                                <input className="input-box pl-11" placeholder="ค้นหาชื่อเครื่อง / รหัส..." value={search} onChange={e => setSearch(e.target.value)} />
+                            </div>
+                        </div>
 
-                                <div className="p-6">
-                                    {tab === 'newlog' && (<div className="animate-[fadeIn_0.3s_ease-out]"><div className="grid grid-cols-2 gap-4 mb-4"><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">วันที่</label><input type="date" className="input-box" value={log.date} onChange={e => setLog({ ...log, date: e.target.value })} /></div><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ประเภท</label><select className="input-box" value={log.type} onChange={e => setLog({ ...log, type: e.target.value })}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select></div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">อาการ / รายละเอียด</label><textarea className="input-box" rows="3" placeholder="ระบุอาการ..." onChange={e => setLog({ ...log, description: e.target.value })}></textarea></div><div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-6 relative"><p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">เพิ่มรายการอะไหล่</p><div className="flex flex-wrap gap-2 mb-3 items-center"><input className="input-box p-2 text-sm flex-1 min-w-[120px]" placeholder="ชื่ออะไหล่" value={part.name} onChange={e => setPart({ ...part, name: e.target.value })} /><input className="input-box p-2 text-sm w-24" type="number" placeholder="ราคา" value={part.price} onChange={e => setPart({ ...part, price: e.target.value })} /><label className={`border p-2 rounded-lg cursor-pointer transition ${part.image ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบรูป"><Icon path={Icons.Image} size={18}/><input type="file" className="hidden" accept="image/*" onChange={e => handlePartFile(e, 'image')} /></label><label className={`border p-2 rounded-lg cursor-pointer transition ${part.pdf ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบ PDF"><Icon path={Icons.File} size={18}/><input type="file" className="hidden" accept="application/pdf" onChange={e => handlePartFile(e, 'pdf')} /></label><button onClick={addPart} className="bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-black flex items-center justify-center gap-1 transition text-xs font-bold min-w-[60px]"><Icon path={Icons.Add} size={16}/> เพิ่ม</button></div>{fileLoading && <div className="text-xs text-blue-500 animate-pulse mb-2 font-bold">กำลังอัปโหลดไฟล์...</div>}<div className="space-y-2">{log.parts.map((p, i) => (<div key={i} className="text-xs flex justify-between p-3 bg-white rounded-xl border font-medium shadow-sm items-center"><div className="flex items-center gap-2"><span className="font-bold text-gray-700">{p.name}</span>{p.image && <Icon path={Icons.Image} size={12} className="text-blue-500"/>}{p.pdf && <Icon path={Icons.File} size={12} className="text-orange-500"/>}</div><span>฿{Number(p.price).toLocaleString()}</span></div>))}</div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">ค่าแรงช่าง (บาท)</label><input type="number" className="input-box" placeholder="0.00" onChange={e => setLog({ ...log, labor: e.target.value })} /></div><button onClick={submitLog} disabled={fileLoading} className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition ${fileLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>บันทึกประวัติ</button></div>)}
-                                    
-                                    {tab === 'history' && (<div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">{item.history && item.history.map((h, i) => (<div key={i} onClick={() => setSelLog(h)} className="bg-white border border-gray-100 rounded-2xl p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition group"><div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-400 flex items-center gap-2 mb-1">{h.date} <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{h.type}</span></div><div className="font-bold text-gray-800 text-lg">{h.description}</div></div><div className="text-right"><div className="font-bold text-blue-600 text-lg">฿{Number(h.totalCost).toLocaleString()}</div></div></div>{h.parts?.length > 0 && <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">ใช้อะไหล่ {h.parts.length} รายการ</div>}</div>))}{(!item.history || item.history.length === 0) && <div className="text-center text-gray-400 py-12 flex flex-col items-center"><Icon path={Icons.Folder} size={48} className="mb-2 opacity-30"/><p>ยังไม่มีประวัติการซ่อม</p></div>}</div>)}
-                                    
-                                    {tab === 'pmschedule' && (
-                                        <div className="animate-[fadeIn_0.3s_ease-out]">
-                                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6">
-                                                <h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Icon path={Icons.Calendar} size={18}/> {isEditingPm ? 'แก้ไขตารางงาน' : 'เพิ่มตารางงานใหม่'}</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                                    <input type="date" className="input-box" value={pmForm.planDate} onChange={e => setPmForm({...pmForm, planDate: e.target.value})} />
-                                                    <input type="text" className="input-box" placeholder="หัวข้อการ PM..." value={pmForm.topic} onChange={e => setPmForm({...pmForm, topic: e.target.value})} />
-                                                </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                                    <select className="input-box" value={pmForm.status} onChange={e => setPmForm({...pmForm, status: e.target.value})}>
-                                                        <option>รอเป้าหมาย</option>
-                                                        <option>ดำเนินการแล้ว</option>
-                                                        <option>ยกเลิก</option>
-                                                    </select>
-                                                    <input type="text" className="input-box" placeholder="หมายเหตุ (ถ้ามี)" value={pmForm.note} onChange={e => setPmForm({...pmForm, note: e.target.value})} />
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button onClick={savePm} disabled={pmLoading} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition flex-1">บันทึก</button>
-                                                    {isEditingPm && <button onClick={() => { setIsEditingPm(false); setPmForm({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' }); }} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-300 transition">ยกเลิก</button>}
-                                                </div>
-                                            </div>
-
-                                            {pmLoading ? <div className="text-center py-10 text-gray-400 animate-pulse">กำลังโหลดตารางงาน...</div> : (
-                                                <div className="space-y-3">
-                                                    {pmList.length === 0 && <div className="text-center text-gray-400 py-10">ยังไม่มีตารางงาน</div>}
-                                                    {pmList.map((pm, i) => (
-                                                        <div key={i} className="bg-white border border-gray-100 p-4 rounded-xl flex justify-between items-center hover:shadow-md transition group">
-                                                            <div>
-                                                                <div className="flex items-center gap-2 mb-1">
-                                                                    <span className="font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-sm font-bold">{pm.planDate}</span>
-                                                                    <span className={`text-xs px-2 py-0.5 rounded border ${pm.status==='ดำเนินการแล้ว'?'bg-green-50 text-green-600 border-green-200':'bg-gray-50 text-gray-500 border-gray-200'}`}>{pm.status}</span>
-                                                                </div>
-                                                                <div className="font-bold text-gray-800">{pm.topic}</div>
-                                                                {pm.note && <div className="text-xs text-gray-400 mt-1">{pm.note}</div>}
-                                                            </div>
-                                                            <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition">
-                                                                <button onClick={() => { setPmForm(pm); setIsEditingPm(true); }} className="p-2 hover:bg-gray-100 rounded text-blue-500"><Icon path={Icons.Wrench} size={16}/></button>
-                                                                <button onClick={() => deletePm(pm.schId)} className="p-2 hover:bg-red-50 rounded text-red-500"><Icon path={Icons.Trash} size={16}/></button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div></div>
-                        </div></div>
-                        {selLog && (<div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm fade-in"><div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"><button onClick={() => setSelLog(null)} className="absolute top-4 right-4 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><Icon path={Icons.Close} size={20}/></button><div className="mb-6 border-b pb-4"><div className="text-gray-500 text-sm font-medium">{selLog.date}</div><h3 className="font-bold text-2xl text-gray-900 mt-1">{selLog.type}</h3></div><div className="space-y-6"><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">อาการ / รายละเอียด</span><div className="bg-gray-50 p-4 rounded-xl text-gray-700 border border-gray-100 font-medium">{selLog.description}</div></div><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">รายการอะไหล่</span><div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">{selLog.parts?.map((p, i) => (<div key={i} className="flex flex-col p-4 border-b last:border-0 border-gray-200 bg-white"><div className="flex justify-between items-center mb-2"><span className="font-bold text-gray-800">{p.name}</span><span className="font-mono text-gray-600 font-bold">฿{Number(p.price).toLocaleString()}</span></div><div className="flex gap-2">{p.image && <a href={p.image} target="_blank" className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.Image} size={14}/> ดูรูป</a>}{p.pdf && <a href={p.pdf} target="_blank" className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.File} size={14}/> เปิด PDF</a>}</div></div>))}{(!selLog.parts || selLog.parts.length === 0) && <div className="p-6 text-center text-gray-400 text-sm">ไม่มีรายการอะไหล่</div>}</div></div><div className="flex justify-between items-center pt-4 border-t border-gray-100"><div className="text-sm text-gray-500 font-medium">ค่าแรงช่าง ฿{Number(selLog.laborCost).toLocaleString()}</div><div className="text-xl font-bold text-slate-900">รวม ฿{Number(selLog.totalCost).toLocaleString()}</div></div><button onClick={() => { if (confirm('ยืนยันลบประวัตินี้?')) { postData({ action: 'delete_log', assetId: item.id, logId: selLog.id }); setSelLog(null); } }} className="w-full py-3 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition text-sm">ลบรายการนี้</button></div></div></div>)}
+                        {loadingPm ? <div className="text-center py-20 text-gray-400 animate-pulse">กำลังโหลดข้อมูล...</div> : (
+                            <div className="space-y-2">
+                                {tasks.length === 0 && <div className="text-center py-20 text-gray-400">ยังไม่มีข้อมูลตารางงาน</div>}
+                                {renderTaskSection("เกินกำหนด / วันนี้", "overdue", "text-red-600", <Icon path={Icons.Clock} size={20}/>)}
+                                {renderTaskSection("สัปดาห์นี้ (This Week)", "thisWeek", "text-red-500", <Icon path={Icons.Calendar} size={20}/>)}
+                                {renderTaskSection("สัปดาห์หน้า (Next Week)", "nextWeek", "text-orange-500", <Icon path={Icons.Calendar} size={20}/>)}
+                                {renderTaskSection("เดือนหน้า (Next Month)", "nextMonth", "text-blue-500", <Icon path={Icons.Calendar} size={20}/>)}
+                                {renderTaskSection("อนาคต", "future", "text-gray-500", <Icon path={Icons.Calendar} size={20}/>)}
+                            </div>
+                        )}
                     </div>
                 );
             };
+
+            // ... (Components เดิม DashboardView, DepartmentView, AssetListView, AddAssetView, DetailAssetView เหมือนเดิม) ...
+            
+            const DashboardView = () => { /* ... (Code เดิม) ... */ return <div className="p-6 md:p-10 w-full max-w-7xl mx-auto space-y-8 fade-in pb-24 md:pb-10"><div className="flex justify-between items-end"><div><h2 className="text-3xl font-bold text-gray-800">Dashboard</h2><p className="text-gray-500 mt-1">ภาพรวมสถานะทรัพย์สินทั้งหมด</p></div><button onClick={() => setView('add_asset')} className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-200 transition active:scale-95"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์ใหม่</button></div><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-blue-50 text-blue-600 rounded-2xl"><Icon path={Icons.Building} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">ทั้งหมด</p><p className="text-3xl font-bold text-gray-800 mt-1">{data.assets.length}</p></div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-orange-50 text-orange-600 rounded-2xl"><Icon path={Icons.Wrench} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">กำลังซ่อม</p><p className="text-3xl font-bold text-orange-600 mt-1">{data.assets.filter(a => a.status === 'ส่งซ่อม').length}</p></div></div><div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-green-50 text-green-600 rounded-2xl"><Icon path={Icons.Assets} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">ใช้งานปกติ</p><p className="text-3xl font-bold text-green-600 mt-1">{data.assets.length - data.assets.filter(a => a.status === 'ส่งซ่อม').length}</p></div></div></div></div>; };
+            const DepartmentView = () => { /* ... (Code เดิม) ... */ const [newDept, setNewDept] = useState({ name: '', code: '' }); return <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-24 md:pb-10 fade-in"><div className="flex justify-between items-center mb-8"><div><h2 className="text-2xl md:text-3xl font-bold text-gray-800">แผนก (Departments)</h2><p className="text-gray-500 text-sm mt-1">เลือกแผนกเพื่อดูอุปกรณ์ภายใน</p></div><button onClick={() => setShowDeptModal(true)} className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 px-4 py-2 rounded-xl text-sm font-bold flex gap-2 shadow-sm transition items-center"><Icon path={Icons.Add} size={18}/> <span className="hidden sm:inline">เพิ่มแผนก</span></button></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-10">{data.departments.map(dept => (<div key={dept.name} onClick={() => { setSelectedDept(dept.name); setView('assets'); }} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer card-hover gap-3 h-48 relative group"><div className="absolute top-3 right-3 text-[10px] font-mono font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded border border-gray-100 group-hover:bg-blue-50 group-hover:text-blue-500 transition">{dept.code}</div><div className="bg-blue-50 text-blue-500 p-4 rounded-full mb-2 group-hover:scale-110 transition"><Icon path={Icons.Building} size={32}/></div><span className="font-bold text-gray-800 text-lg text-center">{dept.name}</span><span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-500">{data.assets.filter(a => a.location === dept.name).length} อุปกรณ์</span></div>))}</div>{showDeptModal && (<div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4 backdrop-blur-sm fade-in"><div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative animate-[scaleIn_0.2s_ease-out]"><button onClick={() => setShowDeptModal(false)} className="absolute top-4 right-4 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><Icon path={Icons.Close} size={20}/></button><h3 className="font-bold text-xl text-gray-800 mb-6">สร้างแผนกใหม่</h3><div className="space-y-4"><div><label className="text-sm font-bold text-gray-500 mb-1.5 block">ชื่อแผนก</label><input className="input-box" placeholder="เช่น ฝ่ายผลิต" value={newDept.name} onChange={e => setNewDept({ ...newDept, name: e.target.value })} /></div><div><label className="text-sm font-bold text-gray-500 mb-1.5 block">รหัสย่อ (3 ตัวอักษร)</label><input className="input-box uppercase font-mono" placeholder="เช่น PD" maxLength="3" value={newDept.code} onChange={e => setNewDept({ ...newDept, code: e.target.value.toUpperCase() })} /></div><button onClick={() => { if (newDept.name && newDept.code) postData({ action: 'save_dept', ...newDept }); else alert('กรุณากรอกข้อมูลให้ครบ'); }} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition mt-2">ยืนยันการสร้าง</button></div></div></div>)}</div>; };
+            const AssetListView = () => { const [term, setTerm] = useState(''); const filtered = data.assets.filter(a => a.location === selectedDept && (a.name.toLowerCase().includes(term.toLowerCase()) || a.id.toLowerCase().includes(term.toLowerCase()))); return <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-24 md:pb-10 fade-in"><div className="flex flex-col md:flex-row md:items-center gap-4 mb-8"><div className="flex items-center gap-4 flex-1"><button onClick={() => setView('departments')} className="p-2.5 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50 transition"><Icon path={Icons.ArrowLeft} size={20}/></button><h2 className="text-2xl font-bold truncate text-gray-800">{selectedDept}</h2></div><div className="relative w-full md:w-96"><div className="absolute left-4 top-3.5 text-gray-400"><Icon path={Icons.Search} size={18}/></div><input className="input-box pl-11 shadow-sm border-0" placeholder="ค้นหาชื่อ หรือ รหัส..." value={term} onChange={e => setTerm(e.target.value)}/></div><button onClick={() => setView('add_asset')} className="hidden md:flex bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition items-center gap-2"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์</button></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-10">{filtered.map(item => (<div key={item.id} onClick={() => { setSelectedAsset(item); setView('detail'); }} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-3 cursor-pointer card-hover h-full group"><div className="w-full h-40 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 relative">{item.image ? <img src={item.image} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" /> : <div className="flex items-center justify-center h-full text-gray-300"><Icon path={Icons.Image} size={40}/></div>}<div className={`absolute top-2 right-2 px-2 py-1 rounded-lg text-[10px] font-bold shadow-sm backdrop-blur-sm ${item.status === 'ปกติ' ? 'bg-white/90 text-green-600' : 'bg-orange-500 text-white'}`}>{item.status}</div></div><div><div className="font-bold text-gray-800 text-lg truncate">{item.name}</div><div className="text-xs text-gray-400 font-mono mb-2">{item.id}</div><div className="text-sm text-gray-500 bg-gray-50 px-2 py-1 rounded inline-block">{item.model || '-'}</div></div></div>))}</div></div>; };
+            const AddAssetView = () => { /* ... (Code เดิม - ยาวมาก ขอละไว้ในนี้ แต่ให้ใช้ Code เดิมได้เลย) ... */ const [form, setForm] = useState({ id: 'รอสร้างอัตโนมัติ...', name: '', model: '', location: selectedDept || '', status: 'ปกติ', purchaseDate: new Date().toISOString().split('T')[0], vendor: '', pmType: 'ภายใน', pmVendorName: '', pmVendorContact: '', nextPmDate: '', image: '', receiptPdf: '' }); const handleFile = async (e, k) => { if (e.target.files[0]) setForm({ ...form, [k]: await fileToBase64(e.target.files[0]) }) }; useEffect(() => { if (form.location) { const deptObj = data.departments.find(d => d.name === form.location); if (deptObj) { const code = deptObj.code; const year = new Date().getFullYear(); const prefix = `MTA-${code}-${year}-`; const existingIds = data.assets.filter(a => a.id && a.id.startsWith(prefix)).map(a => parseInt(a.id.split('-').pop())); const nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1; setForm(prev => ({ ...prev, id: `${prefix}${String(nextNum).padStart(4, '0')}` })); } } }, [form.location]); return <div className="p-6 md:p-10 w-full max-w-4xl mx-auto h-full flex flex-col pb-24 md:pb-10 fade-in overflow-y-auto"><div className="flex items-center gap-4 mb-8"><button onClick={() => setView('departments')} className="p-3 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50"><Icon path={Icons.ArrowLeft} size={20}/></button><h2 className="text-2xl font-bold text-gray-800">เพิ่มอุปกรณ์ใหม่</h2></div><div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8"><div className="w-full md:w-1/3"><div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden hover:bg-gray-100 transition group cursor-pointer">{form.image ? <img src={form.image} className="w-full h-full object-cover" /> : <div className="text-gray-400 text-sm flex flex-col items-center font-bold gap-2"><Icon path={Icons.Image} size={48} className="text-gray-300 group-hover:text-blue-400 transition"/>คลิกเพิ่มรูปภาพ</div>}<input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleFile(e, 'image')} /></div></div><div className="flex-1 space-y-5"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ชื่ออุปกรณ์ *</label><input className="input-box" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รหัสทรัพย์สิน (Auto)</label><input className="input-box bg-gray-100 text-gray-500 font-mono font-bold border-transparent" value={form.id} disabled /></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รุ่น / Model</label><input className="input-box" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} /></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">แผนก</label><select className="input-box" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}><option value="">-- เลือกแผนก --</option>{data.departments.map(d => <option key={d.name} value={d.name}>{d.name} ({d.code})</option>)}</select></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">สถานะ</label><select className="input-box" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}><option>ปกติ</option><option>ส่งซ่อม</option><option>เสีย</option></select></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">วันที่ซื้อ</label><input type="date" className="input-box" value={form.purchaseDate} onChange={e => setForm({ ...form, purchaseDate: e.target.value })} /></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ผู้จำหน่าย</label><input className="input-box" placeholder="ร้านค้า/บริษัทที่ซื้อ" value={form.vendor} onChange={e => setForm({ ...form, vendor: e.target.value })} /></div></div><div className="bg-blue-50 p-5 rounded-xl border border-blue-100 mt-4"><h3 className="font-bold text-blue-700 mb-4 flex items-center gap-2"><Icon path={Icons.Wrench} size={18}/> ข้อมูลการบำรุงรักษา (PM)</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">คิว PM ครั้งถัดไป</label><input type="date" className="input-box" value={form.nextPmDate} onChange={e => setForm({ ...form, nextPmDate: e.target.value })} /></div><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">รูปแบบการ PM</label><select className="input-box" value={form.pmType} onChange={e => setForm({ ...form, pmType: e.target.value })}><option value="ภายใน">ภายใน (ทีมงานบริษัท)</option><option value="ภายนอก">ภายนอก (Supplier)</option></select></div></div>{form.pmType === 'ภายนอก' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-[fadeIn_0.3s_ease-out]"><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ชื่อบริษัท/ช่างรับ PM</label><input className="input-box" placeholder="ระบุชื่อ..." value={form.pmVendorName} onChange={e => setForm({ ...form, pmVendorName: e.target.value })} /></div><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">เบอร์ติดต่อ</label><input className="input-box" placeholder="0xx-xxx-xxxx" value={form.pmVendorContact} onChange={e => setForm({ ...form, pmVendorContact: e.target.value })} /></div></div>)}</div><div className="bg-orange-50 p-4 rounded-xl border border-orange-100 text-sm text-orange-800 flex items-center justify-between"><span className="font-bold flex items-center gap-2"><Icon path={Icons.File} size={18}/> แนบใบเสร็จ (PDF)</span><label className="bg-white border border-orange-200 text-orange-600 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-orange-50 transition text-xs font-bold shadow-sm">{form.receiptPdf ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}<input type="file" accept="application/pdf" className="hidden" onChange={e => handleFile(e, 'receiptPdf')} /></label></div><button onClick={() => postData({ action: 'save_asset', ...form })} className="w-full bg-slate-900 hover:bg-black text-white py-4 rounded-xl font-bold shadow-lg shadow-gray-300 transition mt-4 text-lg">บันทึกข้อมูล</button></div></div></div>; };
+            const DetailAssetView = () => { const item = selectedAsset; const [tab, setTab] = useState('history'); const [log, setLog] = useState({ date: new Date().toISOString().split('T')[0], type: 'ซ่อมแซม', description: '', labor: '', parts: [] }); const [part, setPart] = useState({ name: '', price: '', image: '', pdf: '' }); const [selLog, setSelLog] = useState(null); const [fileLoading, setFileLoading] = useState(false); const [pmList, setPmList] = useState([]); const [pmLoading, setPmLoading] = useState(false); const [pmForm, setPmForm] = useState({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' }); const [isEditingPm, setIsEditingPm] = useState(false); useEffect(() => { if (tab === 'pmschedule') { fetchPmSchedules(); } }, [tab, item.id]); const fetchPmSchedules = async () => { setPmLoading(true); try { const response = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_pm_schedules', assetId: item.id }) }); const json = await response.json(); if (json.pmSchedules) setPmList(json.pmSchedules); } catch (err) { console.error(err); } setPmLoading(false); }; const savePm = async () => { if (!pmForm.topic || !pmForm.planDate) return alert("ระบุหัวข้อและวันที่"); setPmLoading(true); await postData({ action: 'save_pm_schedule', assetId: item.id, assetName: item.name, schedule: pmForm }); setPmForm({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' }); setIsEditingPm(false); setTimeout(fetchPmSchedules, 2000); }; const deletePm = async (schId) => { if(!confirm("ลบรายการนี้?")) return; setPmLoading(true); await postData({ action: 'delete_pm_schedule', assetId: item.id, schId: schId }); setTimeout(fetchPmSchedules, 2000); }; const handlePartFile = async (e, k) => { if (e.target.files[0]) { setFileLoading(true); try { const base64 = await fileToBase64(e.target.files[0]); if (base64) { setPart(prev => ({ ...prev, [k]: base64 })); alert("แนบไฟล์สำเร็จ!"); } } catch (err) { alert("Error reading file"); } finally { setFileLoading(false); } } }; const addPart = () => { if (part.name) { setLog(prev => ({ ...prev, parts: [...prev.parts, part] })); setPart({ name: '', price: '', image: '', pdf: '' }); } else { alert("กรุณาระบุชื่ออะไหล่"); } }; const submitLog = () => { const total = Number(log.labor) + log.parts.reduce((s, p) => s + Number(p.price), 0); let finalParts = [...log.parts]; if (part.name) finalParts.push(part); const newLog = { id: Date.now(), date: log.date, type: log.type, description: log.description, laborCost: log.labor, totalCost: total + (part.name ? Number(part.price) : 0), parts: finalParts }; postData({ action: 'save_log', assetId: item.id, log: newLog }); }; return <div className="w-full h-full flex flex-col bg-gray-50 relative overflow-y-auto pb-24 md:pb-0 fade-in"><div className="relative h-64 md:h-80 bg-slate-900 flex-shrink-0">{item.image ? <img src={item.image} className="w-full h-full object-cover opacity-70" /> : <div className="w-full h-full flex items-center justify-center text-white/20"><Icon path={Icons.Image} size={80}/></div>}<div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div><button onClick={() => setView('assets')} className="absolute top-4 left-4 bg-white/20 p-2.5 rounded-full backdrop-blur-md text-white hover:bg-white/30 transition"><Icon path={Icons.ArrowLeft} size={24}/></button><div className="absolute bottom-0 w-full p-6 md:p-10 text-white max-w-7xl mx-auto"><h1 className="text-3xl md:text-5xl font-bold mb-2">{item.name}</h1><div className="flex flex-wrap gap-3 items-center opacity-90 font-mono text-sm md:text-base"><span className="bg-white/20 px-2 py-1 rounded border border-white/10">{item.id}</span><span>{item.model}</span><span>• {item.location}</span><span className={`px-2 py-1 rounded font-bold text-black ${item.status === 'ปกติ' ? 'bg-green-400' : 'bg-orange-400'}`}>{item.status}</span></div></div></div><div className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8 -mt-8 relative z-10"><div className="flex flex-col lg:flex-row gap-6"><div className="w-full lg:w-1/3 space-y-4"><div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"><h3 className="font-bold text-gray-800 mb-4 text-lg border-b pb-3">ข้อมูลทั่วไป</h3><div className="space-y-4 text-sm text-gray-600"><div className="flex justify-between"><span>วันที่ซื้อ</span><span className="font-bold text-gray-900">{item.purchaseDate}</span></div><div className="flex justify-between"><span>รุ่น</span><span className="font-bold text-gray-900">{item.model || '-'}</span></div><div className="flex justify-between"><span>ผู้จำหน่าย</span><span className="font-bold text-gray-900">{item.vendor || '-'}</span></div><div className="pt-2 border-t mt-2"><div className="text-xs font-bold text-gray-400 uppercase mb-2">ข้อมูลการ PM (เบื้องต้น)</div><div className="flex justify-between mb-1"><span>รอบถัดไป</span><span className="font-bold text-blue-600 bg-blue-50 px-2 rounded">{item.nextPmDate || '-'}</span></div><div className="flex justify-between mb-1"><span>รูปแบบ</span><span className="font-bold text-gray-900">{item.pmType || '-'}</span></div>{item.pmType === 'ภายนอก' && (<div className="bg-gray-50 p-3 rounded-xl mt-2 border text-xs"><div className="font-bold text-gray-800 flex items-center gap-1 mb-1"><Icon path={Icons.User} size={14}/> {item.pmVendorName}</div><div className="text-gray-500 flex items-center gap-1"><Icon path={Icons.Phone} size={14}/> {item.pmVendorContact}</div></div>)}</div>{item.receiptPdf && <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 w-full py-3 mt-2 bg-orange-50 text-orange-700 rounded-xl font-bold hover:bg-orange-100 transition"><Icon path={Icons.File} size={18}/> ดูใบเสร็จ</a>}</div><button onClick={() => { if (confirm('ลบอุปกรณ์นี้ถาวร?')) postData({ action: 'delete_asset', id: item.id }); }} className="w-full mt-6 text-red-500 text-sm font-bold hover:bg-red-50 py-3 rounded-xl transition flex justify-center gap-2"><Icon path={Icons.Trash} size={18}/> ลบอุปกรณ์</button></div></div><div className="w-full lg:w-2/3"><div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]"><div className="flex border-b border-gray-100 overflow-x-auto"><button onClick={() => setTab('history')} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition whitespace-nowrap ${tab === 'history' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>ประวัติซ่อม ({item.history?.length || 0})</button><button onClick={() => setTab('newlog')} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition whitespace-nowrap ${tab === 'newlog' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>+ บันทึกซ่อม</button><button onClick={() => setTab('pmschedule')} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition whitespace-nowrap ${tab === 'pmschedule' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>📅 ตาราง PM</button></div><div className="p-6">{tab === 'newlog' && (<div className="animate-[fadeIn_0.3s_ease-out]"><div className="grid grid-cols-2 gap-4 mb-4"><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">วันที่</label><input type="date" className="input-box" value={log.date} onChange={e => setLog({ ...log, date: e.target.value })} /></div><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ประเภท</label><select className="input-box" value={log.type} onChange={e => setLog({ ...log, type: e.target.value })}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select></div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">อาการ / รายละเอียด</label><textarea className="input-box" rows="3" placeholder="ระบุอาการ..." onChange={e => setLog({ ...log, description: e.target.value })}></textarea></div><div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-6 relative"><p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">เพิ่มรายการอะไหล่</p><div className="flex flex-wrap gap-2 mb-3 items-center"><input className="input-box p-2 text-sm flex-1 min-w-[120px]" placeholder="ชื่ออะไหล่" value={part.name} onChange={e => setPart({ ...part, name: e.target.value })} /><input className="input-box p-2 text-sm w-24" type="number" placeholder="ราคา" value={part.price} onChange={e => setPart({ ...part, price: e.target.value })} /><label className={`border p-2 rounded-lg cursor-pointer transition ${part.image ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบรูป"><Icon path={Icons.Image} size={18}/><input type="file" className="hidden" accept="image/*" onChange={e => handlePartFile(e, 'image')} /></label><label className={`border p-2 rounded-lg cursor-pointer transition ${part.pdf ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบ PDF"><Icon path={Icons.File} size={18}/><input type="file" className="hidden" accept="application/pdf" onChange={e => handlePartFile(e, 'pdf')} /></label><button onClick={addPart} className="bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-black flex items-center justify-center gap-1 transition text-xs font-bold min-w-[60px]"><Icon path={Icons.Add} size={16}/> เพิ่ม</button></div>{fileLoading && <div className="text-xs text-blue-500 animate-pulse mb-2 font-bold">กำลังอัปโหลดไฟล์...</div>}<div className="space-y-2">{log.parts.map((p, i) => (<div key={i} className="text-xs flex justify-between p-3 bg-white rounded-xl border font-medium shadow-sm items-center"><div className="flex items-center gap-2"><span className="font-bold text-gray-700">{p.name}</span>{p.image && <Icon path={Icons.Image} size={12} className="text-blue-500"/>}{p.pdf && <Icon path={Icons.File} size={12} className="text-orange-500"/>}</div><span>฿{Number(p.price).toLocaleString()}</span></div>))}</div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">ค่าแรงช่าง (บาท)</label><input type="number" className="input-box" placeholder="0.00" onChange={e => setLog({ ...log, labor: e.target.value })} /></div><button onClick={submitLog} disabled={fileLoading} className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition ${fileLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>บันทึกประวัติ</button></div>)}{tab === 'history' && (<div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">{item.history && item.history.map((h, i) => (<div key={i} onClick={() => setSelLog(h)} className="bg-white border border-gray-100 rounded-2xl p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition group"><div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-400 flex items-center gap-2 mb-1">{h.date} <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{h.type}</span></div><div className="font-bold text-gray-800 text-lg">{h.description}</div></div><div className="text-right"><div className="font-bold text-blue-600 text-lg">฿{Number(h.totalCost).toLocaleString()}</div></div></div>{h.parts?.length > 0 && <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">ใช้อะไหล่ {h.parts.length} รายการ</div>}</div>))}{(!item.history || item.history.length === 0) && <div className="text-center text-gray-400 py-12 flex flex-col items-center"><Icon path={Icons.Folder} size={48} className="mb-2 opacity-30"/><p>ยังไม่มีประวัติการซ่อม</p></div>}</div>)}{tab === 'pmschedule' && (<div className="animate-[fadeIn_0.3s_ease-out]"><div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6"><h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Icon path={Icons.Calendar} size={18}/> {isEditingPm ? 'แก้ไขตารางงาน' : 'เพิ่มตารางงานใหม่'}</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3"><input type="date" className="input-box" value={pmForm.planDate} onChange={e => setPmForm({...pmForm, planDate: e.target.value})} /><input type="text" className="input-box" placeholder="หัวข้อการ PM..." value={pmForm.topic} onChange={e => setPmForm({...pmForm, topic: e.target.value})} /></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3"><select className="input-box" value={pmForm.status} onChange={e => setPmForm({...pmForm, status: e.target.value})}><option>รอเป้าหมาย</option><option>ดำเนินการแล้ว</option><option>ยกเลิก</option></select><input type="text" className="input-box" placeholder="หมายเหตุ (ถ้ามี)" value={pmForm.note} onChange={e => setPmForm({...pmForm, note: e.target.value})} /></div><div className="flex gap-2"><button onClick={savePm} disabled={pmLoading} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition flex-1">บันทึก</button>{isEditingPm && <button onClick={() => { setIsEditingPm(false); setPmForm({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '' }); }} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-300 transition">ยกเลิก</button>}</div></div>{pmLoading ? <div className="text-center py-10 text-gray-400 animate-pulse">กำลังโหลดตารางงาน...</div> : (<div className="space-y-3">{pmList.length === 0 && <div className="text-center text-gray-400 py-10">ยังไม่มีตารางงาน</div>}{pmList.map((pm, i) => (<div key={i} className="bg-white border border-gray-100 p-4 rounded-xl flex justify-between items-center hover:shadow-md transition group"><div><div className="flex items-center gap-2 mb-1"><span className="font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-sm font-bold">{pm.planDate}</span><span className={`text-xs px-2 py-0.5 rounded border ${pm.status==='ดำเนินการแล้ว'?'bg-green-50 text-green-600 border-green-200':'bg-gray-50 text-gray-500 border-gray-200'}`}>{pm.status}</span></div><div className="font-bold text-gray-800">{pm.topic}</div>{pm.note && <div className="text-xs text-gray-400 mt-1">{pm.note}</div>}</div><div className="flex gap-2 opacity-50 group-hover:opacity-100 transition"><button onClick={() => { setPmForm(pm); setIsEditingPm(true); }} className="p-2 hover:bg-gray-100 rounded text-blue-500"><Icon path={Icons.Wrench} size={16}/></button><button onClick={() => deletePm(pm.schId)} className="p-2 hover:bg-red-50 rounded text-red-500"><Icon path={Icons.Trash} size={16}/></button></div></div>))}</div>)}</div>)}</div></div></div></div></div>{selLog && (<div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm fade-in"><div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"><button onClick={() => setSelLog(null)} className="absolute top-4 right-4 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><Icon path={Icons.Close} size={20}/></button><div className="mb-6 border-b pb-4"><div className="text-gray-500 text-sm font-medium">{selLog.date}</div><h3 className="font-bold text-2xl text-gray-900 mt-1">{selLog.type}</h3></div><div className="space-y-6"><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">อาการ / รายละเอียด</span><div className="bg-gray-50 p-4 rounded-xl text-gray-700 border border-gray-100 font-medium">{selLog.description}</div></div><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">รายการอะไหล่</span><div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">{selLog.parts?.map((p, i) => (<div key={i} className="flex flex-col p-4 border-b last:border-0 border-gray-200 bg-white"><div className="flex justify-between items-center mb-2"><span className="font-bold text-gray-800">{p.name}</span><span className="font-mono text-gray-600 font-bold">฿{Number(p.price).toLocaleString()}</span></div><div className="flex gap-2">{p.image && <a href={p.image} target="_blank" className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.Image} size={14}/> ดูรูป</a>}{p.pdf && <a href={p.pdf} target="_blank" className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.File} size={14}/> เปิด PDF</a>}</div></div>))}{(!selLog.parts || selLog.parts.length === 0) && <div className="p-6 text-center text-gray-400 text-sm">ไม่มีรายการอะไหล่</div>}</div></div><div className="flex justify-between items-center pt-4 border-t border-gray-100"><div className="text-sm text-gray-500 font-medium">ค่าแรงช่าง ฿{Number(selLog.laborCost).toLocaleString()}</div><div className="text-xl font-bold text-slate-900">รวม ฿{Number(selLog.totalCost).toLocaleString()}</div></div><button onClick={() => { if (confirm('ยืนยันลบประวัตินี้?')) { postData({ action: 'delete_log', assetId: item.id, logId: selLog.id }); setSelLog(null); } }} className="w-full py-3 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition text-sm">ลบรายการนี้</button></div></div></div>)}</div>; };
 
             return (
                 <div className="flex h-screen w-full bg-slate-50 overflow-hidden text-gray-800">
                     {(loading || submitting) && <LoadingOverlay text={submitting ? 'กำลังบันทึกและอัปโหลด...' : 'กำลังดึงข้อมูล...'}/>}
-                    <Sidebar /><main className="flex-1 h-full relative overflow-hidden flex flex-col bg-[#f8fafc]">{view === 'dashboard' && <DashboardView />}{view === 'departments' && <DepartmentView />}{view === 'assets' && <AssetListView />}{view === 'add_asset' && <AddAssetView />}{view === 'detail' && <DetailAssetView />}</main><MobileNav />
+                    <Sidebar /><main className="flex-1 h-full relative overflow-hidden flex flex-col bg-[#f8fafc]">{view === 'dashboard' && <DashboardView />}{view === 'departments' && <DepartmentView />}{view === 'assets' && <AssetListView />}{view === 'add_asset' && <AddAssetView />}{view === 'detail' && <DetailAssetView />}{view === 'pm_dashboard' && <PmDashboardView />}</main><MobileNav />
                 </div>
             );
         }
