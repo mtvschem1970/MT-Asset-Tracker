@@ -16,20 +16,28 @@
         body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
         .fade-in { animation: fadeIn 0.4s ease-out forwards; opacity: 0; transform: translateY(10px); }
         @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+        
         .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .card-hover:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        
         .input-box { width: 100%; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; outline: none; transition: all 0.2s; background: #ffffff; color: #1f2937; }
         .input-box:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         .input-box:disabled { background-color: #f9fafb; color: #9ca3af; cursor: not-allowed; }
+        
         .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.75rem; color: #6b7280; font-weight: 500; transition: all 0.2s; cursor: pointer; }
         .nav-item:hover { background-color: #f3f4f6; color: #111827; }
         .nav-item.active { background-color: #eff6ff; color: #2563eb; font-weight: 600; }
+        
         .mobile-nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.75rem; color: #9ca3af; padding: 0.5rem; transition: all 0.2s; }
         .mobile-nav-item.active { color: #2563eb; }
+        
         .pb-safe { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
         .scroll-container { -webkit-overflow-scrolling: touch; }
+        
         .modal-enter { animation: modalIn 0.3s ease-out forwards; }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
@@ -235,12 +243,16 @@
 
         const AssetListView = ({ data, selectedDept, setView, setSelectedAsset }) => {
             const [term, setTerm] = useState('');
-            // --- FIXED: Added String() wrapper to prevent error ---
-            const filtered = data.assets.filter(a => 
-                a.location === selectedDept && 
-                (String(a.name || "").toLowerCase().includes(term.toLowerCase()) || 
-                 String(a.id || "").toLowerCase().includes(term.toLowerCase()))
-            );
+            // --- FIXED: Use String(...) wrapper to prevent errors with non-string values ---
+            const filtered = data.assets.filter(a => {
+                // Ensure properties exist before accessing
+                const name = a.name ? String(a.name).toLowerCase() : "";
+                const id = a.id ? String(a.id).toLowerCase() : "";
+                const searchTerm = term.toLowerCase();
+                
+                return a.location === selectedDept && (name.includes(searchTerm) || id.includes(searchTerm));
+            });
+
             return (
                 <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-safe fade-in">
                     <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8"><div className="flex items-center gap-4 flex-1"><button onClick={() => setView('departments')} className="p-2.5 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50 transition"><Icon path={Icons.ArrowLeft} size={20}/></button><h2 className="text-2xl font-bold truncate text-gray-800">{selectedDept}</h2></div><div className="relative w-full md:w-96"><div className="absolute left-4 top-3.5 text-gray-400"><Icon path={Icons.Search} size={18}/></div><input className="input-box pl-11 shadow-sm border-0" placeholder="ค้นหาชื่อ หรือ รหัส..." value={term} onChange={e => setTerm(e.target.value)}/></div><button onClick={() => setView('add_asset')} className="hidden md:flex bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition items-center gap-2"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์</button></div>
@@ -396,7 +408,7 @@
                         {selLog && (<div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm fade-in"><div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"><button onClick={() => setSelLog(null)} className="absolute top-4 right-4 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><Icon path={Icons.Close} size={20}/></button><div className="mb-6 border-b pb-4"><div className="text-gray-500 text-sm font-medium">{selLog.date}</div><h3 className="font-bold text-2xl text-gray-900 mt-1">{selLog.type}</h3></div><div className="space-y-6"><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">อาการ / รายละเอียด</span><div className="bg-gray-50 p-4 rounded-xl text-gray-700 border border-gray-100 font-medium">{selLog.description}</div></div><div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">รายการอะไหล่</span><div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">{selLog.parts?.map((p, i) => (<div key={i} className="flex flex-col p-4 border-b last:border-0 border-gray-200 bg-white"><div className="flex justify-between items-center mb-2"><span className="font-bold text-gray-800">{p.name}</span><span className="font-mono text-gray-600 font-bold">฿{Number(p.price).toLocaleString()}</span></div><div className="flex gap-2">{p.image && <a href={p.image} target="_blank" className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.Image} size={14}/> ดูรูป</a>}{p.pdf && <a href={p.pdf} target="_blank" className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.File} size={14}/> เปิด PDF</a>}</div></div>))}{(!selLog.parts || selLog.parts.length === 0) && <div className="p-6 text-center text-gray-400 text-sm">ไม่มีรายการอะไหล่</div>}</div></div><div className="flex justify-between items-center pt-4 border-t border-gray-100"><div className="text-sm text-gray-500 font-medium">ค่าแรงช่าง ฿{Number(selLog.laborCost).toLocaleString()}</div><div className="text-xl font-bold text-slate-900">รวม ฿{Number(selLog.totalCost).toLocaleString()}</div></div><button onClick={() => { if (confirm('ยืนยันลบประวัตินี้?')) { postData({ action: 'delete_log', assetId: item.id, logId: selLog.id }); setSelLog(null); } }} className="w-full py-3 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition text-sm">ลบรายการนี้</button></div></div></div>)}</div>; 
             };
 
-            // --- App Component (Now Cleaner) ---
+            // --- App Component ---
             const App = () => {
                 const [view, setView] = useState('dashboard');
                 const [data, setData] = useState({ assets: [], departments: [] });
@@ -413,10 +425,9 @@
                     }
                 }, []);
 
-                // 🟢 Sync Selected Asset when data updates (Fixes state inconsistency)
                 useEffect(() => {
                     if (selectedAsset && data.assets.length > 0) {
-                        const updated = data.assets.find(a => a.id === selectedAsset.id);
+                        const updated = data.assets.find(a => String(a.id) === String(selectedAsset.id));
                         if (updated) setSelectedAsset(updated);
                     }
                 }, [data.assets]);
