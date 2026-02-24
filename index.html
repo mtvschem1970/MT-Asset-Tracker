@@ -50,8 +50,8 @@
         const { useState, useEffect, useMemo } = React;
 
         // ***************************************************************
-        // 🔴🔴🔴 สำคัญมาก: ลบข้อความข้างล่างนี้ แล้วใส่ URL ของคุณ 🔴🔴🔴
-        const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec"; 
+        // 🔴🔴🔴 สำคัญมาก: ใส่ URL ของ Google Apps Script ที่ Deploy ล่าสุดตรงนี้ 🔴🔴🔴
+        const API_URL = "ใส่ลิงก์_WEB_APP_URL_ของคุณตรงนี้"; 
         // ***************************************************************
 
         // --- Icons ---
@@ -307,7 +307,6 @@
         const AddAssetView = ({ data, selectedDept, setView, postData, view, editItem }) => {
             const isEditMode = view === 'edit_asset';
             
-            // 🟢 อัปเดต Initial Form ให้รองรับ Electrical และ Water
             const initialForm = isEditMode && editItem ? {
                 id: editItem.id,
                 name: editItem.name,
@@ -323,8 +322,6 @@
             };
 
             const [form, setForm] = useState(initialForm);
-            
-            // State ใหม่สำหรับข้อมูลไฟฟ้า และ น้ำ
             const [electrical, setElectrical] = useState(isEditMode && editItem?.electrical ? editItem.electrical : { uses: false, watt: '', amp: '', hp: '', breaker: '' });
             const [water, setWater] = useState(isEditMode && editItem?.water ? editItem.water : { uses: false, type: 'Tap water', pump: '' });
 
@@ -365,7 +362,6 @@
                         </div>
                     </div>
 
-                    {/* 🟢 ส่วนที่เพิ่มใหม่: ข้อมูลระบบไฟฟ้า */}
                     <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mb-6">
                         <label className="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" className="w-5 h-5 accent-yellow-500 rounded" checked={electrical.uses} onChange={e => setElectrical({...electrical, uses: e.target.checked})}/>
@@ -381,7 +377,6 @@
                         )}
                     </div>
 
-                    {/* 🟢 ส่วนที่เพิ่มใหม่: ข้อมูลระบบน้ำ */}
                     <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mb-6">
                         <label className="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" className="w-5 h-5 accent-blue-500 rounded" checked={water.uses} onChange={e => setWater({...water, uses: e.target.checked})}/>
@@ -517,7 +512,11 @@
             const [fileLoading, setFileLoading] = useState(false); 
             const [pmList, setPmList] = useState([]); 
             const [pmLoading, setPmLoading] = useState(false); 
-            const [pmForm, setPmForm] = useState({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '', pmType: 'ภายใน', pmVendorName: '', pmVendorContact: '' }); 
+            
+            // 🟢 เพิ่ม State รองรับการแนบไฟล์ใน PM
+            const initialPmState = { schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '', pmType: 'ภายใน', pmVendorName: '', pmVendorContact: '', image: '', pdf: '' };
+            const [pmForm, setPmForm] = useState(initialPmState); 
+            
             const [isEditingPm, setIsEditingPm] = useState(false); 
             
             const [showImageModal, setShowImageModal] = useState(false);
@@ -528,9 +527,37 @@
             }, [tab, item.id]); 
 
             const fetchPmSchedules = async () => { setPmLoading(true); try { const response = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_pm_schedules', assetId: item.id }) }); const json = await response.json(); if (json.pmSchedules) setPmList(json.pmSchedules); } catch (err) { console.error(err); } setPmLoading(false); }; 
-            const savePm = async () => { if (!pmForm.topic || !pmForm.planDate) return alert("ระบุหัวข้อและวันที่"); setPmLoading(true); await postData({ action: 'save_pm_schedule', assetId: item.id, assetName: item.name, schedule: pmForm }); setPmForm({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '', pmType: 'ภายใน', pmVendorName: '', pmVendorContact: '' }); setIsEditingPm(false); setTimeout(fetchPmSchedules, 2000); }; 
+            
+            const savePm = async () => { 
+                if (!pmForm.topic || !pmForm.planDate) return alert("ระบุหัวข้อและวันที่"); 
+                setPmLoading(true); 
+                await postData({ action: 'save_pm_schedule', assetId: item.id, assetName: item.name, schedule: pmForm }); 
+                setPmForm(initialPmState); // 🟢 Reset ฟอร์มเป็นค่าเริ่มต้นรวมไฟล์
+                setIsEditingPm(false); 
+                setTimeout(fetchPmSchedules, 2000); 
+            }; 
+            
             const deletePm = async (schId) => { if(!confirm("ลบรายการนี้?")) return; setPmLoading(true); await postData({ action: 'delete_pm_schedule', assetId: item.id, schId: schId }); setTimeout(fetchPmSchedules, 2000); }; 
+            
             const handlePartFile = async (e, k) => { if (e.target.files[0]) { setFileLoading(true); try { const base64 = await fileToBase64(e.target.files[0]); if (base64) { setPart(prev => ({ ...prev, [k]: base64 })); alert("แนบไฟล์สำเร็จ!"); } } catch (err) { alert("Error reading file"); } finally { setFileLoading(false); } } }; 
+            
+            // 🟢 ฟังก์ชันใหม่สำหรับจัดการอัปโหลดรูปและ PDF ของ PM
+            const handlePmFile = async (e, k) => { 
+                if (e.target.files[0]) { 
+                    setPmLoading(true); 
+                    try { 
+                        const base64 = await fileToBase64(e.target.files[0]); 
+                        if (base64) { 
+                            setPmForm(prev => ({ ...prev, [k]: base64 })); 
+                        } 
+                    } catch (err) { 
+                        alert("เกิดข้อผิดพลาดในการอ่านไฟล์"); 
+                    } finally { 
+                        setPmLoading(false); 
+                    } 
+                } 
+            };
+
             const addPart = () => { if (part.name) { setLog(prev => ({ ...prev, parts: [...prev.parts, part] })); setPart({ name: '', price: '', image: '', pdf: '' }); } else { alert("กรุณาระบุชื่ออะไหล่"); } }; 
             
             const removePartFromForm = (indexToRemove) => {
@@ -602,7 +629,6 @@
                                 </div>
                             </div>
                             
-                            {/* 🟢 แสดงข้อมูลระบบไฟฟ้าและน้ำ (ถ้ามี) */}
                             {item.electrical?.uses && (
                                 <div className="p-5 bg-yellow-50 rounded-2xl border border-yellow-200 shadow-sm">
                                     <h4 className="font-bold text-yellow-800 mb-3 flex items-center gap-2"><Icon path={Icons.Zap} size={18}/> ข้อมูลระบบไฟฟ้า</h4>
@@ -658,7 +684,100 @@
                                             ))}
                                         </div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">ค่าแรงช่าง (บาท)</label><input type="number" className="input-box" placeholder="0.00" value={log.labor} onChange={e => setLog({ ...log, labor: e.target.value })} /></div><button onClick={submitLog} disabled={fileLoading} className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition ${fileLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{isEditingLog ? '💾 บันทึกการแก้ไข' : 'บันทึกประวัติ'}</button></div>)}
                                     {tab === 'history' && (<div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">{item.history && item.history.map((h, i) => (<div key={i} onClick={() => setSelLog(h)} className="bg-white border border-gray-100 rounded-2xl p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition group"><div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-400 flex items-center gap-2 mb-1">{h.date} <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{h.type}</span></div><div className="font-bold text-gray-800 text-lg">{h.description}</div></div><div className="text-right"><div className="font-bold text-blue-600 text-lg">฿{Number(h.totalCost).toLocaleString()}</div></div></div>{h.parts?.length > 0 && <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">ใช้อะไหล่ {h.parts.length} รายการ</div>}</div>))}{(!item.history || item.history.length === 0) && <div className="text-center text-gray-400 py-12 flex flex-col items-center"><Icon path={Icons.Folder} size={48} className="mb-2 opacity-30"/><p>ยังไม่มีประวัติการซ่อม</p></div>}</div>)}
-                                    {tab === 'pmschedule' && (<div className="animate-[fadeIn_0.3s_ease-out]"><div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6"><h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Icon path={Icons.Calendar} size={18}/> {isEditingPm ? 'แก้ไขตารางงาน' : 'เพิ่มตารางงานใหม่'}</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3"><input type="date" className="input-box" value={pmForm.planDate} onChange={e => setPmForm({...pmForm, planDate: e.target.value})} /><input type="text" className="input-box" placeholder="หัวข้อการ PM..." value={pmForm.topic} onChange={e => setPmForm({...pmForm, topic: e.target.value})} /></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3"><select className="input-box" value={pmForm.status} onChange={e => setPmForm({...pmForm, status: e.target.value})}><option>รอเป้าหมาย</option><option>ดำเนินการแล้ว</option><option>ยกเลิก</option></select><input type="text" className="input-box" placeholder="หมายเหตุ (ถ้ามี)" value={pmForm.note} onChange={e => setPmForm({...pmForm, note: e.target.value})} /></div><div className="bg-white p-3 rounded-lg border border-blue-100 mb-3"><div className="text-xs font-bold text-blue-500 mb-2">ผู้รับผิดชอบงาน PM</div><div className="grid grid-cols-1 md:grid-cols-2 gap-3"><select className="input-box" value={pmForm.pmType} onChange={e => setPmForm({...pmForm, pmType: e.target.value})}><option value="ภายใน">ภายใน (ทีมงานบริษัท)</option><option value="ภายนอก">ภายนอก (Supplier)</option></select>{pmForm.pmType === 'ภายนอก' && (<div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 animate-[fadeIn_0.2s_ease-out]"><input type="text" className="input-box" placeholder="ชื่อช่าง / บริษัท" value={pmForm.pmVendorName} onChange={e => setPmForm({...pmForm, pmVendorName: e.target.value})} /><input type="text" className="input-box" placeholder="เบอร์ติดต่อ" value={pmForm.pmVendorContact} onChange={e => setPmForm({...pmForm, pmVendorContact: e.target.value})} /></div>)}</div></div><div className="flex gap-2"><button onClick={savePm} disabled={pmLoading} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition flex-1">บันทึก</button>{isEditingPm && <button onClick={() => { setIsEditingPm(false); setPmForm({ schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '', pmType: 'ภายใน', pmVendorName: '', pmVendorContact: '' }); }} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-300 transition">ยกเลิก</button>}</div></div>{pmLoading ? <div className="text-center py-10 text-gray-400 animate-pulse">กำลังโหลดตารางงาน...</div> : (<div className="space-y-3">{pmList.length === 0 && <div className="text-center text-gray-400 py-10">ยังไม่มีตารางงาน</div>}{pmList.map((pm, i) => (<div key={i} className="bg-white border border-gray-100 p-4 rounded-xl flex justify-between items-center hover:shadow-md transition group"><div><div className="flex items-center gap-2 mb-1"><span className="font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-sm font-bold">{pm.planDate}</span><span className={`text-xs px-2 py-0.5 rounded border ${pm.status==='ดำเนินการแล้ว'?'bg-green-50 text-green-600 border-green-200':'bg-gray-50 text-gray-500 border-gray-200'}`}>{pm.status}</span></div><div className="font-bold text-gray-800">{pm.topic}</div><div className="text-xs text-gray-500 mt-1 flex gap-2"><span>{pm.note}</span>{pm.pmType === 'ภายนอก' && <span className="text-blue-500 font-bold bg-blue-50 px-1 rounded">🔧 {pm.pmVendorName}</span>}</div></div><div className="flex gap-2 opacity-100 md:opacity-50 md:group-hover:opacity-100 transition"><button onClick={() => { setPmForm(pm); setIsEditingPm(true); }} className="p-2 hover:bg-gray-100 rounded text-blue-500"><Icon path={Icons.Wrench} size={16}/></button><button onClick={() => deletePm(pm.schId)} className="p-2 hover:bg-red-50 rounded text-red-500"><Icon path={Icons.Trash} size={16}/></button></div></div>))}</div>)}</div>)}
+                                    
+                                    {/* 🟢 หน้าจอตาราง PM ที่เพิ่มฟังก์ชันแนบไฟล์ */}
+                                    {tab === 'pmschedule' && (
+                                    <div className="animate-[fadeIn_0.3s_ease-out]">
+                                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6">
+                                            <h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Icon path={Icons.Calendar} size={18}/> {isEditingPm ? 'แก้ไขตารางงาน' : 'เพิ่มตารางงานใหม่'}</h4>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                <input type="date" className="input-box" value={pmForm.planDate} onChange={e => setPmForm({...pmForm, planDate: e.target.value})} />
+                                                <input type="text" className="input-box" placeholder="หัวข้อการ PM..." value={pmForm.topic} onChange={e => setPmForm({...pmForm, topic: e.target.value})} />
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                <select className="input-box font-bold text-blue-700" value={pmForm.status} onChange={e => setPmForm({...pmForm, status: e.target.value})}>
+                                                    <option>รอเป้าหมาย</option>
+                                                    <option>ดำเนินการแล้ว</option>
+                                                    <option>ยกเลิก</option>
+                                                </select>
+                                                <input type="text" className="input-box" placeholder="หมายเหตุ (ถ้ามี)" value={pmForm.note} onChange={e => setPmForm({...pmForm, note: e.target.value})} />
+                                            </div>
+                                            
+                                            <div className="bg-white p-3 rounded-lg border border-blue-100 mb-3">
+                                                <div className="text-xs font-bold text-blue-500 mb-2">ผู้รับผิดชอบงาน PM</div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <select className="input-box" value={pmForm.pmType} onChange={e => setPmForm({...pmForm, pmType: e.target.value})}>
+                                                        <option value="ภายใน">ภายใน (ทีมงานบริษัท)</option>
+                                                        <option value="ภายนอก">ภายนอก (Supplier)</option>
+                                                    </select>
+                                                    {pmForm.pmType === 'ภายนอก' && (
+                                                        <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 animate-[fadeIn_0.2s_ease-out]">
+                                                            <input type="text" className="input-box" placeholder="ชื่อช่าง / บริษัท" value={pmForm.pmVendorName} onChange={e => setPmForm({...pmForm, pmVendorName: e.target.value})} />
+                                                            <input type="text" className="input-box" placeholder="เบอร์ติดต่อ" value={pmForm.pmVendorContact} onChange={e => setPmForm({...pmForm, pmVendorContact: e.target.value})} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* 🟢 ส่วนอัปโหลดไฟล์ จะแสดงเมื่อเลือกสถานะ "ดำเนินการแล้ว" */}
+                                            {pmForm.status === 'ดำเนินการแล้ว' && (
+                                                <div className="mt-4 p-4 bg-white rounded-lg border border-green-200 animate-[fadeIn_0.2s_ease-out] mb-4">
+                                                    <div className="text-xs font-bold text-green-600 mb-2">แนบหลักฐานการ PM (รูปภาพ / PDF)</div>
+                                                    <div className="flex flex-col md:flex-row gap-2">
+                                                        <label className={`border border-dashed p-3 rounded-xl cursor-pointer transition flex-1 flex justify-center items-center gap-2 text-sm font-bold ${pmForm.image ? 'bg-green-50 text-green-700 border-green-300' : 'bg-gray-50 hover:bg-gray-100 text-gray-600'}`}>
+                                                            <Icon path={Icons.Image} size={18}/> {pmForm.image ? 'แนบรูปภาพแล้ว (เปลี่ยน)' : '+ แนบรูปภาพ'}
+                                                            <input type="file" className="hidden" accept="image/*" onChange={e => handlePmFile(e, 'image')} />
+                                                        </label>
+                                                        <label className={`border border-dashed p-3 rounded-xl cursor-pointer transition flex-1 flex justify-center items-center gap-2 text-sm font-bold ${pmForm.pdf ? 'bg-orange-50 text-orange-700 border-orange-300' : 'bg-gray-50 hover:bg-gray-100 text-gray-600'}`}>
+                                                            <Icon path={Icons.File} size={18}/> {pmForm.pdf ? 'แนบ PDF แล้ว (เปลี่ยน)' : '+ แนบ PDF'}
+                                                            <input type="file" className="hidden" accept="application/pdf" onChange={e => handlePmFile(e, 'pdf')} />
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="flex gap-2">
+                                                <button onClick={savePm} disabled={pmLoading} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition flex-1">บันทึก</button>
+                                                {isEditingPm && <button onClick={() => { setIsEditingPm(false); setPmForm(initialPmState); }} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-300 transition">ยกเลิก</button>}
+                                            </div>
+                                        </div>
+                                        
+                                        {pmLoading ? <div className="text-center py-10 text-gray-400 animate-pulse">กำลังโหลดตารางงาน...</div> : (
+                                        <div className="space-y-3">
+                                            {pmList.length === 0 && <div className="text-center text-gray-400 py-10">ยังไม่มีตารางงาน</div>}
+                                            {pmList.map((pm, i) => (
+                                                <div key={i} className="bg-white border border-gray-100 p-4 rounded-xl flex justify-between items-center hover:shadow-md transition group">
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-sm font-bold">{pm.planDate}</span>
+                                                            <span className={`text-xs px-2 py-0.5 rounded border font-bold ${pm.status==='ดำเนินการแล้ว'?'bg-green-50 text-green-600 border-green-200':'bg-gray-50 text-gray-500 border-gray-200'}`}>{pm.status}</span>
+                                                        </div>
+                                                        <div className="font-bold text-gray-800">{pm.topic}</div>
+                                                        <div className="text-xs text-gray-500 mt-1 flex gap-2">
+                                                            <span>{pm.note}</span>
+                                                            {pm.pmType === 'ภายนอก' && <span className="text-blue-500 font-bold bg-blue-50 px-1 rounded">🔧 {pm.pmVendorName}</span>}
+                                                        </div>
+                                                        
+                                                        {/* 🟢 ส่วนแสดงปุ่มดูไฟล์ของ PM History */}
+                                                        {(pm.image || pm.pdf) && (
+                                                            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+                                                                {pm.image && <button onClick={(e) => { e.stopPropagation(); openImagePopup(pm.image); }} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.Image} size={14}/> ดูรูปภาพ</button>}
+                                                                {pm.pdf && <a href={pm.pdf} target="_blank" onClick={e => e.stopPropagation()} className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.File} size={14}/> เปิด PDF</a>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2 opacity-100 md:opacity-50 md:group-hover:opacity-100 transition">
+                                                        <button onClick={() => { setPmForm(pm); setIsEditingPm(true); }} className="p-2 hover:bg-gray-100 rounded text-blue-500"><Icon path={Icons.Wrench} size={16}/></button>
+                                                        <button onClick={() => deletePm(pm.schId)} className="p-2 hover:bg-red-50 rounded text-red-500"><Icon path={Icons.Trash} size={16}/></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        )}
+                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -701,7 +820,6 @@
                                     <div className="text-xl font-bold text-slate-900">รวม ฿{Number(selLog.totalCost).toLocaleString()}</div>
                                 </div>
                                 
-                                {/* 🟢 ปุ่มแก้ไข และลบประวัติ */}
                                 <div className="flex gap-2">
                                     <button onClick={() => {
                                         setLog({
