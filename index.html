@@ -97,6 +97,38 @@
             </div>
         );
 
+        // --- เพิ่ม SyncToast Component สำหรับแสดงสถานะแบบไม่บังหน้าจอ ---
+        const SyncToast = ({ notify, setNotify }) => {
+            if (!notify.show) return null;
+
+            return (
+                <div className="fixed bottom-20 md:bottom-10 right-4 md:right-10 z-[100] bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-4 flex items-center gap-4 animate-[modalIn_0.3s_ease-out] min-w-[300px]">
+                    {/* Icon Status */}
+                    {notify.status === 'syncing' && <div className="animate-spin text-blue-500"><Icon path={Icons.Loader} size={24} /></div>}
+                    {notify.status === 'success' && <div className="text-green-500 bg-green-50 p-1.5 rounded-full"><Icon path={Icons.Zap} size={20} /></div>}
+                    {notify.status === 'error' && <div className="text-red-500 bg-red-50 p-1.5 rounded-full"><Icon path={Icons.Alert} size={20} /></div>}
+
+                    {/* Message */}
+                    <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-800">{notify.message}</p>
+                        {notify.status === 'syncing' && <p className="text-[10px] text-gray-400">คุณสามารถใช้งานต่อได้เลย...</p>}
+                    </div>
+
+                    {/* Action Button */}
+                    {notify.status === 'success' && notify.action && (
+                        <button onClick={notify.action} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md active:scale-95">
+                            <span className="flex items-center gap-1"><Icon path={Icons.Refresh} size={14}/> อัปเดตข้อมูล</span>
+                        </button>
+                    )}
+                    
+                    {/* Close Button (For Error) */}
+                    {notify.status === 'error' && (
+                        <button onClick={() => setNotify({ ...notify, show: false })} className="text-gray-400 hover:text-red-500"><Icon path={Icons.Close} size={18}/></button>
+                    )}
+                </div>
+            );
+        };
+
         const getTaskCategory = (dateStr) => {
             if(!dateStr) return 'unknown';
             const today = new Date();
@@ -513,7 +545,6 @@
             const [pmList, setPmList] = useState([]); 
             const [pmLoading, setPmLoading] = useState(false); 
             
-            // 🟢 เพิ่ม State รองรับการแนบไฟล์ใน PM
             const initialPmState = { schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '', pmType: 'ภายใน', pmVendorName: '', pmVendorContact: '', image: '', pdf: '' };
             const [pmForm, setPmForm] = useState(initialPmState); 
             
@@ -532,7 +563,7 @@
                 if (!pmForm.topic || !pmForm.planDate) return alert("ระบุหัวข้อและวันที่"); 
                 setPmLoading(true); 
                 await postData({ action: 'save_pm_schedule', assetId: item.id, assetName: item.name, schedule: pmForm }); 
-                setPmForm(initialPmState); // 🟢 Reset ฟอร์มเป็นค่าเริ่มต้นรวมไฟล์
+                setPmForm(initialPmState);
                 setIsEditingPm(false); 
                 setTimeout(fetchPmSchedules, 2000); 
             }; 
@@ -541,7 +572,6 @@
             
             const handlePartFile = async (e, k) => { if (e.target.files[0]) { setFileLoading(true); try { const base64 = await fileToBase64(e.target.files[0]); if (base64) { setPart(prev => ({ ...prev, [k]: base64 })); alert("แนบไฟล์สำเร็จ!"); } } catch (err) { alert("Error reading file"); } finally { setFileLoading(false); } } }; 
             
-            // 🟢 ฟังก์ชันใหม่สำหรับจัดการอัปโหลดรูปและ PDF ของ PM
             const handlePmFile = async (e, k) => { 
                 if (e.target.files[0]) { 
                     setPmLoading(true); 
@@ -685,7 +715,6 @@
                                         </div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">ค่าแรงช่าง (บาท)</label><input type="number" className="input-box" placeholder="0.00" value={log.labor} onChange={e => setLog({ ...log, labor: e.target.value })} /></div><button onClick={submitLog} disabled={fileLoading} className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition ${fileLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{isEditingLog ? '💾 บันทึกการแก้ไข' : 'บันทึกประวัติ'}</button></div>)}
                                     {tab === 'history' && (<div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">{item.history && item.history.map((h, i) => (<div key={i} onClick={() => setSelLog(h)} className="bg-white border border-gray-100 rounded-2xl p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition group"><div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-400 flex items-center gap-2 mb-1">{h.date} <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{h.type}</span></div><div className="font-bold text-gray-800 text-lg">{h.description}</div></div><div className="text-right"><div className="font-bold text-blue-600 text-lg">฿{Number(h.totalCost).toLocaleString()}</div></div></div>{h.parts?.length > 0 && <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">ใช้อะไหล่ {h.parts.length} รายการ</div>}</div>))}{(!item.history || item.history.length === 0) && <div className="text-center text-gray-400 py-12 flex flex-col items-center"><Icon path={Icons.Folder} size={48} className="mb-2 opacity-30"/><p>ยังไม่มีประวัติการซ่อม</p></div>}</div>)}
                                     
-                                    {/* 🟢 หน้าจอตาราง PM ที่เพิ่มฟังก์ชันแนบไฟล์ */}
                                     {tab === 'pmschedule' && (
                                     <div className="animate-[fadeIn_0.3s_ease-out]">
                                         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6">
@@ -721,7 +750,6 @@
                                                 </div>
                                             </div>
 
-                                            {/* 🟢 ส่วนอัปโหลดไฟล์ จะแสดงเมื่อเลือกสถานะ "ดำเนินการแล้ว" */}
                                             {pmForm.status === 'ดำเนินการแล้ว' && (
                                                 <div className="mt-4 p-4 bg-white rounded-lg border border-green-200 animate-[fadeIn_0.2s_ease-out] mb-4">
                                                     <div className="text-xs font-bold text-green-600 mb-2">แนบหลักฐานการ PM (รูปภาพ / PDF)</div>
@@ -760,7 +788,6 @@
                                                             {pm.pmType === 'ภายนอก' && <span className="text-blue-500 font-bold bg-blue-50 px-1 rounded">🔧 {pm.pmVendorName}</span>}
                                                         </div>
                                                         
-                                                        {/* 🟢 ส่วนแสดงปุ่มดูไฟล์ของ PM History */}
                                                         {(pm.image || pm.pdf) && (
                                                             <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
                                                                 {pm.image && <button onClick={(e) => { e.stopPropagation(); openImagePopup(pm.image); }} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.Image} size={14}/> ดูรูปภาพ</button>}
@@ -848,9 +875,11 @@
             const [view, setView] = useState('dashboard');
             const [data, setData] = useState({ assets: [], departments: [] });
             const [loading, setLoading] = useState(false);
-            const [submitting, setSubmitting] = useState(false);
             const [selectedDept, setSelectedDept] = useState(null);
             const [selectedAsset, setSelectedAsset] = useState(null);
+            
+            // --- State ใหม่สำหรับ Toast Notification ---
+            const [syncNotify, setSyncNotify] = useState({ show: false, status: 'idle', message: '', action: null });
 
             useEffect(() => { 
                 if (API_URL.includes("URL_FROM")) {
@@ -878,24 +907,42 @@
             };
 
             const postData = async (payload) => {
-                setSubmitting(true);
+                // แจ้งเตือนว่ากำลังบันทึก (โชว์แบบลอย ไม่บล็อกจอ)
+                setSyncNotify({ show: true, status: 'syncing', message: 'กำลังบันทึกข้อมูลเบื้องหลัง...' });
+
                 try {
                     await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
-                    setTimeout(() => {
-                        if (!['save_pm_schedule', 'delete_pm_schedule'].includes(payload.action)) fetchData();
-                        setSubmitting(false);
-                        if(payload.action === 'save_asset') { setView('assets'); alert('บันทึกข้อมูลอุปกรณ์เรียบร้อย'); }
-                        if(payload.action === 'save_log') alert('บันทึกประวัติเรียบร้อย');
-                        if(payload.action === 'save_dept') { alert('สร้างแผนกเรียบร้อย'); }
-                        if(payload.action.includes('delete') && !payload.action.includes('pm')) { setView('assets'); alert('ลบเรียบร้อย'); }
-                        if(payload.action.includes('pm_schedule')) alert('ดำเนินการเรียบร้อย');
-                    }, 2500);
-                } catch (err) { alert("Error: " + err.message); setSubmitting(false); }
+                    
+                    // เปลี่ยนหน้าถ้าเป็นการลบหรือเซฟ asset
+                    if(payload.action === 'save_asset' || payload.action === 'delete_asset') { 
+                        setView('assets'); 
+                    }
+
+                    // เมื่อเสร็จแล้ว โชว์ให้กด Update
+                    setSyncNotify({
+                        show: true,
+                        status: 'success',
+                        message: 'บันทึกสำเร็จเรียบร้อย!',
+                        action: () => {
+                            fetchData(); // ให้ไปดึงข้อมูลใหม่เมื่อกดอัปเดต
+                            setSyncNotify({ show: false, status: 'idle', message: '', action: null });
+                        }
+                    });
+
+                } catch (err) { 
+                    setSyncNotify({ show: true, status: 'error', message: 'ผิดพลาด: ' + err.message, action: null });
+                    setTimeout(() => setSyncNotify({ show: false, status: 'idle', message: '', action: null }), 6000);
+                }
             };
 
             return (
                 <div className="flex h-screen w-full bg-slate-50 overflow-hidden text-gray-800">
-                    {(loading || submitting) && <LoadingOverlay text={submitting ? 'กำลังบันทึกและอัปโหลด...' : 'กำลังดึงข้อมูล...'}/>}
+                    {/* บล็อกจอเฉพาะตอนที่ไม่มีข้อมูลเลยและกำลังโหลด (เปิดแอปครั้งแรก) */}
+                    {loading && data.assets.length === 0 && <LoadingOverlay text='กำลังดึงข้อมูลระบบ...'/>}
+                    
+                    {/* Notification Toast ทำงานเบื้องหลัง */}
+                    <SyncToast notify={syncNotify} setNotify={setSyncNotify} />
+                    
                     <Sidebar setView={setView} view={view} fetchData={fetchData} />
                     <main className="flex-1 h-full relative overflow-hidden flex flex-col bg-[#f8fafc]">
                         {view === 'dashboard' && <DashboardView data={data} setView={setView} />}
@@ -917,5 +964,3 @@
     </script>
 </body>
 </html>
-
-
