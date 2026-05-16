@@ -3,964 +3,1485 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MTA Asset Maintenance</title>
+    <title>MTA Asset Pro</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
-        .fade-in { animation: fadeIn 0.4s ease-out forwards; opacity: 0; transform: translateY(10px); }
-        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface2: #22263a;
+            --border: #2e3348;
+            --accent: #4f8ef7;
+            --accent2: #7c3aed;
+            --green: #22c55e;
+            --orange: #f97316;
+            --red: #ef4444;
+            --yellow: #eab308;
+            --text: #e8eaf0;
+            --text2: #8b90a7;
+            --text3: #4a4f6a;
+        }
+
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background: var(--bg); 
+            color: var(--text);
+            -webkit-tap-highlight-color: transparent; 
+            overflow: hidden;
+            height: 100vh;
+        }
         
-        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
-        
-        .input-box { width: 100%; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; outline: none; transition: all 0.2s; background: #ffffff; color: #1f2937; }
-        .input-box:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-        .input-box:disabled { background-color: #f9fafb; color: #9ca3af; cursor: not-allowed; }
-        
-        .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.75rem; color: #6b7280; font-weight: 500; transition: all 0.2s; cursor: pointer; }
-        .nav-item:hover { background-color: #f3f4f6; color: #111827; }
-        .nav-item.active { background-color: #eff6ff; color: #2563eb; font-weight: 600; }
-        
-        .mobile-nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; font-size: 0.75rem; color: #9ca3af; padding: 0.5rem; transition: all 0.2s; min-width: 60px; flex-shrink: 0; }
-        .mobile-nav-item.active { color: #2563eb; }
-        
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
-        
-        .pb-safe { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
-        .scroll-container { -webkit-overflow-scrolling: touch; }
-        
-        .modal-enter { animation: modalIn 0.3s ease-out forwards; }
-        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .mono { font-family: 'IBM Plex Mono', monospace; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+        /* Animations */
+        @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+        @keyframes ping { 0% { transform: scale(1); opacity: 1; } 75%,100% { transform: scale(2); opacity: 0; } }
+        @keyframes modalIn { from { opacity:0; transform:scale(0.94) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+
+        .fade-up { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards; opacity: 0; }
+        .fade-in { animation: fadeIn 0.3s ease forwards; }
+        .slide-in { animation: slideIn 0.3s ease forwards; }
+        .modal-in { animation: modalIn 0.3s cubic-bezier(0.16,1,0.3,1) forwards; }
+        .spin { animation: spin 1s linear infinite; }
+        .pulse-dot { animation: ping 1.5s ease-in-out infinite; }
+
+        /* Stagger children */
+        .stagger > *:nth-child(1) { animation-delay: 0ms; }
+        .stagger > *:nth-child(2) { animation-delay: 60ms; }
+        .stagger > *:nth-child(3) { animation-delay: 120ms; }
+        .stagger > *:nth-child(4) { animation-delay: 180ms; }
+        .stagger > *:nth-child(5) { animation-delay: 240ms; }
+        .stagger > *:nth-child(6) { animation-delay: 300ms; }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+        }
+        .card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 32px rgba(79,142,247,0.08); }
+        .card-static { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+
+        /* Inputs */
+        .inp {
+            width: 100%; padding: 10px 14px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text);
+            font-family: 'Sarabun', sans-serif; font-size: 14px;
+            outline: none; transition: all 0.2s;
+        }
+        .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,142,247,0.12); }
+        .inp:disabled { opacity: 0.4; cursor: not-allowed; }
+        .inp::placeholder { color: var(--text3); }
+
+        /* Buttons */
+        .btn { padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; transition: all 0.2s; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #3d7ef0; }
+        .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+        .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--text3); }
+        .btn-danger { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+        .btn-danger:hover { background: rgba(239,68,68,0.2); }
+        .btn-success { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+
+        /* Nav */
+        .nav-item { 
+            display: flex; align-items: center; gap: 12px; 
+            padding: 10px 14px; border-radius: 10px; 
+            color: var(--text2); font-weight: 500; font-size: 14px;
+            transition: all 0.2s; cursor: pointer; position: relative;
+        }
+        .nav-item:hover { background: var(--surface2); color: var(--text); }
+        .nav-item.active { background: rgba(79,142,247,0.12); color: var(--accent); }
+        .nav-item.active::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
+
+        /* Status badges */
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .badge-green { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+        .badge-red { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+        .badge-orange { background: rgba(249,115,22,0.12); color: var(--orange); border: 1px solid rgba(249,115,22,0.2); }
+        .badge-blue { background: rgba(79,142,247,0.12); color: var(--accent); border: 1px solid rgba(79,142,247,0.2); }
+        .badge-yellow { background: rgba(234,179,8,0.12); color: var(--yellow); border: 1px solid rgba(234,179,8,0.2); }
+        .badge-gray { background: rgba(139,144,167,0.12); color: var(--text2); border: 1px solid var(--border); }
+
+        /* Mobile nav */
+        .mobile-nav-btn { 
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            font-size: 10px; color: var(--text3); padding: 8px 12px; min-width: 56px;
+            transition: all 0.2s; cursor: pointer; border-radius: 10px;
+        }
+        .mobile-nav-btn.active { color: var(--accent); background: rgba(79,142,247,0.08); }
+
+        /* Glow effects */
+        .glow-blue { box-shadow: 0 0 20px rgba(79,142,247,0.3); }
+        .glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.3); }
+        .glow-red { box-shadow: 0 0 20px rgba(239,68,68,0.2); }
+
+        /* Grid pattern bg */
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* Kanban */
+        .kanban-col { min-width: 300px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+        .kanban-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; transition: all 0.2s; cursor: pointer; }
+        .kanban-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+        /* AI Chat */
+        .ai-msg { padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.7; max-width: 85%; }
+        .ai-msg.bot { background: var(--surface2); border: 1px solid var(--border); align-self: flex-start; }
+        .ai-msg.user { background: rgba(79,142,247,0.15); border: 1px solid rgba(79,142,247,0.2); align-self: flex-end; }
+
+        /* Chart bars */
+        .bar-fill { transition: height 0.8s cubic-bezier(0.16,1,0.3,1); }
+
+        /* Toast */
+        .toast { 
+            position: fixed; bottom: 90px; right: 20px; z-index: 9999;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 14px 18px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            display: flex; align-items: center; gap: 12px; min-width: 280px;
+            animation: modalIn 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        /* Overdue pulse */
+        .overdue-pulse { position: relative; }
+        .overdue-pulse::after { content: ''; position: absolute; top: 0; right: 0; width: 8px; height: 8px; background: var(--red); border-radius: 50%; animation: ping 1.5s ease-in-out infinite; }
+
+        .scroll-y { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .pb-nav { padding-bottom: 88px; }
+
+        /* Safe area */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .pb-nav { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+        }
+
+        /* QR */
+        #qr-container canvas, #qr-container img { border-radius: 8px; }
+
+        /* Shimmer loading */
+        .shimmer {
+            background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+            border-radius: 8px;
+        }
     </style>
 </head>
-<body class="text-gray-800 h-screen overflow-hidden flex flex-col md:flex-row">
-    <div id="root" class="w-full h-full"></div>
+<body>
+<div id="root" style="width:100%;height:100vh;"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-        // ***************************************************************
-        // 🔴🔴🔴 สำคัญมาก: ใส่ URL ของ Google Apps Script ที่ Deploy ล่าสุดตรงนี้ 🔴🔴🔴
-        const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec"; 
-        // ***************************************************************
+// ====== CONFIG ======
+const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
+const CLAUDE_API = "https://api.anthropic.com/v1/messages";
+const APP_VERSION = "2.0 Pro";
 
-        // --- Icons ---
-        const Icon = ({ path, size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>
-        );
-        const Icons = {
-            Dashboard: <><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></>,
-            Assets: <><path d="M2 12h20"></path><path d="M7 12v5a3 3 0 0 0 6 0v-5"></path><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M12 12V7"></path></>,
-            Add: <><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></>,
-            Refresh: <><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></>,
-            Search: <><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></>,
-            ArrowLeft: <><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></>,
-            Image: <><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></>,
-            File: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></>,
-            Close: <><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></>,
-            Building: <><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="22" x2="9" y2="22.01"></line><line x1="15" y1="22" x2="15" y2="22.01"></line><line x1="12" y1="22" x2="12" y2="22.01"></line><line x1="12" y1="2" x2="12" y2="22"></line><line x1="4" y1="10" x2="20" y2="10"></line><line x1="4" y1="16" x2="20" y2="16"></line></>,
-            Wrench: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></>,
-            Trash: <><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></>,
-            Loader: <><path d="M21 12a9 9 0 1 1-6.219-8.56"/></>,
-            Folder: <><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></>,
-            Calendar: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></>,
-            User: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></>,
-            Phone: <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></>,
-            Clock: <><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></>,
-            Alert: <><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></>,
-            Zap: <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></>,
-            Droplet: <><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></>
-        };
+// ====== ICONS ======
+const I = ({ d, size=20, cls="" }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>{d}</svg>
+);
+const ic = {
+    dash: <><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></>,
+    building: <><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="16" x2="20" y2="16"/></>,
+    wrench: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></>,
+    search: <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
+    plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+    refresh: <><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></>,
+    back: <><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></>,
+    img: <><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>,
+    file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>,
+    x: <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
+    cal: <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
+    phone: <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></>,
+    clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+    alert: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
+    zap: <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>,
+    drop: <><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></>,
+    trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>,
+    loader: <path d="M21 12a9 9 0 1 1-6.219-8.56"/>,
+    qr: <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3"/><rect x="16" y="5" width="3" height="3"/><rect x="5" y="16" width="3" height="3"/><path d="M14 14h3v3h-3z"/><path d="M17 17h3v3h-3z"/><path d="M14 17h.01"/><path d="M17 14h.01"/></>,
+    bot: <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M12 11V7"/><circle cx="12" cy="5" r="2"/><path d="M8 11V9a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="9" y1="17" x2="9" y2="17.01"/><line x1="15" y1="17" x2="15" y2="17.01"/></>,
+    chart: <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>,
+    send: <><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
+    kanban: <><rect x="3" y="3" width="5" height="19"/><rect x="10" y="3" width="5" height="11"/><rect x="17" y="3" width="5" height="15"/></>,
+    star: <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>,
+    tag: <><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>,
+    folder: <><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></>,
+    eye: <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+    trend: <><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>,
+    info: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>,
+};
 
-        const fileToBase64 = (file) => new Promise((resolve, reject) => {
-            if (file.size > 5 * 1024 * 1024) return alert("ไฟล์ต้องไม่เกิน 5MB");
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
+// ====== UTILS ======
+const fileToBase64 = (file) => new Promise((res, rej) => {
+    if (file.size > 5 * 1024 * 1024) { alert("ไฟล์ต้องไม่เกิน 5MB"); return; }
+    const r = new FileReader();
+    r.readAsDataURL(file);
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+});
 
-        const LoadingOverlay = ({ text }) => (
-            <div className="fixed inset-0 bg-white/80 z-[60] flex flex-col items-center justify-center fade-in backdrop-blur-sm">
-                <div className="animate-spin text-blue-600 mb-4"><Icon path={Icons.Loader} size={48} /></div>
-                <p className="text-slate-600 font-bold text-lg">{text}</p>
+const daysDiff = (dateStr) => {
+    if (!dateStr) return null;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(dateStr); d.setHours(0,0,0,0);
+    return Math.ceil((d - today) / 86400000);
+};
+
+const getPmCategory = (dateStr) => {
+    const d = daysDiff(dateStr);
+    if (d === null) return 'none';
+    if (d < 0) return 'overdue';
+    if (d <= 7) return 'thisWeek';
+    if (d <= 14) return 'nextWeek';
+    if (d <= 30) return 'thisMonth';
+    return 'future';
+};
+
+const fmtNum = (n) => Number(n || 0).toLocaleString('th-TH');
+const fmtDate = (str) => str ? new Date(str).toLocaleDateString('th-TH', {day:'numeric',month:'short',year:'2-digit'}) : '-';
+
+// ====== COMPONENTS ======
+
+const Loader = ({ size=24 }) => <I d={ic.loader} size={size} cls="spin" />;
+
+const Toast = ({ notify, setNotify }) => {
+    if (!notify.show) return null;
+    return (
+        <div className="toast">
+            {notify.status === 'syncing' && <div style={{color:'var(--accent)'}}><Loader size={20}/></div>}
+            {notify.status === 'success' && <div style={{color:'var(--green)'}}>✓</div>}
+            {notify.status === 'error' && <div style={{color:'var(--red)'}}><I d={ic.alert} size={20}/></div>}
+            <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:13}}>{notify.message}</div>
+                {notify.status==='syncing' && <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>ใช้งานต่อได้เลยครับ...</div>}
             </div>
-        );
+            {notify.status==='success' && notify.action && (
+                <button className="btn btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={notify.action}>
+                    <I d={ic.refresh} size={14}/> อัปเดต
+                </button>
+            )}
+            {notify.status==='error' && (
+                <button onClick={() => setNotify({show:false})} style={{color:'var(--text3)'}}><I d={ic.x} size={16}/></button>
+            )}
+        </div>
+    );
+};
 
-        // --- เพิ่ม SyncToast Component สำหรับแสดงสถานะแบบไม่บังหน้าจอ ---
-        const SyncToast = ({ notify, setNotify }) => {
-            if (!notify.show) return null;
-
-            return (
-                <div className="fixed bottom-20 md:bottom-10 right-4 md:right-10 z-[100] bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-4 flex items-center gap-4 animate-[modalIn_0.3s_ease-out] min-w-[300px]">
-                    {/* Icon Status */}
-                    {notify.status === 'syncing' && <div className="animate-spin text-blue-500"><Icon path={Icons.Loader} size={24} /></div>}
-                    {notify.status === 'success' && <div className="text-green-500 bg-green-50 p-1.5 rounded-full"><Icon path={Icons.Zap} size={20} /></div>}
-                    {notify.status === 'error' && <div className="text-red-500 bg-red-50 p-1.5 rounded-full"><Icon path={Icons.Alert} size={20} /></div>}
-
-                    {/* Message */}
-                    <div className="flex-1">
-                        <p className="text-sm font-bold text-gray-800">{notify.message}</p>
-                        {notify.status === 'syncing' && <p className="text-[10px] text-gray-400">คุณสามารถใช้งานต่อได้เลย...</p>}
-                    </div>
-
-                    {/* Action Button */}
-                    {notify.status === 'success' && notify.action && (
-                        <button onClick={notify.action} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md active:scale-95">
-                            <span className="flex items-center gap-1"><Icon path={Icons.Refresh} size={14}/> อัปเดตข้อมูล</span>
-                        </button>
-                    )}
-                    
-                    {/* Close Button (For Error) */}
-                    {notify.status === 'error' && (
-                        <button onClick={() => setNotify({ ...notify, show: false })} className="text-gray-400 hover:text-red-500"><Icon path={Icons.Close} size={18}/></button>
-                    )}
+// ====== SIDEBAR ======
+const Sidebar = ({ view, setView, fetchData, pmOverdue }) => {
+    const navs = [
+        { id:'dashboard', label:'Dashboard', icon:ic.dash },
+        { id:'kanban', label:'PM Kanban Board', icon:ic.kanban, badge: pmOverdue > 0 ? pmOverdue : null },
+        { id:'departments', label:'แผนกและอุปกรณ์', icon:ic.building },
+        { id:'global_search', label:'ค้นหาทั่วระบบ', icon:ic.search },
+        { id:'electrical', label:'ระบบไฟฟ้า', icon:ic.zap },
+        { id:'water', label:'ระบบน้ำ', icon:ic.drop },
+        { id:'ai', label:'AI Assistant', icon:ic.bot },
+        { id:'executive', label:'รายงานผู้บริหาร', icon:ic.chart },
+    ];
+    return (
+        <div style={{width:260,background:'var(--surface)',borderRight:'1px solid var(--border)',height:'100%',display:'flex',flexDirection:'column',padding:'24px 16px',flexShrink:0}} className="hidden md:flex">
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:32,padding:'0 4px'}}>
+                <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:10,borderRadius:12,display:'flex'}}>
+                    <I d={ic.wrench} size={22} cls="" style={{color:'white'}}/>
                 </div>
+                <div>
+                    <div style={{fontWeight:800,fontSize:16,letterSpacing:'-0.5px'}}>MTA Asset</div>
+                    <div style={{fontSize:11,color:'var(--text3)',fontFamily:'IBM Plex Mono, monospace'}}>v{APP_VERSION}</div>
+                </div>
+            </div>
+            <nav style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:4}}>
+                {navs.map(n => (
+                    <div key={n.id} className={`nav-item ${['departments','assets','detail','add_asset','edit_asset'].includes(view) && n.id==='departments' ? 'active' : view===n.id ? 'active' : ''}`} onClick={() => setView(n.id)}>
+                        <I d={n.icon} size={18}/>
+                        <span style={{flex:1}}>{n.label}</span>
+                        {n.badge && <span style={{background:'var(--red)',color:'white',fontSize:10,fontWeight:800,padding:'2px 7px',borderRadius:20}}>{n.badge}</span>}
+                    </div>
+                ))}
+            </nav>
+            <div style={{borderTop:'1px solid var(--border)',paddingTop:12,marginTop:12}}>
+                <div className="nav-item" onClick={fetchData}><I d={ic.refresh} size={18}/> รีเฟรชข้อมูล</div>
+            </div>
+        </div>
+    );
+};
+
+const MobileNav = ({ view, setView, pmOverdue }) => {
+    const navs = [
+        { id:'dashboard', label:'หน้าหลัก', icon:ic.dash },
+        { id:'kanban', label:'PM', icon:ic.kanban, badge:pmOverdue },
+        { id:'departments', label:'อุปกรณ์', icon:ic.building },
+        { id:'global_search', label:'ค้นหา', icon:ic.search },
+        { id:'ai', label:'AI', icon:ic.bot },
+        { id:'executive', label:'รายงาน', icon:ic.chart },
+    ];
+    return (
+        <div style={{position:'fixed',bottom:0,left:0,right:0,background:'var(--surface)',borderTop:'1px solid var(--border)',display:'flex',justifyContent:'space-around',alignItems:'center',padding:'6px 4px',zIndex:50,paddingBottom:'calc(6px + env(safe-area-inset-bottom))'}} className="md:hidden">
+            {navs.map(n => (
+                <button key={n.id} className={`mobile-nav-btn ${(['departments','assets','detail','add_asset','edit_asset'].includes(view)&&n.id==='departments')||view===n.id?'active':''}`} onClick={()=>setView(n.id)} style={{position:'relative'}}>
+                    <I d={n.icon} size={22}/>
+                    <span>{n.label}</span>
+                    {n.badge > 0 && <span style={{position:'absolute',top:4,right:8,background:'var(--red)',color:'white',fontSize:9,fontWeight:800,padding:'1px 5px',borderRadius:20}}>{n.badge}</span>}
+                </button>
+            ))}
+        </div>
+    );
+};
+
+// ====== GLOBAL SEARCH ======
+const GlobalSearch = ({ data, setView, setSelectedAsset }) => {
+    const [q, setQ] = useState('');
+    const inputRef = useRef();
+    useEffect(() => { inputRef.current?.focus(); }, []);
+
+    const results = useMemo(() => {
+        if (!q.trim() || q.length < 2) return [];
+        const s = q.toLowerCase();
+        return data.assets.filter(a => {
+            return (
+                String(a.name||'').toLowerCase().includes(s) ||
+                String(a.id||'').toLowerCase().includes(s) ||
+                String(a.model||'').toLowerCase().includes(s) ||
+                String(a.location||'').toLowerCase().includes(s) ||
+                String(a.vendor||'').toLowerCase().includes(s) ||
+                String(a.electrical?.breaker||'').toLowerCase().includes(s) ||
+                String(a.water?.pump||'').toLowerCase().includes(s)
             );
-        };
+        }).slice(0, 30);
+    }, [q, data.assets]);
 
-        const getTaskCategory = (dateStr) => {
-            if(!dateStr) return 'unknown';
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const taskDate = new Date(dateStr);
-            taskDate.setHours(0,0,0,0);
-            const diffTime = taskDate - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-            if (diffDays < 0) return 'overdue';
-            if (diffDays <= 7) return 'thisWeek';
-            if (diffDays <= 14) return 'nextWeek';
-            if (diffDays <= 30) return 'nextMonth';
-            return 'future';
-        };
+    const highlight = (text, query) => {
+        if (!query || !text) return text;
+        const idx = String(text).toLowerCase().indexOf(query.toLowerCase());
+        if (idx === -1) return text;
+        return <>{String(text).slice(0,idx)}<mark style={{background:'rgba(79,142,247,0.3)',color:'var(--accent)',borderRadius:3,padding:'0 2px'}}>{String(text).slice(idx,idx+query.length)}</mark>{String(text).slice(idx+query.length)}</>;
+    };
 
-        // --- Layout Components ---
-        const Sidebar = ({ view, setView, fetchData }) => (
-            <div className="hidden md:flex flex-col w-72 bg-white border-r border-gray-200 h-full p-6 shadow-sm z-20">
-                <div className="flex items-center gap-3 mb-10 text-blue-600">
-                    <div className="bg-blue-50 p-2.5 rounded-xl"><Icon path={Icons.Wrench} size={28}/></div>
-                    <div><h1 className="font-bold text-xl tracking-tight text-gray-900">MTA Service</h1><p className="text-xs text-gray-500 font-medium">Asset Management</p></div>
+    return (
+        <div style={{padding:'24px',maxWidth:900,margin:'0 auto',height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav scroll-y">
+            <div style={{marginBottom:24}}>
+                <h2 style={{fontSize:24,fontWeight:800,marginBottom:4}}>ค้นหาทั่วระบบ</h2>
+                <p style={{color:'var(--text2)',fontSize:14}}>ค้นหาข้ามแผนก — ชื่อ, รหัส, รุ่น, Breaker, Pump, ผู้จำหน่าย</p>
+            </div>
+            <div style={{position:'relative',marginBottom:24}}>
+                <I d={ic.search} size={20} cls="" style={{position:'absolute',left:16,top:'50%',transform:'translateY(-50%)',color:'var(--text3)'}}/>
+                <input ref={inputRef} className="inp" value={q} onChange={e=>setQ(e.target.value)} placeholder="พิมพ์ชื่อ รหัส รุ่น เบรคเกอร์ ปั๊มน้ำ..." style={{paddingLeft:48,fontSize:16,padding:'14px 16px 14px 48px'}} />
+                {q && <button onClick={()=>setQ('')} style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',color:'var(--text3)'}}><I d={ic.x} size={18}/></button>}
+            </div>
+
+            {q.length >= 2 && (
+                <div style={{color:'var(--text3)',fontSize:12,marginBottom:12}}>
+                    พบ {results.length} รายการ{results.length===30?' (แสดง 30 รายการแรก)':''}
                 </div>
-                <nav className="flex-1 space-y-2 overflow-y-auto">
-                    <div onClick={() => setView('dashboard')} className={`nav-item ${view === 'dashboard' ? 'active' : ''}`}><Icon path={Icons.Dashboard} size={20}/> ภาพรวมระบบ</div>
-                    <div onClick={() => setView('pm_dashboard')} className={`nav-item ${view === 'pm_dashboard' ? 'active' : ''}`}><Icon path={Icons.Calendar} size={20}/> ภาพรวม PM</div>
-                    <div onClick={() => setView('departments')} className={`nav-item ${['departments', 'assets', 'detail', 'add_asset', 'edit_asset'].includes(view) ? 'active' : ''}`}><Icon path={Icons.Building} size={20}/> แผนกและอุปกรณ์</div>
-                    <div onClick={() => setView('electrical')} className={`nav-item ${view === 'electrical' ? 'active' : ''}`}><Icon path={Icons.Zap} size={20}/> ข้อมูลระบบไฟฟ้า</div>
-                    <div onClick={() => setView('water')} className={`nav-item ${view === 'water' ? 'active' : ''}`}><Icon path={Icons.Droplet} size={20}/> ข้อมูลระบบน้ำ</div>
-                </nav>
-                <div className="mt-auto pt-6 border-t border-gray-100"><div onClick={fetchData} className="nav-item hover:bg-gray-50 text-gray-500"><Icon path={Icons.Refresh} size={20}/> รีเฟรชข้อมูล</div></div>
-            </div>
-        );
+            )}
 
-        const MobileNav = ({ view, setView, fetchData }) => (
-            <div className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-start px-4 py-2 z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)] overflow-x-auto scrollbar-hide gap-6">
-                <button onClick={() => setView('dashboard')} className={`mobile-nav-item ${view === 'dashboard' ? 'active' : ''}`}><Icon path={Icons.Dashboard} size={22}/><span>ภาพรวม</span></button>
-                <button onClick={() => setView('pm_dashboard')} className={`mobile-nav-item ${view === 'pm_dashboard' ? 'active' : ''}`}><Icon path={Icons.Calendar} size={22}/><span>PM</span></button>
-                <button onClick={() => setView('departments')} className={`mobile-nav-item ${['departments', 'assets', 'detail', 'edit_asset'].includes(view) ? 'active' : ''}`}><Icon path={Icons.Building} size={22}/><span>แผนก</span></button>
-                <button onClick={() => setView('electrical')} className={`mobile-nav-item ${view === 'electrical' ? 'active' : ''}`}><Icon path={Icons.Zap} size={22}/><span>ระบบไฟ</span></button>
-                <button onClick={() => setView('water')} className={`mobile-nav-item ${view === 'water' ? 'active' : ''}`}><Icon path={Icons.Droplet} size={22}/><span>ระบบน้ำ</span></button>
-                <button onClick={fetchData} className="mobile-nav-item text-gray-400"><Icon path={Icons.Refresh} size={22}/><span>รีเฟรช</span></button>
-            </div>
-        );
-
-        // --- Utility System View (For Electrical and Water) ---
-        const UtilitySystemsView = ({ data, type, setView, setSelectedAsset }) => {
-            const [search, setSearch] = useState('');
-            const isElec = type === 'electrical';
-            const title = isElec ? 'ข้อมูลอุปกรณ์ไฟฟ้า' : 'ข้อมูลอุปกรณ์น้ำ';
-            const icon = isElec ? <Icon path={Icons.Zap} size={24} /> : <Icon path={Icons.Droplet} size={24} />;
-            const colorClass = isElec ? 'text-yellow-600' : 'text-blue-600';
-            const bgClass = isElec ? 'bg-yellow-50' : 'bg-blue-50';
-
-            const filtered = data.assets.filter(a => {
-                if (isElec && !a.electrical?.uses) return false;
-                if (!isElec && !a.water?.uses) return false;
-                
-                const s = search.toLowerCase();
-                const matchName = String(a.name || "").toLowerCase().includes(s);
-                const matchId = String(a.id || "").toLowerCase().includes(s);
-                const matchControl = isElec 
-                    ? String(a.electrical?.breaker || "").toLowerCase().includes(s)
-                    : String(a.water?.pump || "").toLowerCase().includes(s);
-                    
-                return matchName || matchId || matchControl;
-            });
-
-            const grouped = {};
-            filtered.forEach(a => {
-                const key = isElec 
-                    ? (a.electrical?.breaker || 'ไม่ระบุเบรคเกอร์') 
-                    : (a.water?.pump || 'ไม่ระบุปั๊ม');
-                if (!grouped[key]) grouped[key] = [];
-                grouped[key].push(a);
-            });
-
-            return (
-                <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-safe fade-in scroll-container">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                        <div>
-                            <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                                <div className={`p-2 rounded-xl ${bgClass} ${colorClass}`}>{icon}</div>
-                                {title}
-                            </h2>
-                            <p className="text-gray-500 mt-1">{isElec ? 'ค้นหาและดูรายการอุปกรณ์ที่พ่วงเบรคเกอร์' : 'ค้นหาและดูรายการอุปกรณ์ที่พ่วงปั๊มน้ำ'}</p>
+            <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8}}>
+                {results.map(item => (
+                    <div key={item.id} className="card" style={{padding:16,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
+                        <div style={{width:56,height:56,background:'var(--surface2)',borderRadius:10,overflow:'hidden',flexShrink:0}}>
+                            {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={20}/></div>}
                         </div>
-                        <div className="relative w-full md:w-96">
-                            <div className="absolute left-4 top-3.5 text-gray-400"><Icon path={Icons.Search} size={18}/></div>
-                            <input className="input-box pl-11 shadow-sm border-0" placeholder={`ค้นหาชื่อ, รหัส, ${isElec ? 'หมายเลขเบรคเกอร์' : 'หมายเลขปั๊ม'}...`} value={search} onChange={e => setSearch(e.target.value)}/>
+                        <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontWeight:700,marginBottom:2}}>{highlight(item.name, q)}</div>
+                            <div style={{fontSize:12,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)',marginBottom:6}}>{highlight(item.id, q)}</div>
+                            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                                <span className="badge badge-gray">{item.location}</span>
+                                {item.model && <span className="badge badge-gray">{highlight(item.model, q)}</span>}
+                                {item.electrical?.breaker && <span className="badge badge-yellow">⚡ {highlight(item.electrical.breaker, q)}</span>}
+                                {item.water?.pump && <span className="badge badge-blue">💧 {highlight(item.water.pump, q)}</span>}
+                                <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`}>{item.status}</span>
+                            </div>
                         </div>
+                        <I d={ic.back} size={18} cls="" style={{color:'var(--text3)',transform:'rotate(180deg)',flexShrink:0}}/>
                     </div>
+                ))}
+                {q.length >= 2 && results.length === 0 && (
+                    <div style={{textAlign:'center',padding:60,color:'var(--text3)'}}>
+                        <I d={ic.search} size={48} cls="" style={{opacity:0.2,marginBottom:12}}/>
+                        <div>ไม่พบ "{q}" ในระบบ</div>
+                    </div>
+                )}
+                {q.length < 2 && (
+                    <div style={{textAlign:'center',padding:60,color:'var(--text3)'}}>
+                        <I d={ic.search} size={48} cls="" style={{opacity:0.15,marginBottom:12}}/>
+                        <div>พิมพ์อย่างน้อย 2 ตัวอักษร</div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
-                    <div className="overflow-y-auto pb-10 space-y-6">
-                        {Object.keys(grouped).map(ctrlKey => (
-                            <div key={ctrlKey} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                <h3 className={`text-xl font-bold mb-4 flex items-center gap-2 ${colorClass}`}>
-                                    {isElec ? '🔌 เบรคเกอร์:' : '💧 ปั๊มน้ำ:'} {ctrlKey}
-                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{grouped[ctrlKey].length} อุปกรณ์</span>
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    {grouped[ctrlKey].map(item => (
-                                        <div key={item.id} onClick={() => { setSelectedAsset(item); setView('detail'); }} className="flex items-center gap-4 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 cursor-pointer transition">
-                                            <div className="w-16 h-16 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
-                                                {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-gray-300"><Icon path={Icons.Image} size={20}/></div>}
+// ====== KANBAN PM BOARD ======
+const KanbanBoard = ({ assets, setSelectedAsset, setView }) => {
+    const [allPm, setAllPm] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [filter, setFilter] = useState('all');
+
+    useEffect(() => {
+        const load = async () => {
+            setLoading(true);
+            try {
+                const r = await fetch(API_URL, { method:'POST', body: JSON.stringify({action:'get_all_pm_dashboard'}) });
+                const j = await r.json();
+                if (j.allPm) setAllPm(j.allPm);
+            } catch(e) { console.error(e); }
+            setLoading(false);
+        };
+        load();
+    }, []);
+
+    const filtered = filter === 'all' ? allPm : allPm.filter(t => t.status === filter);
+
+    const cols = [
+        { id:'overdue', label:'🔴 เกินกำหนด', color:'var(--red)', bgColor:'rgba(239,68,68,0.06)', borderColor:'rgba(239,68,68,0.2)' },
+        { id:'thisWeek', label:'🟠 สัปดาห์นี้', color:'var(--orange)', bgColor:'rgba(249,115,22,0.06)', borderColor:'rgba(249,115,22,0.2)' },
+        { id:'nextWeek', label:'🔵 สัปดาห์หน้า', color:'var(--accent)', bgColor:'rgba(79,142,247,0.06)', borderColor:'rgba(79,142,247,0.2)' },
+        { id:'thisMonth', label:'🟢 เดือนนี้', color:'var(--green)', bgColor:'rgba(34,197,94,0.06)', borderColor:'rgba(34,197,94,0.2)' },
+        { id:'future', label:'⚪ อนาคต', color:'var(--text2)', bgColor:'rgba(139,144,167,0.06)', borderColor:'var(--border)' },
+    ];
+
+    const getItems = (colId) => filtered.filter(t => getPmCategory(t.planDate) === colId);
+
+    const handleClick = (t) => {
+        const a = assets.find(x => String(x.id) === String(t.assetId));
+        if (a) { setSelectedAsset(a); setView('detail'); }
+    };
+
+    const statuses = ['all','รอเป้าหมาย','ดำเนินการแล้ว','ยกเลิก'];
+
+    return (
+        <div style={{padding:'24px',height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav">
+            <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'center',marginBottom:20,flexShrink:0}}>
+                <div>
+                    <h2 style={{fontSize:22,fontWeight:800}}>PM Kanban Board</h2>
+                    <p style={{fontSize:13,color:'var(--text2)'}}>ภาพรวมตารางงาน PM ทั้งหมด</p>
+                </div>
+                <div style={{marginLeft:'auto',display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {statuses.map(s => (
+                        <button key={s} className={`btn ${filter===s?'btn-primary':'btn-ghost'}`} style={{padding:'6px 14px',fontSize:12}} onClick={()=>setFilter(s)}>
+                            {s==='all'?'ทั้งหมด':s}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            {loading ? (
+                <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)',gap:12}}>
+                    <Loader size={24}/> กำลังโหลด...
+                </div>
+            ) : (
+                <div style={{display:'flex',gap:16,overflowX:'auto',flex:1,paddingBottom:16,alignItems:'flex-start'}} className="scroll-y">
+                    {cols.map(col => {
+                        const items = getItems(col.id);
+                        return (
+                            <div key={col.id} className="kanban-col" style={{flexShrink:0,background:col.bgColor,borderColor:col.borderColor,display:'flex',flexDirection:'column',maxHeight:'100%'}}>
+                                <div style={{padding:'14px 16px',borderBottom:`1px solid ${col.borderColor}`,display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+                                    <span style={{fontWeight:700,fontSize:13,color:col.color}}>{col.label}</span>
+                                    <span style={{background:col.color+'22',color:col.color,fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:20}}>{items.length}</span>
+                                </div>
+                                <div style={{overflowY:'auto',padding:12,display:'flex',flexDirection:'column',gap:8,flex:1}}>
+                                    {items.length === 0 && <div style={{textAlign:'center',padding:20,color:'var(--text3)',fontSize:12}}>ไม่มีงาน</div>}
+                                    {items.map((t,i) => (
+                                        <div key={i} className="kanban-card" onClick={()=>handleClick(t)}>
+                                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6,gap:8}}>
+                                                <div style={{fontWeight:700,fontSize:13,lineHeight:1.3}}>{t.assetName}</div>
+                                                <span className={`badge ${t.status==='ดำเนินการแล้ว'?'badge-green':'badge-gray'}`} style={{flexShrink:0,fontSize:10}}>{t.status==='ดำเนินการแล้ว'?'✓ เสร็จ':'รอ'}</span>
                                             </div>
-                                            <div className="flex-1 overflow-hidden">
-                                                <div className="font-bold text-gray-800 text-sm truncate">{item.name}</div>
-                                                <div className="text-xs text-gray-500 font-mono mt-0.5 mb-1.5">{item.id}</div>
-                                                <div className="text-[11px] font-bold text-gray-500 bg-white px-2 py-1 rounded border inline-block">
-                                                    {isElec ? `Watt: ${item.electrical.watt||'-'} | Amp: ${item.electrical.amp||'-'} | HP: ${item.electrical.hp||'-'}` : `Type: ${item.water.type||'-'}`}
-                                                </div>
+                                            <div style={{fontSize:12,color:'var(--text2)',marginBottom:8}}>{t.topic}</div>
+                                            <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+                                                <span style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:col.color,background:col.color+'15',padding:'2px 7px',borderRadius:6}}>{t.planDate}</span>
+                                                {t.pmType==='ภายนอก' && <span style={{fontSize:10,color:'var(--accent)'}}>🔧 {t.pmVendorName}</span>}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        ))}
-                        {Object.keys(grouped).length === 0 && (
-                            <div className="text-center py-20 text-gray-400">ไม่พบข้อมูลอุปกรณ์ในระบบนี้</div>
-                        )}
-                    </div>
+                        );
+                    })}
                 </div>
-            );
+            )}
+        </div>
+    );
+};
+
+// ====== QR CODE MODAL ======
+const QrModal = ({ asset, onClose }) => {
+    const qrRef = useRef();
+    const [qrGenerated, setQrGenerated] = useState(false);
+    const url = `${window.location.href.split('?')[0]}?asset=${asset.id}`;
+
+    useEffect(() => {
+        if (qrRef.current && !qrGenerated) {
+            qrRef.current.innerHTML = '';
+            try {
+                new QRCode(qrRef.current, {
+                    text: url,
+                    width: 200, height: 200,
+                    colorDark: '#1a1d27', colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                setQrGenerated(true);
+            } catch(e) {
+                qrRef.current.innerHTML = `<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px">QR: ${asset.id}</div>`;
+            }
         }
+    }, []);
 
-        // --- Other Views ---
-        const DashboardView = ({ data, setView }) => {
-            const totalAssets = data.assets.length;
-            const repairing = data.assets.filter(a => a.status === 'ส่งซ่อม').length;
-            const active = totalAssets - repairing;
-            return (
-                <div className="p-6 md:p-10 w-full max-w-7xl mx-auto space-y-8 fade-in pb-safe scroll-container">
-                    <div className="flex justify-between items-end"><div><h2 className="text-3xl font-bold text-gray-800">Dashboard</h2><p className="text-gray-500 mt-1">ภาพรวมสถานะทรัพย์สินทั้งหมด</p></div><button onClick={() => setView('add_asset')} className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-200 transition active:scale-95"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์ใหม่</button></div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-blue-50 text-blue-600 rounded-2xl"><Icon path={Icons.Building} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">ทั้งหมด</p><p className="text-3xl font-bold text-gray-800 mt-1">{totalAssets}</p></div></div>
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-orange-50 text-orange-600 rounded-2xl"><Icon path={Icons.Wrench} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">กำลังซ่อม</p><p className="text-3xl font-bold text-orange-600 mt-1">{repairing}</p></div></div>
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 card-hover"><div className="p-4 bg-green-50 text-green-600 rounded-2xl"><Icon path={Icons.Assets} size={32}/></div><div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider">ใช้งานปกติ</p><p className="text-3xl font-bold text-green-600 mt-1">{active}</p></div></div>
-                    </div>
+    const handlePrint = () => {
+        const w = window.open('', '_blank');
+        const qrHtml = qrRef.current?.innerHTML || '';
+        w.document.write(`
+            <html><head><title>QR - ${asset.name}</title>
+            <style>body{font-family:sans-serif;display:flex;flex-direction:column;align-items:center;padding:20px;background:#fff;} .box{border:2px solid #000;padding:16px;border-radius:8px;text-align:center;} h2{font-size:14px;margin:8px 0 4px;} p{font-size:11px;color:#666;margin:0;font-family:monospace;}</style>
+            </head><body><div class="box">${qrHtml}<h2>${asset.name}</h2><p>${asset.id}</p><p>${asset.location}</p></div><script>window.print();setTimeout(()=>window.close(),1000);</script></body></html>
+        `);
+        w.document.close();
+    };
+
+    return (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20,backdropFilter:'blur(4px)'}} onClick={onClose}>
+            <div className="card-static modal-in" style={{padding:28,maxWidth:340,width:'100%',textAlign:'center'}} onClick={e=>e.stopPropagation()}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+                    <h3 style={{fontWeight:800,fontSize:16,display:'flex',alignItems:'center',gap:8}}><I d={ic.qr} size={18}/> QR Code</h3>
+                    <button onClick={onClose} style={{color:'var(--text3)'}}><I d={ic.x} size={20}/></button>
                 </div>
-            );
-        };
+                <div style={{background:'white',padding:16,borderRadius:12,display:'inline-block',marginBottom:16}}>
+                    <div ref={qrRef}/>
+                </div>
+                <div style={{fontWeight:700,marginBottom:4}}>{asset.name}</div>
+                <div style={{fontSize:12,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)',marginBottom:16}}>{asset.id}</div>
+                <div style={{fontSize:11,color:'var(--text3)',marginBottom:16,wordBreak:'break-all',padding:'8px',background:'var(--surface2)',borderRadius:8}}>{url}</div>
+                <button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={handlePrint}>
+                    🖨️ พิมพ์สติ๊กเกอร์
+                </button>
+            </div>
+        </div>
+    );
+};
 
-        const DepartmentView = ({ data, setSelectedDept, setView, postData }) => {
-            const [showDeptModal, setShowDeptModal] = useState(false);
-            const [newDept, setNewDept] = useState({ name: '', code: '' });
-            return (
-                <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-safe fade-in scroll-container">
-                    <div className="flex justify-between items-center mb-8"><div><h2 className="text-2xl md:text-3xl font-bold text-gray-800">แผนก (Departments)</h2><p className="text-gray-500 text-sm mt-1">เลือกแผนกเพื่อดูอุปกรณ์ภายใน</p></div><button onClick={() => setShowDeptModal(true)} className="bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 px-4 py-2 rounded-xl text-sm font-bold flex gap-2 shadow-sm transition items-center"><Icon path={Icons.Add} size={18}/> <span className="hidden sm:inline">เพิ่มแผนก</span></button></div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-10">
-                        {data.departments.map(dept => (
-                            <div key={dept.name} onClick={() => { setSelectedDept(dept.name); setView('assets'); }} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center cursor-pointer card-hover gap-3 h-48 relative group"><div className="absolute top-3 right-3 text-[10px] font-mono font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded border border-gray-100 group-hover:bg-blue-50 group-hover:text-blue-500 transition">{dept.code}</div><div className="bg-blue-50 text-blue-500 p-4 rounded-full mb-2 group-hover:scale-110 transition"><Icon path={Icons.Building} size={32}/></div><span className="font-bold text-gray-800 text-lg text-center">{dept.name}</span><span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-500">{data.assets.filter(a => a.location === dept.name).length} อุปกรณ์</span></div>
+// ====== EXECUTIVE DASHBOARD ======
+const ExecutiveDashboard = ({ data }) => {
+    const assets = data.assets;
+    const total = assets.length;
+    const repairing = assets.filter(a => a.status === 'ส่งซ่อม').length;
+    const noPm = assets.filter(a => !a.nextPmDate).length;
+
+    // Cost by dept
+    const deptCost = {};
+    assets.forEach(a => {
+        const cost = (a.history||[]).reduce((s,h) => s + Number(h.totalCost||0), 0);
+        if (!deptCost[a.location]) deptCost[a.location] = 0;
+        deptCost[a.location] += cost;
+    });
+    const deptCostArr = Object.entries(deptCost).sort((a,b) => b[1]-a[1]).slice(0,6);
+    const maxCost = Math.max(...deptCostArr.map(d=>d[1]), 1);
+
+    // Most repaired
+    const repairCount = assets.map(a => ({
+        name: a.name, id: a.id,
+        count: (a.history||[]).length,
+        cost: (a.history||[]).reduce((s,h) => s + Number(h.totalCost||0), 0)
+    })).sort((a,b) => b.count - a.count).slice(0,5);
+
+    const totalCost = assets.reduce((s,a) => s + (a.history||[]).reduce((ss,h) => ss + Number(h.totalCost||0), 0), 0);
+    const pmCompliance = total > 0 ? Math.round(((total - noPm) / total) * 100) : 0;
+
+    const StatCard = ({label, value, sub, color='var(--accent)', icon}) => (
+        <div className="card-static fade-up" style={{padding:20}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+                <div style={{background:color+'18',color,padding:10,borderRadius:10}}>{icon}</div>
+                <div style={{color:'var(--text3)',fontSize:12,fontWeight:600}}>{label}</div>
+            </div>
+            <div style={{fontSize:28,fontWeight:800,color}}>{value}</div>
+            {sub && <div style={{fontSize:12,color:'var(--text3)',marginTop:4}}>{sub}</div>}
+        </div>
+    );
+
+    return (
+        <div style={{padding:24,maxWidth:1200,margin:'0 auto',height:'100%',overflowY:'auto'}} className="fade-up pb-nav">
+            <div style={{marginBottom:24}}>
+                <h2 style={{fontSize:22,fontWeight:800,marginBottom:4}}>รายงานผู้บริหาร</h2>
+                <p style={{fontSize:13,color:'var(--text2)'}}>ภาพรวมค่าใช้จ่ายและสถานะอุปกรณ์ทั้งหมด</p>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}} className="stagger">
+                <StatCard label="อุปกรณ์ทั้งหมด" value={total} icon={<I d={ic.building} size={20}/>} color="var(--accent)"/>
+                <StatCard label="กำลังซ่อม" value={repairing} icon={<I d={ic.wrench} size={20}/>} color="var(--orange)" sub={`${Math.round(repairing/total*100)||0}% ของทั้งหมด`}/>
+                <StatCard label="PM Compliance" value={`${pmCompliance}%`} icon={<I d={ic.cal} size={20}/>} color={pmCompliance>80?'var(--green)':'var(--orange)'} sub={`${noPm} เครื่องไม่มีแผน PM`}/>
+                <StatCard label="ค่าซ่อมรวม" value={`฿${fmtNum(totalCost)}`} icon={<I d={ic.chart} size={20}/>} color="var(--yellow)" sub="ตลอดอายุการใช้งาน"/>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:24}} className="stagger">
+                {/* Cost by dept */}
+                <div className="card-static" style={{padding:20}}>
+                    <h3 style={{fontWeight:700,marginBottom:16,display:'flex',alignItems:'center',gap:8}}><I d={ic.chart} size={16}/> ค่าซ่อมตามแผนก</h3>
+                    {deptCostArr.length === 0 && <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:20}}>ยังไม่มีข้อมูลค่าซ่อม</div>}
+                    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                        {deptCostArr.map(([dept, cost]) => (
+                            <div key={dept}>
+                                <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}}>
+                                    <span style={{color:'var(--text2)'}}>{dept}</span>
+                                    <span style={{fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>฿{fmtNum(cost)}</span>
+                                </div>
+                                <div style={{height:6,background:'var(--surface2)',borderRadius:4,overflow:'hidden'}}>
+                                    <div style={{height:'100%',background:'linear-gradient(90deg,var(--accent),var(--accent2))',width:`${(cost/maxCost)*100}%`,borderRadius:4,transition:'width 1s cubic-bezier(0.16,1,0.3,1)'}}/>
+                                </div>
+                            </div>
                         ))}
                     </div>
-                    {showDeptModal && (<div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4 backdrop-blur-sm fade-in"><div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative animate-[scaleIn_0.2s_ease-out]"><button onClick={() => setShowDeptModal(false)} className="absolute top-4 right-4 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><Icon path={Icons.Close} size={20}/></button><h3 className="font-bold text-xl text-gray-800 mb-6">สร้างแผนกใหม่</h3><div className="space-y-4"><div><label className="text-sm font-bold text-gray-500 mb-1.5 block">ชื่อแผนก</label><input className="input-box" placeholder="เช่น ฝ่ายผลิต" value={newDept.name} onChange={e => setNewDept({ ...newDept, name: e.target.value })} /></div><div><label className="text-sm font-bold text-gray-500 mb-1.5 block">รหัสย่อ (3 ตัวอักษร)</label><input className="input-box uppercase font-mono" placeholder="เช่น PD" maxLength="3" value={newDept.code} onChange={e => setNewDept({ ...newDept, code: e.target.value.toUpperCase() })} /></div><button onClick={() => { if (newDept.name && newDept.code) { postData({ action: 'save_dept', ...newDept }); setShowDeptModal(false); } else alert('กรุณากรอกข้อมูลให้ครบ'); }} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition mt-2">ยืนยันการสร้าง</button></div></div></div>)}
                 </div>
-            );
-        };
 
-        const AssetListView = ({ data, selectedDept, setView, setSelectedAsset }) => {
-            const [term, setTerm] = useState('');
-            const filtered = data.assets.filter(a => {
-                if (a.location !== selectedDept) return false;
-                const searchTerm = term.toLowerCase();
-                const assetName = a.name ? String(a.name).toLowerCase() : "";
-                const assetId = a.id ? String(a.id).toLowerCase() : "";
-                return assetName.includes(searchTerm) || assetId.includes(searchTerm);
+                {/* Most repaired */}
+                <div className="card-static" style={{padding:20}}>
+                    <h3 style={{fontWeight:700,marginBottom:16,display:'flex',alignItems:'center',gap:8}}><I d={ic.trend} size={16}/> ซ่อมบ่อยที่สุด</h3>
+                    {repairCount.filter(r=>r.count>0).length === 0 && <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:20}}>ยังไม่มีประวัติซ่อม</div>}
+                    <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                        {repairCount.filter(r=>r.count>0).map((r,i) => (
+                            <div key={r.id} style={{display:'flex',gap:12,alignItems:'center',padding:'8px 10px',background:'var(--surface2)',borderRadius:10}}>
+                                <div style={{fontWeight:800,fontSize:18,color:'var(--text3)',width:24,textAlign:'center'}}>{i+1}</div>
+                                <div style={{flex:1,minWidth:0}}>
+                                    <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.name}</div>
+                                    <div style={{fontSize:11,color:'var(--text3)',fontFamily:'IBM Plex Mono,monospace'}}>{r.id}</div>
+                                </div>
+                                <div style={{textAlign:'right'}}>
+                                    <div style={{fontWeight:700,color:'var(--orange)'}}>{r.count} ครั้ง</div>
+                                    <div style={{fontSize:11,color:'var(--text3)'}}>฿{fmtNum(r.cost)}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* PM Compliance Gauge */}
+            <div className="card-static" style={{padding:20,textAlign:'center'}}>
+                <h3 style={{fontWeight:700,marginBottom:16}}>สรุปสถานะ PM ทั้งระบบ</h3>
+                <div style={{display:'flex',justifyContent:'center',gap:32,flexWrap:'wrap'}}>
+                    {[
+                        {label:'มีแผน PM', value:total-noPm, color:'var(--green)'},
+                        {label:'ไม่มีแผน PM', value:noPm, color:'var(--red)'},
+                        {label:'กำลังซ่อม', value:repairing, color:'var(--orange)'},
+                        {label:'ปกติ', value:total-repairing, color:'var(--accent)'},
+                    ].map(s => (
+                        <div key={s.label} style={{textAlign:'center'}}>
+                            <div style={{fontSize:36,fontWeight:800,color:s.color}}>{s.value}</div>
+                            <div style={{fontSize:12,color:'var(--text2)',marginTop:4}}>{s.label}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ====== AI ASSISTANT ======
+const AiAssistant = ({ data }) => {
+    const [messages, setMessages] = useState([
+        { role:'bot', text:`สวัสดีครับ! ผมคือ AI Assistant สำหรับระบบ MTA Asset Maintenance 🤖\n\nผมสามารถช่วยได้:\n• วิเคราะห์ประวัติซ่อมและแนะนำการ PM\n• หาเครื่องจักรที่ซ่อมบ่อยที่สุด\n• แนะนำตารางงาน PM\n• ตอบคำถามเกี่ยวกับอุปกรณ์\n\nลองถามได้เลยครับ!` }
+    ]);
+    const [input, setInput] = useState('');
+    const [loading, setLoading] = useState(false);
+    const bottomRef = useRef();
+
+    useEffect(() => { bottomRef.current?.scrollIntoView({behavior:'smooth'}); }, [messages]);
+
+    const systemPrompt = () => {
+        const summary = {
+            totalAssets: data.assets.length,
+            departments: data.departments?.map(d=>d.name),
+            mostRepaired: data.assets.map(a => ({
+                name: a.name, id: a.id, location: a.location,
+                repairCount: (a.history||[]).length,
+                totalCost: (a.history||[]).reduce((s,h) => s+Number(h.totalCost||0),0),
+                recentIssues: (a.history||[]).slice(-3).map(h=>h.description),
+                status: a.status
+            })).sort((a,b)=>b.repairCount-a.repairCount).slice(0,10),
+            noPmAssets: data.assets.filter(a=>!a.nextPmDate).length,
+            repairing: data.assets.filter(a=>a.status==='ส่งซ่อม').length,
+        };
+        return `คุณเป็น AI Assistant ของระบบ MTA Asset Maintenance ที่ช่วยช่างซ่อมบำรุงวิเคราะห์ข้อมูลอุปกรณ์และแนะนำการบำรุงรักษา
+ตอบเป็นภาษาไทยเสมอ ตอบกระชับ ชัดเจน ใช้ emoji เพื่อให้อ่านง่าย
+ข้อมูลระบบปัจจุบัน: ${JSON.stringify(summary, null, 2)}`;
+    };
+
+    const send = async () => {
+        if (!input.trim() || loading) return;
+        const userMsg = input.trim();
+        setInput('');
+        setMessages(prev => [...prev, {role:'user',text:userMsg}]);
+        setLoading(true);
+        try {
+            const history = messages.slice(-10).filter(m=>m.role!=='bot'||messages.indexOf(m)>0).map(m => ({
+                role: m.role==='bot'?'assistant':'user',
+                content: m.text
+            }));
+            const res = await fetch(CLAUDE_API, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 1000,
+                    system: systemPrompt(),
+                    messages: [...history, {role:'user',content:userMsg}]
+                })
             });
+            const j = await res.json();
+            const reply = j.content?.[0]?.text || 'ขออภัย เกิดข้อผิดพลาดครับ';
+            setMessages(prev => [...prev, {role:'bot',text:reply}]);
+        } catch(e) {
+            setMessages(prev => [...prev, {role:'bot',text:'⚠️ ไม่สามารถเชื่อมต่อ AI ได้ กรุณาตรวจสอบการเชื่อมต่อ'}]);
+        }
+        setLoading(false);
+    };
 
-            return (
-                <div className="p-6 md:p-10 w-full max-w-7xl mx-auto h-full flex flex-col pb-safe fade-in scroll-container">
-                    <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8"><div className="flex items-center gap-4 flex-1"><button onClick={() => setView('departments')} className="p-2.5 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50 transition"><Icon path={Icons.ArrowLeft} size={20}/></button><h2 className="text-2xl font-bold truncate text-gray-800">{selectedDept}</h2></div><div className="relative w-full md:w-96"><div className="absolute left-4 top-3.5 text-gray-400"><Icon path={Icons.Search} size={18}/></div><input className="input-box pl-11 shadow-sm border-0" placeholder="ค้นหาชื่อ หรือ รหัส..." value={term} onChange={e => setTerm(e.target.value)}/></div><button onClick={() => setView('add_asset')} className="hidden md:flex bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition items-center gap-2"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์</button></div>
-                    <div className="md:hidden mb-4"><button onClick={() => setView('add_asset')} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2"><Icon path={Icons.Add} size={20}/> เพิ่มอุปกรณ์ใหม่</button></div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto pb-10">
-                        {filtered.map(item => (
-                            <div key={item.id} onClick={() => { setSelectedAsset(item); setView('detail'); }} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md flex flex-col cursor-pointer card-hover group relative overflow-hidden h-[300px]"> 
-                                {!item.nextPmDate && (
-                                    <div className="absolute top-3 left-3 z-10 bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
-                                        <Icon path={Icons.Alert} size={12}/> ไม่มีแผน PM
-                                    </div>
-                                )}
-                                <div className="w-full h-[180px] bg-gray-100 flex-shrink-0 relative overflow-hidden border-b border-gray-100">
-                                    {item.image ? (
-                                        <img src={item.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" /> 
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full text-gray-300"><Icon path={Icons.Image} size={48}/></div>
-                                    )}
-                                    <div className={`absolute bottom-3 right-3 px-2 py-1 rounded-lg text-xs font-bold shadow-sm backdrop-blur-md ${item.status === 'ปกติ' ? 'bg-white/90 text-green-600' : 'bg-orange-500/90 text-white'}`}>
-                                        {item.status}
-                                    </div>
-                                </div>
-                                <div className="p-4 flex flex-col flex-1 justify-between">
-                                    <div>
-                                        <div className="font-bold text-gray-800 text-lg line-clamp-1" title={item.name}>{item.name}</div>
-                                        <div className="text-xs text-gray-500 font-mono mt-0.5">{item.id}</div>
-                                    </div>
-                                    <div className="mt-2">
-                                        <span className="text-xs text-gray-500 bg-gray-50 border border-gray-100 px-2 py-1 rounded inline-block line-clamp-1">{item.model || 'ไม่ระบุรุ่น'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+    const quickQ = [
+        'เครื่องไหนซ่อมบ่อยที่สุด?',
+        'อุปกรณ์ไหนควร PM ด่วน?',
+        'สรุปค่าใช้จ่ายซ่อมให้หน่อย',
+        'แนะนำตาราง PM ที่ดี',
+    ];
+
+    return (
+        <div style={{height:'100%',display:'flex',flexDirection:'column',maxWidth:800,margin:'0 auto',padding:24,paddingBottom:0}} className="fade-up">
+            <div style={{marginBottom:16,flexShrink:0}}>
+                <h2 style={{fontSize:22,fontWeight:800,display:'flex',alignItems:'center',gap:10}}>
+                    <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:8,borderRadius:10}}><I d={ic.bot} size={20}/></div>
+                    AI Maintenance Assistant
+                </h2>
+                <p style={{fontSize:13,color:'var(--text2)',marginTop:4}}>วิเคราะห์อุปกรณ์และแนะนำการบำรุงรักษา ด้วย Claude AI</p>
+            </div>
+
+            <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:12,paddingBottom:16}} className="scroll-y">
+                {messages.map((m,i) => (
+                    <div key={i} className={`ai-msg ${m.role}`} style={{whiteSpace:'pre-wrap',lineHeight:1.7}}>
+                        {m.role==='bot' && <div style={{fontSize:11,color:'var(--accent)',fontWeight:700,marginBottom:6,display:'flex',alignItems:'center',gap:4}}><I d={ic.bot} size={12}/> AI Assistant</div>}
+                        {m.text}
+                    </div>
+                ))}
+                {loading && (
+                    <div className="ai-msg bot" style={{display:'flex',alignItems:'center',gap:8,color:'var(--text3)'}}>
+                        <Loader size={16}/> กำลังวิเคราะห์...
+                    </div>
+                )}
+                <div ref={bottomRef}/>
+            </div>
+
+            {messages.length <= 1 && (
+                <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12,flexShrink:0}}>
+                    {quickQ.map(q => (
+                        <button key={q} className="btn btn-ghost" style={{padding:'6px 14px',fontSize:12}} onClick={()=>setInput(q)}>
+                            {q}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            <div style={{display:'flex',gap:10,paddingBottom:24,flexShrink:0}}>
+                <input className="inp" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()} placeholder="ถามเกี่ยวกับอุปกรณ์..." style={{flex:1}}/>
+                <button className="btn btn-primary" onClick={send} disabled={loading||!input.trim()} style={{flexShrink:0}}>
+                    <I d={ic.send} size={18}/>
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// ====== DASHBOARD ======
+const Dashboard = ({ data, setView }) => {
+    const total = data.assets.length;
+    const repairing = data.assets.filter(a=>a.status==='ส่งซ่อม').length;
+    const noPm = data.assets.filter(a=>!a.nextPmDate).length;
+    const totalCost = data.assets.reduce((s,a) => s + (a.history||[]).reduce((ss,h) => ss + Number(h.totalCost||0), 0), 0);
+
+    const stats = [
+        {label:'อุปกรณ์ทั้งหมด', value:total, color:'var(--accent)', icon:ic.building, action:()=>setView('departments')},
+        {label:'กำลังซ่อม', value:repairing, color:'var(--orange)', icon:ic.wrench},
+        {label:'ไม่มีแผน PM', value:noPm, color:'var(--red)', icon:ic.alert, action:()=>setView('kanban')},
+        {label:'ค่าซ่อมรวม', value:`฿${fmtNum(totalCost)}`, color:'var(--yellow)', icon:ic.chart, action:()=>setView('executive')},
+    ];
+
+    return (
+        <div style={{padding:24,maxWidth:1200,margin:'0 auto',height:'100%',overflowY:'auto'}} className="fade-up pb-nav">
+            <div style={{marginBottom:28}}>
+                <div style={{fontSize:12,color:'var(--text3)',fontFamily:'IBM Plex Mono,monospace',marginBottom:6}}>OVERVIEW</div>
+                <h2 style={{fontSize:28,fontWeight:800,letterSpacing:'-0.5px'}}>Dashboard</h2>
+                <p style={{color:'var(--text2)',marginTop:4}}>ภาพรวมสถานะระบบ MTA Asset Pro</p>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:16,marginBottom:28}} className="stagger">
+                {stats.map((s,i) => (
+                    <div key={i} className="card" style={{padding:20,cursor:s.action?'pointer':'default',animationDelay:`${i*60}ms`}} onClick={s.action}>
+                        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:16}}>
+                            <div style={{background:s.color+'18',color:s.color,padding:10,borderRadius:10}}><I d={s.icon} size={20}/></div>
+                            {s.action && <I d={ic.back} size={16} cls="" style={{color:'var(--text3)',transform:'rotate(180deg)'}}/>}
+                        </div>
+                        <div style={{fontSize:30,fontWeight:800,color:s.color,marginBottom:4}}>{s.value}</div>
+                        <div style={{fontSize:12,color:'var(--text3)'}}>{s.label}</div>
+                    </div>
+                ))}
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}} className="stagger">
+                {[
+                    {label:'PM Kanban Board', desc:'ดูงาน PM แบบ Kanban', icon:ic.kanban, id:'kanban', color:'var(--accent)'},
+                    {label:'ค้นหาทั่วระบบ', desc:'ค้นข้ามแผนก ทุก field', icon:ic.search, id:'global_search', color:'var(--accent2)'},
+                    {label:'AI Assistant', desc:'วิเคราะห์และแนะนำ PM', icon:ic.bot, id:'ai', color:'var(--green)'},
+                    {label:'รายงานผู้บริหาร', desc:'กราฟค่าซ่อมและสถิติ', icon:ic.chart, id:'executive', color:'var(--yellow)'},
+                ].map((f,i) => (
+                    <div key={i} className="card" style={{padding:16,cursor:'pointer',animationDelay:`${i*60}ms`}} onClick={()=>setView(f.id)}>
+                        <div style={{color:f.color,marginBottom:8}}><I d={f.icon} size={20}/></div>
+                        <div style={{fontWeight:700,marginBottom:4,fontSize:14}}>{f.label}</div>
+                        <div style={{fontSize:12,color:'var(--text3)'}}>{f.desc}</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ====== DEPT VIEW ======
+const DeptView = ({ data, setSelectedDept, setView, postData }) => {
+    const [showModal, setShowModal] = useState(false);
+    const [form, setForm] = useState({name:'',code:''});
+    return (
+        <div style={{padding:24,height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexShrink:0}}>
+                <div>
+                    <h2 style={{fontSize:22,fontWeight:800}}>แผนก</h2>
+                    <p style={{fontSize:13,color:'var(--text2)'}}>เลือกแผนกเพื่อดูอุปกรณ์</p>
+                </div>
+                <button className="btn btn-ghost" onClick={()=>setShowModal(true)}><I d={ic.plus} size={16}/> เพิ่มแผนก</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:14,overflowY:'auto',flex:1,paddingBottom:16}}>
+                {data.departments.map((d,i) => (
+                    <div key={d.name} className="card" style={{padding:20,textAlign:'center',cursor:'pointer',animationDelay:`${i*40}ms`}} onClick={()=>{setSelectedDept(d.name);setView('assets');}}>
+                        <div style={{background:'rgba(79,142,247,0.1)',color:'var(--accent)',padding:12,borderRadius:12,display:'inline-flex',marginBottom:12}}><I d={ic.building} size={24}/></div>
+                        <div style={{fontWeight:700,marginBottom:4}}>{d.name}</div>
+                        <div style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:'var(--text3)',marginBottom:8}}>{d.code}</div>
+                        <span className="badge badge-blue">{data.assets.filter(a=>a.location===d.name).length} เครื่อง</span>
+                    </div>
+                ))}
+            </div>
+            {showModal && (
+                <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20,backdropFilter:'blur(4px)'}} onClick={()=>setShowModal(false)}>
+                    <div className="card-static modal-in" style={{padding:24,maxWidth:360,width:'100%'}} onClick={e=>e.stopPropagation()}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+                            <h3 style={{fontWeight:800}}>สร้างแผนกใหม่</h3>
+                            <button onClick={()=>setShowModal(false)} style={{color:'var(--text3)'}}><I d={ic.x} size={20}/></button>
+                        </div>
+                        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                            <div><label style={{fontSize:12,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ชื่อแผนก</label><input className="inp" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="เช่น ฝ่ายผลิต"/></div>
+                            <div><label style={{fontSize:12,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>รหัสย่อ</label><input className="inp" value={form.code} onChange={e=>setForm({...form,code:e.target.value.toUpperCase()})} maxLength={3} placeholder="เช่น PD" style={{fontFamily:'IBM Plex Mono,monospace'}}/></div>
+                            <button className="btn btn-primary" style={{justifyContent:'center',marginTop:8}} onClick={()=>{if(form.name&&form.code){postData({action:'save_dept',...form});setShowModal(false);}else alert('กรอกข้อมูลให้ครบ');}}>ยืนยัน</button>
+                        </div>
                     </div>
                 </div>
-            );
-        };
+            )}
+        </div>
+    );
+};
 
-        const AddAssetView = ({ data, selectedDept, setView, postData, view, editItem }) => {
-            const isEditMode = view === 'edit_asset';
-            
-            const initialForm = isEditMode && editItem ? {
-                id: editItem.id,
-                name: editItem.name,
-                model: editItem.model || '',
-                location: editItem.location,
-                status: editItem.status,
-                purchaseDate: editItem.purchaseDate || new Date().toISOString().split('T')[0],
-                vendor: editItem.vendor || '',
-                image: editItem.image || '',
-                receiptPdf: editItem.receiptPdf || ''
-            } : { 
-                id: 'รอสร้างอัตโนมัติ...', name: '', model: '', location: selectedDept || '', status: 'ปกติ', purchaseDate: new Date().toISOString().split('T')[0], vendor: '', image: '', receiptPdf: '' 
-            };
-
-            const [form, setForm] = useState(initialForm);
-            const [electrical, setElectrical] = useState(isEditMode && editItem?.electrical ? editItem.electrical : { uses: false, watt: '', amp: '', hp: '', breaker: '' });
-            const [water, setWater] = useState(isEditMode && editItem?.water ? editItem.water : { uses: false, type: 'Tap water', pump: '' });
-
-            const handleFile = async (e, k) => { if (e.target.files[0]) setForm({ ...form, [k]: await fileToBase64(e.target.files[0]) }) };
-            
-            useEffect(() => {
-                if (!isEditMode && form.location && form.id === 'รอสร้างอัตโนมัติ...') {
-                    const deptObj = data.departments.find(d => d.name === form.location);
-                    if (deptObj) {
-                        const code = deptObj.code;
-                        const year = new Date().getFullYear();
-                        const prefix = `MTA-${code}-${year}-`;
-                        const existingIds = data.assets.filter(a => a.id && a.id.startsWith(prefix)).map(a => parseInt(a.id.split('-').pop()));
-                        const nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
-                        setForm(prev => ({ ...prev, id: `${prefix}${String(nextNum).padStart(4, '0')}` }));
-                    }
-                }
-            }, [form.location, isEditMode]);
-
-            return (
-                <div className="p-6 md:p-10 w-full max-w-4xl mx-auto h-full flex flex-col pb-safe fade-in overflow-y-auto scroll-container">
-                    <div className="flex items-center gap-4 mb-8">
-                        <button onClick={() => isEditMode ? setView('detail') : setView('departments')} className="p-3 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50"><Icon path={Icons.ArrowLeft} size={20}/></button>
-                        <h2 className="text-2xl font-bold text-gray-800">{isEditMode ? 'แก้ไขอุปกรณ์' : 'เพิ่มอุปกรณ์ใหม่'}</h2>
-                    </div>
-                    
-                    {/* ข้อมูลพื้นฐาน */}
-                    <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8 mb-6">
-                        <div className="w-full md:w-1/3">
-                            <div className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden hover:bg-gray-100 transition group cursor-pointer">{form.image ? <img src={form.image} className="w-full h-full object-cover" /> : <div className="text-gray-400 text-sm flex flex-col items-center font-bold gap-2"><Icon path={Icons.Image} size={48} className="text-gray-300 group-hover:text-blue-400 transition"/>คลิกเพิ่มรูปภาพ</div>}<input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => handleFile(e, 'image')} /></div>
-                        </div>
-                        <div className="flex-1 space-y-5">
-                            <div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ชื่ออุปกรณ์ *</label><input className="input-box" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รหัสทรัพย์สิน</label><input className="input-box bg-gray-100 text-gray-500 font-mono font-bold border-transparent" value={form.id} disabled /></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">รุ่น / Model</label><input className="input-box" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} /></div></div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">แผนก</label><select className="input-box" value={form.location} disabled={isEditMode} onChange={e => setForm({ ...form, location: e.target.value })}><option value="">-- เลือกแผนก --</option>{data.departments.map(d => <option key={d.name} value={d.name}>{d.name} ({d.code})</option>)}</select></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">สถานะ</label><select className="input-box" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}><option>ปกติ</option><option>ส่งซ่อม</option><option>เสีย</option></select></div></div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">วันที่ซื้อ</label><input type="date" className="input-box" value={form.purchaseDate} onChange={e => setForm({ ...form, purchaseDate: e.target.value })} /></div><div><label className="text-sm font-bold text-gray-600 mb-1.5 block">ผู้จำหน่าย</label><input className="input-box" placeholder="ร้านค้า/บริษัทที่ซื้อ" value={form.vendor} onChange={e => setForm({ ...form, vendor: e.target.value })} /></div></div>
-                            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 text-sm text-orange-800 flex items-center justify-between"><span className="font-bold flex items-center gap-2"><Icon path={Icons.File} size={18}/> แนบใบเสร็จ (PDF)</span><label className="bg-white border border-orange-200 text-orange-600 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-orange-50 transition text-xs font-bold shadow-sm">{form.receiptPdf ? 'เปลี่ยนไฟล์' : 'เลือกไฟล์'}<input type="file" accept="application/pdf" className="hidden" onChange={e => handleFile(e, 'receiptPdf')} /></label></div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mb-6">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" className="w-5 h-5 accent-yellow-500 rounded" checked={electrical.uses} onChange={e => setElectrical({...electrical, uses: e.target.checked})}/>
-                            <span className="font-bold text-lg text-gray-800 flex items-center gap-2"><Icon path={Icons.Zap} size={22} className="text-yellow-500"/> ใช้อุปกรณ์ไฟฟ้าร่วมด้วย</span>
-                        </label>
-                        {electrical.uses && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 animate-[fadeIn_0.2s_ease-out]">
-                                <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">Watt (วัตต์)</label><input className="input-box" value={electrical.watt} onChange={e=>setElectrical({...electrical, watt: e.target.value})} placeholder="เช่น 1500"/></div>
-                                <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">Amp (แอมป์)</label><input className="input-box" value={electrical.amp} onChange={e=>setElectrical({...electrical, amp: e.target.value})} placeholder="เช่น 10"/></div>
-                                <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">HP (แรงม้า)</label><input className="input-box" value={electrical.hp} onChange={e=>setElectrical({...electrical, hp: e.target.value})} placeholder="เช่น 2.0"/></div>
-                                <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">หมายเลขเบรคเกอร์</label><input className="input-box border-yellow-300 bg-yellow-50 focus:border-yellow-500" value={electrical.breaker} onChange={e=>setElectrical({...electrical, breaker: e.target.value})} placeholder="เช่น B-01"/></div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mb-6">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" className="w-5 h-5 accent-blue-500 rounded" checked={water.uses} onChange={e => setWater({...water, uses: e.target.checked})}/>
-                            <span className="font-bold text-lg text-gray-800 flex items-center gap-2"><Icon path={Icons.Droplet} size={22} className="text-blue-500"/> ใช้ระบบน้ำร่วมด้วย</span>
-                        </label>
-                        {water.uses && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 animate-[fadeIn_0.2s_ease-out]">
-                                <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ประเภทน้ำ (Water Type)</label>
-                                    <select className="input-box" value={water.type} onChange={e=>setWater({...water, type: e.target.value})}>
-                                        <option value="Tap water">Tap water (น้ำประปา)</option>
-                                        <option value="Di water">Di water</option>
-                                        <option value="Demin water">Demin water</option>
-                                    </select>
-                                </div>
-                                <div><label className="text-xs font-bold text-gray-500 mb-1.5 block">หมายเลขปั๊มน้ำ (Pump No.)</label><input className="input-box border-blue-300 bg-blue-50 focus:border-blue-500" value={water.pump} onChange={e=>setWater({...water, pump: e.target.value})} placeholder="เช่น P-05"/></div>
-                            </div>
-                        )}
-                    </div>
-
-                    <button onClick={() => postData({ action: 'save_asset', ...form, electrical, water })} className="w-full bg-slate-900 hover:bg-black text-white py-4 rounded-2xl font-bold shadow-lg shadow-gray-300 transition mt-2 text-lg">บันทึกข้อมูลอุปกรณ์</button>
+// ====== ASSET LIST ======
+const AssetList = ({ data, selectedDept, setView, setSelectedAsset }) => {
+    const [q, setQ] = useState('');
+    const filtered = data.assets.filter(a => a.location===selectedDept && (
+        String(a.name||'').toLowerCase().includes(q.toLowerCase()) ||
+        String(a.id||'').toLowerCase().includes(q.toLowerCase())
+    ));
+    return (
+        <div style={{padding:24,height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav">
+            <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:16,flexShrink:0,flexWrap:'wrap'}}>
+                <button className="btn btn-ghost" style={{padding:'8px 12px'}} onClick={()=>setView('departments')}><I d={ic.back} size={18}/></button>
+                <h2 style={{fontSize:20,fontWeight:800,flex:1}}>{selectedDept}</h2>
+                <div style={{position:'relative'}}>
+                    <I d={ic.search} size={16} cls="" style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text3)'}}/>
+                    <input className="inp" value={q} onChange={e=>setQ(e.target.value)} placeholder="ค้นหา..." style={{paddingLeft:36,width:200}}/>
                 </div>
-            );
-        };
+                <button className="btn btn-primary" onClick={()=>setView('add_asset')}><I d={ic.plus} size={18}/> เพิ่ม</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:14,overflowY:'auto',flex:1,paddingBottom:16}}>
+                {filtered.map((item,i) => (
+                    <div key={item.id} className="card" style={{cursor:'pointer',overflow:'hidden',display:'flex',flexDirection:'column',animationDelay:`${i*30}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
+                        {!item.nextPmDate && <div style={{background:'rgba(239,68,68,0.9)',color:'white',fontSize:10,fontWeight:700,padding:'4px 10px',display:'flex',alignItems:'center',gap:4}}><I d={ic.alert} size={11}/> ไม่มีแผน PM</div>}
+                        <div style={{height:160,background:'var(--surface2)',position:'relative',overflow:'hidden'}}>
+                            {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={40}/></div>}
+                            <div style={{position:'absolute',bottom:8,right:8}}>
+                                <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`} style={{fontSize:10}}>{item.status}</span>
+                            </div>
+                        </div>
+                        <div style={{padding:14,flex:1}}>
+                            <div style={{fontWeight:700,fontSize:14,marginBottom:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</div>
+                            <div style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)'}}>{item.id}</div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
-        const PmDashboardView = ({ assets, setSelectedAsset, setView }) => {
-            const [tasks, setTasks] = useState([]);
-            const [loadingPm, setLoadingPm] = useState(false);
-            const [search, setSearch] = useState('');
+// ====== ADD/EDIT ASSET ======
+const AddAssetView = ({ data, selectedDept, setView, postData, view, editItem }) => {
+    const isEdit = view==='edit_asset';
+    const [form, setForm] = useState(isEdit && editItem ? {
+        id:editItem.id, name:editItem.name, model:editItem.model||'', location:editItem.location,
+        status:editItem.status, purchaseDate:editItem.purchaseDate||new Date().toISOString().split('T')[0],
+        vendor:editItem.vendor||'', image:editItem.image||'', receiptPdf:editItem.receiptPdf||''
+    } : {id:'รอสร้างอัตโนมัติ...',name:'',model:'',location:selectedDept||'',status:'ปกติ',purchaseDate:new Date().toISOString().split('T')[0],vendor:'',image:'',receiptPdf:''});
+    const [elec, setElec] = useState(isEdit&&editItem?.electrical?editItem.electrical:{uses:false,watt:'',amp:'',hp:'',breaker:''});
+    const [water, setWater] = useState(isEdit&&editItem?.water?editItem.water:{uses:false,type:'Tap water',pump:''});
 
-            useEffect(() => {
-                const loadPmData = async () => {
-                    setLoadingPm(true);
-                    try {
-                        const response = await fetch(API_URL, {
-                            method: 'POST',
-                            body: JSON.stringify({ action: 'get_all_pm_dashboard' })
-                        });
-                        const json = await response.json();
-                        if (json.allPm) setTasks(json.allPm);
-                    } catch (err) { console.log(err); }
-                    setLoadingPm(false);
-                };
-                loadPmData();
-            }, []);
+    const handleFile = async (e,k) => { if(e.target.files[0]) setForm({...form,[k]:await fileToBase64(e.target.files[0])}); };
 
-            const filteredTasks = tasks.filter(t => 
-                (String(t.assetName || "").toLowerCase().includes(search.toLowerCase()) || 
-                 String(t.assetId || "").toLowerCase().includes(search.toLowerCase()))
-            );
+    useEffect(() => {
+        if(!isEdit && form.location && form.id==='รอสร้างอัตโนมัติ...') {
+            const d = data.departments.find(d=>d.name===form.location);
+            if(d){
+                const prefix = `MTA-${d.code}-${new Date().getFullYear()}-`;
+                const existing = data.assets.filter(a=>a.id&&a.id.startsWith(prefix)).map(a=>parseInt(a.id.split('-').pop()));
+                const next = existing.length>0?Math.max(...existing)+1:1;
+                setForm(prev=>({...prev,id:`${prefix}${String(next).padStart(4,'0')}`}));
+            }
+        }
+    }, [form.location, isEdit]);
 
-            const handleTaskClick = (assetId) => {
-                const foundAsset = assets.find(a => String(a.id) === String(assetId));
-                if (foundAsset) {
-                    setSelectedAsset(foundAsset);
-                    setView('detail');
-                } else {
-                    alert('ไม่พบข้อมูลอุปกรณ์นี้ อาจถูกลบไปแล้ว');
-                }
-            };
+    const Section = ({children, title}) => (
+        <div className="card-static" style={{padding:20,marginBottom:16}}>
+            {title && <div style={{fontWeight:700,marginBottom:16,fontSize:15}}>{title}</div>}
+            {children}
+        </div>
+    );
 
-            const renderTaskSection = (title, category, colorClass, icon) => {
-                const items = filteredTasks.filter(t => getTaskCategory(t.planDate) === category);
-                if (items.length === 0) return null;
-                return (
-                    <div className="mb-8 animate-[fadeIn_0.3s_ease-out]">
-                        <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${colorClass}`}>
-                            {icon} {title} <span className="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-full">{items.length}</span>
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {items.map((t, i) => (
-                                <div key={i} onClick={() => handleTaskClick(t.assetId)} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition border-l-4 cursor-pointer active:scale-95 transform" style={{borderLeftColor: colorClass.includes('red')?'#ef4444':colorClass.includes('orange')?'#f97316':'#3b82f6'}}>
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="font-bold text-gray-800 text-sm">{t.assetName}</div>
-                                        <div className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">{t.assetId}</div>
-                                    </div>
-                                    <div className="text-gray-600 text-sm mb-2">{t.topic}</div>
-                                    <div className="flex flex-col gap-1 text-xs">
-                                        <div className="flex items-center gap-2">
-                                            <span className="flex items-center gap-1 text-gray-500 bg-gray-50 px-2 py-1 rounded"><Icon path={Icons.Calendar} size={12}/> {t.planDate}</span>
-                                            <span className={`px-2 py-1 rounded ${t.status==='ดำเนินการแล้ว'?'bg-green-100 text-green-700':'bg-yellow-50 text-yellow-700'}`}>{t.status}</span>
+    return (
+        <div style={{padding:24,maxWidth:800,margin:'0 auto',height:'100%',overflowY:'auto'}} className="fade-up pb-nav">
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24,flexShrink:0}}>
+                <button className="btn btn-ghost" style={{padding:'8px 12px'}} onClick={()=>isEdit?setView('detail'):setView('departments')}><I d={ic.back} size={18}/></button>
+                <h2 style={{fontSize:20,fontWeight:800}}>{isEdit?'แก้ไขอุปกรณ์':'เพิ่มอุปกรณ์ใหม่'}</h2>
+            </div>
+            <Section>
+                <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
+                    <div style={{width:140,flexShrink:0}}>
+                        <div style={{aspectRatio:'1',background:'var(--surface2)',border:'2px dashed var(--border)',borderRadius:12,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',position:'relative',overflow:'hidden'}}>
+                            {form.image ? <img src={form.image} style={{width:'100%',height:'100%',objectFit:'cover',position:'absolute',inset:0}}/> : <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,color:'var(--text3)'}}><I d={ic.img} size={28}/><span style={{fontSize:11}}>เพิ่มรูป</span></div>}
+                            <input type="file" accept="image/*" style={{position:'absolute',inset:0,opacity:0,cursor:'pointer'}} onChange={e=>handleFile(e,'image')}/>
+                        </div>
+                    </div>
+                    <div style={{flex:1,minWidth:200,display:'flex',flexDirection:'column',gap:12}}>
+                        <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ชื่ออุปกรณ์ *</label><input className="inp" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>รหัส</label><input className="inp" value={form.id} disabled style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12}}/></div>
+                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>รุ่น</label><input className="inp" value={form.model} onChange={e=>setForm({...form,model:e.target.value})}/></div>
+                        </div>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>แผนก</label>
+                                <select className="inp" value={form.location} disabled={isEdit} onChange={e=>setForm({...form,location:e.target.value})}>
+                                    <option value="">-- เลือก --</option>
+                                    {data.departments.map(d=><option key={d.name} value={d.name}>{d.name}</option>)}
+                                </select>
+                            </div>
+                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>สถานะ</label>
+                                <select className="inp" value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>
+                                    <option>ปกติ</option><option>ส่งซ่อม</option><option>เสีย</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>วันที่ซื้อ</label><input type="date" className="inp" value={form.purchaseDate} onChange={e=>setForm({...form,purchaseDate:e.target.value})}/></div>
+                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ผู้จำหน่าย</label><input className="inp" value={form.vendor} onChange={e=>setForm({...form,vendor:e.target.value})}/></div>
+                        </div>
+                    </div>
+                </div>
+            </Section>
+
+            <Section title="⚡ ระบบไฟฟ้า">
+                <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:elec.uses?16:0}}>
+                    <input type="checkbox" checked={elec.uses} onChange={e=>setElec({...elec,uses:e.target.checked})} style={{width:16,height:16,accentColor:'var(--yellow)'}}/>
+                    <span style={{fontWeight:600}}>ใช้อุปกรณ์ไฟฟ้า</span>
+                </label>
+                {elec.uses && <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:10}}>
+                    {['watt','amp','hp','breaker'].map(k => (
+                        <div key={k}><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6,textTransform:'uppercase'}}>{k}</label><input className="inp" value={elec[k]} onChange={e=>setElec({...elec,[k]:e.target.value})} placeholder={k==='breaker'?'B-01':''}/></div>
+                    ))}
+                </div>}
+            </Section>
+
+            <Section title="💧 ระบบน้ำ">
+                <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',marginBottom:water.uses?16:0}}>
+                    <input type="checkbox" checked={water.uses} onChange={e=>setWater({...water,uses:e.target.checked})} style={{width:16,height:16,accentColor:'var(--accent)'}}/>
+                    <span style={{fontWeight:600}}>ใช้ระบบน้ำ</span>
+                </label>
+                {water.uses && <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                    <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ประเภท</label><select className="inp" value={water.type} onChange={e=>setWater({...water,type:e.target.value})}><option>Tap water</option><option>Di water</option><option>Demin water</option></select></div>
+                    <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>Pump No.</label><input className="inp" value={water.pump} onChange={e=>setWater({...water,pump:e.target.value})} placeholder="P-05"/></div>
+                </div>}
+            </Section>
+
+            <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:'14px',fontSize:15}} onClick={()=>postData({action:'save_asset',...form,electrical:elec,water})}>
+                💾 บันทึกอุปกรณ์
+            </button>
+        </div>
+    );
+};
+
+// ====== DETAIL VIEW ======
+const DetailView = ({ item, setView, postData }) => {
+    if(!item) return null;
+    const [tab, setTab] = useState('history');
+    const [log, setLog] = useState({date:new Date().toISOString().split('T')[0],type:'ซ่อมแซม',description:'',labor:'',parts:[]});
+    const [part, setPart] = useState({name:'',price:'',image:'',pdf:''});
+    const [selLog, setSelLog] = useState(null);
+    const [pmList, setPmList] = useState([]);
+    const [pmLoading, setPmLoading] = useState(false);
+    const [pmForm, setPmForm] = useState({schId:null,topic:'',planDate:'',status:'รอเป้าหมาย',note:'',pmType:'ภายใน',pmVendorName:'',pmVendorContact:'',image:'',pdf:''});
+    const [showQr, setShowQr] = useState(false);
+    const [imgPop, setImgPop] = useState(null);
+    const [fileLoading, setFileLoading] = useState(false);
+
+    useEffect(() => { if(tab==='pmschedule') fetchPm(); }, [tab]);
+
+    const fetchPm = async () => {
+        setPmLoading(true);
+        try {
+            const r = await fetch(API_URL,{method:'POST',body:JSON.stringify({action:'get_pm_schedules',assetId:item.id})});
+            const j = await r.json();
+            if(j.pmSchedules) setPmList(j.pmSchedules);
+        } catch(e){}
+        setPmLoading(false);
+    };
+
+    const savePm = async () => {
+        if(!pmForm.topic||!pmForm.planDate) return alert('ระบุหัวข้อและวันที่');
+        setPmLoading(true);
+        await postData({action:'save_pm_schedule',assetId:item.id,assetName:item.name,schedule:pmForm});
+        setPmForm({schId:null,topic:'',planDate:'',status:'รอเป้าหมาย',note:'',pmType:'ภายใน',pmVendorName:'',pmVendorContact:'',image:'',pdf:''});
+        setTimeout(fetchPm,2000);
+    };
+
+    const delPm = async (id) => { if(!confirm('ลบ?')) return; setPmLoading(true); await postData({action:'delete_pm_schedule',assetId:item.id,schId:id}); setTimeout(fetchPm,2000); };
+
+    const submitLog = () => {
+        const total = Number(log.labor)+(log.parts.reduce((s,p)=>s+Number(p.price),0))+(part.name?Number(part.price):0);
+        const finalParts = part.name ? [...log.parts,part] : [...log.parts];
+        postData({action:'save_log',assetId:item.id,log:{id:log.id||Date.now(),date:log.date,type:log.type,description:log.description,laborCost:log.labor,totalCost:total,parts:finalParts}});
+        setLog({date:new Date().toISOString().split('T')[0],type:'ซ่อมแซม',description:'',labor:'',parts:[]});
+        setPart({name:'',price:'',image:'',pdf:''});
+        setTab('history');
+    };
+
+    const handlePmFile = async (e,k) => {
+        if(e.target.files[0]){setPmLoading(true);try{const b=await fileToBase64(e.target.files[0]);if(b)setPmForm(p=>({...p,[k]:b}));}catch(e){}finally{setPmLoading(false);}};
+    };
+
+    const handlePartFile = async (e,k) => {
+        if(e.target.files[0]){setFileLoading(true);try{const b=await fileToBase64(e.target.files[0]);if(b)setPart(p=>({...p,[k]:b}));}catch(e){}finally{setFileLoading(false);}};
+    };
+
+    const Field = ({label,value}) => (
+        <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+            <span style={{color:'var(--text2)',fontSize:13}}>{label}</span>
+            <span style={{fontWeight:600,fontSize:13,maxWidth:'60%',textAlign:'right'}}>{value||'-'}</span>
+        </div>
+    );
+
+    return (
+        <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-up pb-nav">
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexShrink:0,flexWrap:'wrap'}}>
+                <button className="btn btn-ghost" style={{padding:'8px 12px'}} onClick={()=>setView('assets')}><I d={ic.back} size={18}/></button>
+                <div style={{flex:1,minWidth:0}}>
+                    <h2 style={{fontSize:20,fontWeight:800,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</h2>
+                    <div style={{display:'flex',gap:8,alignItems:'center',marginTop:4,flexWrap:'wrap'}}>
+                        <span style={{fontSize:12,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)'}}>{item.id}</span>
+                        <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`}>{item.status}</span>
+                    </div>
+                </div>
+                <button className="btn btn-ghost" style={{padding:'8px 12px'}} onClick={()=>setShowQr(true)}><I d={ic.qr} size={18}/> QR</button>
+            </div>
+
+            <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
+                {/* Left panel */}
+                <div style={{width:'100%',maxWidth:280,flexShrink:0,display:'flex',flexDirection:'column',gap:12}}>
+                    <div className="card-static" style={{overflow:'hidden'}}>
+                        <div style={{height:200,background:'var(--surface2)',cursor:'pointer',position:'relative'}} onClick={()=>item.image&&setImgPop(item.image)}>
+                            {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={40}/></div>}
+                        </div>
+                        <div style={{padding:16}}>
+                            <Field label="แผนก" value={item.location}/>
+                            <Field label="วันที่ซื้อ" value={fmtDate(item.purchaseDate)}/>
+                            <Field label="ผู้จำหน่าย" value={item.vendor}/>
+                            {item.receiptPdf && <a href={item.receiptPdf} target="_blank" className="btn btn-ghost" style={{width:'100%',justifyContent:'center',marginTop:10,display:'flex'}}><I d={ic.file} size={16}/> ดูใบเสร็จ</a>}
+                        </div>
+                        <div style={{padding:'0 16px 16px',display:'flex',gap:8}}>
+                            <button className="btn btn-ghost" style={{flex:1,justifyContent:'center',fontSize:12}} onClick={()=>setView('edit_asset')}><I d={ic.wrench} size={14}/> แก้ไข</button>
+                            <button className="btn btn-danger" style={{flex:1,justifyContent:'center',fontSize:12}} onClick={()=>{if(confirm('ลบอุปกรณ์นี้?'))postData({action:'delete_asset',id:item.id});}}><I d={ic.trash} size={14}/> ลบ</button>
+                        </div>
+                    </div>
+                    {item.electrical?.uses && (
+                        <div style={{background:'rgba(234,179,8,0.08)',border:'1px solid rgba(234,179,8,0.2)',borderRadius:12,padding:16}}>
+                            <div style={{color:'var(--yellow)',fontWeight:700,fontSize:13,marginBottom:10,display:'flex',alignItems:'center',gap:6}}><I d={ic.zap} size={15}/> ระบบไฟฟ้า</div>
+                            <Field label="Breaker" value={item.electrical.breaker}/>
+                            <Field label="Watt" value={item.electrical.watt}/>
+                            <Field label="Amp" value={item.electrical.amp}/>
+                            <Field label="HP" value={item.electrical.hp}/>
+                        </div>
+                    )}
+                    {item.water?.uses && (
+                        <div style={{background:'rgba(79,142,247,0.08)',border:'1px solid rgba(79,142,247,0.2)',borderRadius:12,padding:16}}>
+                            <div style={{color:'var(--accent)',fontWeight:700,fontSize:13,marginBottom:10,display:'flex',alignItems:'center',gap:6}}><I d={ic.drop} size={15}/> ระบบน้ำ</div>
+                            <Field label="Pump" value={item.water.pump}/>
+                            <Field label="Type" value={item.water.type}/>
+                        </div>
+                    )}
+                </div>
+
+                {/* Right panel */}
+                <div style={{flex:1,minWidth:280}}>
+                    <div className="card-static" style={{overflow:'hidden'}}>
+                        <div style={{display:'flex',borderBottom:'1px solid var(--border)',overflowX:'auto'}}>
+                            {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:'+ บันทึกซ่อม'},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
+                                <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:'12px 16px',fontSize:13,fontWeight:700,borderBottom:`2px solid ${tab===t.id?'var(--accent)':'transparent'}`,color:tab===t.id?'var(--accent)':'var(--text3)',whiteSpace:'nowrap',background:'transparent',transition:'all 0.2s',cursor:'pointer'}}>
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div style={{padding:20}}>
+                            {tab==='history' && (
+                                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                                    {(!item.history||item.history.length===0) && <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}><I d={ic.folder} size={40} cls="" style={{opacity:0.2,marginBottom:8,display:'block'}}/> ยังไม่มีประวัติ</div>}
+                                    {(item.history||[]).map((h,i) => (
+                                        <div key={i} className="card" style={{padding:14,cursor:'pointer'}} onClick={()=>setSelLog(h)}>
+                                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+                                                <div>
+                                                    <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4}}>
+                                                        <span style={{fontSize:11,color:'var(--text3)',fontFamily:'IBM Plex Mono,monospace'}}>{h.date}</span>
+                                                        <span className="badge badge-gray" style={{fontSize:10}}>{h.type}</span>
+                                                    </div>
+                                                    <div style={{fontWeight:700}}>{h.description}</div>
+                                                </div>
+                                                <div style={{color:'var(--accent)',fontWeight:800,fontFamily:'IBM Plex Mono,monospace',flexShrink:0}}>฿{fmtNum(h.totalCost)}</div>
+                                            </div>
+                                            {h.parts?.length>0 && <div style={{fontSize:11,color:'var(--text3)'}}>อะไหล่ {h.parts.length} รายการ</div>}
                                         </div>
-                                        {t.pmType === 'ภายนอก' && (
-                                            <div className="mt-1 flex flex-col gap-0.5 text-blue-600 bg-blue-50 p-2 rounded">
-                                                <span className="font-bold flex items-center gap-1"><Icon path={Icons.Wrench} size={12}/> {t.pmVendorName}</span>
-                                                {t.pmVendorContact && <a href={`tel:${t.pmVendorContact}`} onClick={(e)=>e.stopPropagation()} className="flex items-center gap-1 hover:underline"><Icon path={Icons.Phone} size={12}/> {t.pmVendorContact}</a>}
+                                    ))}
+                                </div>
+                            )}
+                            {tab==='newlog' && (
+                                <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                                        <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>วันที่</label><input type="date" className="inp" value={log.date} onChange={e=>setLog({...log,date:e.target.value})}/></div>
+                                        <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ประเภท</label><select className="inp" value={log.type} onChange={e=>setLog({...log,type:e.target.value})}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select></div>
+                                    </div>
+                                    <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>รายละเอียด</label><textarea className="inp" rows={3} value={log.description} onChange={e=>setLog({...log,description:e.target.value})} placeholder="อาการ..."/></div>
+                                    <div style={{background:'var(--surface2)',borderRadius:10,padding:14}}>
+                                        <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,marginBottom:10}}>เพิ่มอะไหล่</div>
+                                        <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
+                                            <input className="inp" value={part.name} onChange={e=>setPart({...part,name:e.target.value})} placeholder="ชื่ออะไหล่" style={{flex:2,minWidth:100}}/>
+                                            <input className="inp" type="number" value={part.price} onChange={e=>setPart({...part,price:e.target.value})} placeholder="ราคา" style={{width:90}}/>
+                                            <label className={`btn btn-ghost ${part.image?'btn-success':''}`} style={{padding:'8px 10px',cursor:'pointer'}} title="รูป"><I d={ic.img} size={16}/><input type="file" className="hidden" accept="image/*" onChange={e=>handlePartFile(e,'image')} style={{display:'none'}}/></label>
+                                            <label className={`btn btn-ghost ${part.pdf?'btn-success':''}`} style={{padding:'8px 10px',cursor:'pointer'}} title="PDF"><I d={ic.file} size={16}/><input type="file" className="hidden" accept="application/pdf" onChange={e=>handlePartFile(e,'pdf')} style={{display:'none'}}/></label>
+                                            <button className="btn btn-primary" style={{padding:'8px 12px'}} onClick={()=>{if(part.name){setLog(prev=>({...prev,parts:[...prev.parts,part]}));setPart({name:'',price:'',image:'',pdf:''});}}}><I d={ic.plus} size={14}/></button>
+                                        </div>
+                                        {log.parts.map((p,i) => (
+                                            <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',background:'var(--surface)',borderRadius:8,marginBottom:4,fontSize:12}}>
+                                                <span style={{fontWeight:600}}>{p.name}</span>
+                                                <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                                                    <span style={{fontFamily:'IBM Plex Mono,monospace'}}>฿{fmtNum(p.price)}</span>
+                                                    <button onClick={()=>setLog(prev=>({...prev,parts:prev.parts.filter((_,j)=>j!==i)}))} style={{color:'var(--red)'}}><I d={ic.trash} size={13}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ค่าแรง (฿)</label><input type="number" className="inp" value={log.labor} onChange={e=>setLog({...log,labor:e.target.value})} placeholder="0"/></div>
+                                    <button className="btn btn-primary" style={{justifyContent:'center',padding:12}} onClick={submitLog} disabled={fileLoading}>บันทึกประวัติ</button>
+                                </div>
+                            )}
+                            {tab==='pmschedule' && (
+                                <div>
+                                    <div style={{background:'rgba(79,142,247,0.08)',border:'1px solid rgba(79,142,247,0.15)',borderRadius:12,padding:16,marginBottom:16}}>
+                                        <div style={{fontWeight:700,marginBottom:12,fontSize:13,color:'var(--accent)'}}>📅 เพิ่มตารางงาน</div>
+                                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+                                            <input type="date" className="inp" value={pmForm.planDate} onChange={e=>setPmForm({...pmForm,planDate:e.target.value})}/>
+                                            <input className="inp" placeholder="หัวข้อ PM..." value={pmForm.topic} onChange={e=>setPmForm({...pmForm,topic:e.target.value})}/>
+                                        </div>
+                                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+                                            <select className="inp" value={pmForm.status} onChange={e=>setPmForm({...pmForm,status:e.target.value})}><option>รอเป้าหมาย</option><option>ดำเนินการแล้ว</option><option>ยกเลิก</option></select>
+                                            <input className="inp" placeholder="หมายเหตุ" value={pmForm.note} onChange={e=>setPmForm({...pmForm,note:e.target.value})}/>
+                                        </div>
+                                        <div style={{marginBottom:8}}>
+                                            <select className="inp" value={pmForm.pmType} onChange={e=>setPmForm({...pmForm,pmType:e.target.value})} style={{marginBottom:8}}>
+                                                <option value="ภายใน">ภายใน</option><option value="ภายนอก">ภายนอก (Supplier)</option>
+                                            </select>
+                                            {pmForm.pmType==='ภายนอก' && <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                                                <input className="inp" placeholder="ชื่อช่าง/บริษัท" value={pmForm.pmVendorName} onChange={e=>setPmForm({...pmForm,pmVendorName:e.target.value})}/>
+                                                <input className="inp" placeholder="เบอร์ติดต่อ" value={pmForm.pmVendorContact} onChange={e=>setPmForm({...pmForm,pmVendorContact:e.target.value})}/>
+                                            </div>}
+                                        </div>
+                                        {pmForm.status==='ดำเนินการแล้ว' && (
+                                            <div style={{display:'flex',gap:8,marginBottom:8}}>
+                                                <label className={`btn btn-ghost ${pmForm.image?'btn-success':''}`} style={{flex:1,justifyContent:'center',cursor:'pointer'}}><I d={ic.img} size={14}/> {pmForm.image?'✓ มีรูป':'+ รูปภาพ'}<input type="file" accept="image/*" style={{display:'none'}} onChange={e=>handlePmFile(e,'image')}/></label>
+                                                <label className={`btn btn-ghost ${pmForm.pdf?'btn-success':''}`} style={{flex:1,justifyContent:'center',cursor:'pointer'}}><I d={ic.file} size={14}/> {pmForm.pdf?'✓ มี PDF':'+ PDF'}<input type="file" accept="application/pdf" style={{display:'none'}} onChange={e=>handlePmFile(e,'pdf')}/></label>
                                             </div>
                                         )}
+                                        <button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={savePm} disabled={pmLoading}>บันทึก</button>
+                                    </div>
+                                    {pmLoading ? <div style={{textAlign:'center',padding:30,color:'var(--text3)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}><Loader/> โหลด...</div> : (
+                                        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                                            {pmList.length===0 && <div style={{textAlign:'center',padding:30,color:'var(--text3)',fontSize:13}}>ยังไม่มีตารางงาน</div>}
+                                            {pmList.map((pm,i) => {
+                                                const diff = daysDiff(pm.planDate);
+                                                const catColor = diff < 0 ? 'var(--red)' : diff <= 7 ? 'var(--orange)' : 'var(--accent)';
+                                                return (
+                                                    <div key={i} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderLeft:`3px solid ${catColor}`,borderRadius:10,padding:12,display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                                                        <div style={{flex:1}}>
+                                                            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4,flexWrap:'wrap'}}>
+                                                                <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:catColor,fontWeight:700}}>{pm.planDate}</span>
+                                                                <span className={`badge ${pm.status==='ดำเนินการแล้ว'?'badge-green':'badge-gray'}`} style={{fontSize:10}}>{pm.status}</span>
+                                                                {pm.pmType==='ภายนอก' && <span className="badge badge-blue" style={{fontSize:10}}>🔧 {pm.pmVendorName}</span>}
+                                                            </div>
+                                                            <div style={{fontWeight:700,marginBottom:4}}>{pm.topic}</div>
+                                                            {pm.note && <div style={{fontSize:12,color:'var(--text3)'}}>{pm.note}</div>}
+                                                            {(pm.image||pm.pdf) && <div style={{display:'flex',gap:6,marginTop:8}}>
+                                                                {pm.image && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:11}} onClick={()=>setImgPop(pm.image)}><I d={ic.eye} size={12}/> รูป</button>}
+                                                                {pm.pdf && <a href={pm.pdf} target="_blank" className="btn btn-ghost" style={{padding:'4px 10px',fontSize:11}}><I d={ic.file} size={12}/> PDF</a>}
+                                                            </div>}
+                                                        </div>
+                                                        <div style={{display:'flex',gap:4,flexShrink:0}}>
+                                                            <button className="btn btn-ghost" style={{padding:'6px'}} onClick={()=>setPmForm(pm)}><I d={ic.wrench} size={14}/></button>
+                                                            <button className="btn btn-danger" style={{padding:'6px'}} onClick={()=>delPm(pm.schId)}><I d={ic.trash} size={14}/></button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {showQr && <QrModal asset={item} onClose={()=>setShowQr(false)}/>}
+
+            {imgPop && (
+                <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20}} onClick={()=>setImgPop(null)}>
+                    <img src={imgPop} style={{maxHeight:'90vh',maxWidth:'100%',borderRadius:8,objectFit:'contain'}}/>
+                    <button style={{position:'absolute',top:20,right:20,color:'white',background:'rgba(255,255,255,0.1)',borderRadius:'50%',padding:8}} onClick={()=>setImgPop(null)}><I d={ic.x} size={24}/></button>
+                </div>
+            )}
+
+            {selLog && (
+                <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20,backdropFilter:'blur(4px)'}} onClick={()=>setSelLog(null)}>
+                    <div className="card-static modal-in" style={{padding:24,maxWidth:500,width:'100%',maxHeight:'85vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
+                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:16}}>
+                            <div><div style={{fontSize:12,color:'var(--text3)',marginBottom:4,fontFamily:'IBM Plex Mono,monospace'}}>{selLog.date}</div><h3 style={{fontWeight:800,fontSize:18}}>{selLog.type}</h3></div>
+                            <button onClick={()=>setSelLog(null)} style={{color:'var(--text3)'}}><I d={ic.x} size={20}/></button>
+                        </div>
+                        <div style={{background:'var(--surface2)',borderRadius:10,padding:14,marginBottom:16,fontSize:14}}>{selLog.description}</div>
+                        <div style={{marginBottom:16}}>
+                            <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,marginBottom:8}}>อะไหล่</div>
+                            {(!selLog.parts||selLog.parts.length===0) && <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',padding:16}}>ไม่มีรายการอะไหล่</div>}
+                            {(selLog.parts||[]).map((p,i) => (
+                                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',background:'var(--surface2)',borderRadius:8,marginBottom:4}}>
+                                    <div>
+                                        <div style={{fontWeight:600,fontSize:13}}>{p.name}</div>
+                                        <div style={{display:'flex',gap:6,marginTop:4}}>
+                                            {p.image && <button className="btn btn-ghost" style={{padding:'2px 8px',fontSize:10}} onClick={()=>setImgPop(p.image)}><I d={ic.img} size={11}/> รูป</button>}
+                                            {p.pdf && <a href={p.pdf} target="_blank" className="btn btn-ghost" style={{padding:'2px 8px',fontSize:10}}><I d={ic.file} size={11}/> PDF</a>}
+                                        </div>
+                                    </div>
+                                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>฿{fmtNum(p.price)}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid var(--border)',paddingTop:14,marginBottom:14}}>
+                            <span style={{color:'var(--text2)',fontSize:13}}>ค่าแรง ฿{fmtNum(selLog.laborCost)}</span>
+                            <span style={{fontWeight:800,color:'var(--accent)',fontSize:16}}>รวม ฿{fmtNum(selLog.totalCost)}</span>
+                        </div>
+                        <button className="btn btn-danger" style={{width:'100%',justifyContent:'center'}} onClick={()=>{if(confirm('ลบ?')){postData({action:'delete_log',assetId:item.id,logId:selLog.id});setSelLog(null);}}}>ลบรายการนี้</button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ====== UTILITY VIEW ======
+const UtilityView = ({ data, type, setView, setSelectedAsset }) => {
+    const [q, setQ] = useState('');
+    const isElec = type==='electrical';
+    const filtered = data.assets.filter(a => {
+        if(isElec&&!a.electrical?.uses) return false;
+        if(!isElec&&!a.water?.uses) return false;
+        const s = q.toLowerCase();
+        return !s || String(a.name||'').toLowerCase().includes(s) || String(a.id||'').toLowerCase().includes(s) || (isElec?String(a.electrical?.breaker||''):String(a.water?.pump||'')).toLowerCase().includes(s);
+    });
+    const grouped = {};
+    filtered.forEach(a => {
+        const k = isElec?(a.electrical?.breaker||'ไม่ระบุ'):(a.water?.pump||'ไม่ระบุ');
+        if(!grouped[k]) grouped[k]=[];
+        grouped[k].push(a);
+    });
+    return (
+        <div style={{padding:24,height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav">
+            <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'center',marginBottom:20,flexShrink:0}}>
+                <div><h2 style={{fontSize:22,fontWeight:800}}>{isElec?'⚡ ระบบไฟฟ้า':'💧 ระบบน้ำ'}</h2></div>
+                <div style={{position:'relative',marginLeft:'auto'}}>
+                    <I d={ic.search} size={16} cls="" style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text3)'}}/>
+                    <input className="inp" value={q} onChange={e=>setQ(e.target.value)} placeholder="ค้นหา..." style={{paddingLeft:36,width:220}}/>
+                </div>
+            </div>
+            <div style={{overflowY:'auto',flex:1,display:'flex',flexDirection:'column',gap:14,paddingBottom:16}}>
+                {Object.keys(grouped).map(key => (
+                    <div key={key} className="card-static" style={{padding:16}}>
+                        <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:isElec?'var(--yellow)':'var(--accent)',display:'flex',alignItems:'center',gap:8}}>
+                            {isElec?'🔌 Breaker:':'💧 Pump:'} {key}
+                            <span className="badge badge-gray">{grouped[key].length}</span>
+                        </div>
+                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:8}}>
+                            {grouped[key].map(item => (
+                                <div key={item.id} className="card" style={{padding:12,display:'flex',gap:10,cursor:'pointer'}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
+                                    <div style={{width:48,height:48,background:'var(--surface2)',borderRadius:8,overflow:'hidden',flexShrink:0}}>
+                                        {item.image?<img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={16}/></div>}
+                                    </div>
+                                    <div style={{flex:1,minWidth:0}}>
+                                        <div style={{fontWeight:700,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</div>
+                                        <div style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)'}}>{item.id}</div>
+                                        <div style={{fontSize:10,color:'var(--text3)',marginTop:4}}>{isElec?`${item.electrical.watt||'-'}W / ${item.electrical.amp||'-'}A`:`${item.water.type||'-'}`}</div>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
-                );
-            };
+                ))}
+                {Object.keys(grouped).length===0 && <div style={{textAlign:'center',padding:60,color:'var(--text3)'}}>ไม่พบข้อมูล</div>}
+            </div>
+        </div>
+    );
+};
 
-            return (
-                <div className="p-6 md:p-10 w-full max-w-7xl mx-auto space-y-6 fade-in pb-safe h-full overflow-y-auto scroll-container">
-                    <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-                        <div>
-                            <h2 className="text-3xl font-bold text-gray-800">ภาพรวม PM</h2>
-                            <p className="text-gray-500 mt-1">ตารางงานบำรุงรักษาเครื่องจักรทั้งหมด</p>
-                        </div>
-                        <div className="relative w-full md:w-80">
-                            <div className="absolute left-4 top-3.5 text-gray-400"><Icon path={Icons.Search} size={18}/></div>
-                            <input className="input-box pl-11" placeholder="ค้นหาชื่อเครื่อง / รหัส..." value={search} onChange={e => setSearch(e.target.value)} />
-                        </div>
-                    </div>
-                    {loadingPm ? <div className="text-center py-20 text-gray-400 animate-pulse">กำลังโหลดข้อมูล...</div> : (
-                        <div className="space-y-2">
-                            {tasks.length === 0 && <div className="text-center py-20 text-gray-400">ยังไม่มีข้อมูลตารางงาน</div>}
-                            {renderTaskSection("เกินกำหนด / วันนี้", "overdue", "text-red-600", <Icon path={Icons.Clock} size={20}/>)}
-                            {renderTaskSection("สัปดาห์นี้ (This Week)", "thisWeek", "text-red-500", <Icon path={Icons.Calendar} size={20}/>)}
-                            {renderTaskSection("สัปดาห์หน้า (Next Week)", "nextWeek", "text-orange-500", <Icon path={Icons.Calendar} size={20}/>)}
-                            {renderTaskSection("เดือนหน้า (Next Month)", "nextMonth", "text-blue-500", <Icon path={Icons.Calendar} size={20}/>)}
-                            {renderTaskSection("อนาคต", "future", "text-gray-500", <Icon path={Icons.Calendar} size={20}/>)}
-                        </div>
-                    )}
+// ====== APP ======
+const App = () => {
+    const [view, setView] = useState('dashboard');
+    const [data, setData] = useState({assets:[],departments:[]});
+    const [loading, setLoading] = useState(false);
+    const [selectedDept, setSelectedDept] = useState(null);
+    const [selectedAsset, setSelectedAsset] = useState(null);
+    const [notify, setNotify] = useState({show:false,status:'idle',message:'',action:null});
+
+    useEffect(() => { fetchData(); }, []);
+    useEffect(() => {
+        if(selectedAsset && data.assets.length>0) {
+            const updated = data.assets.find(a=>String(a.id)===String(selectedAsset.id));
+            if(updated) setSelectedAsset(updated);
+        }
+    }, [data.assets]);
+
+    // Check URL for QR param
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const assetId = params.get('asset');
+        if(assetId && data.assets.length>0) {
+            const a = data.assets.find(x=>x.id===assetId);
+            if(a){setSelectedAsset(a);setView('detail');}
+        }
+    }, [data.assets]);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const r = await fetch(API_URL);
+            const j = await r.json();
+            if(j.assets) setData({assets:j.assets,departments:j.departments||[]});
+        } catch(e){ console.error(e); }
+        setLoading(false);
+    };
+
+    const postData = async (payload) => {
+        setNotify({show:true,status:'syncing',message:'กำลังบันทึก...',action:null});
+        try {
+            await fetch(API_URL,{method:'POST',body:JSON.stringify(payload)});
+            if(['save_asset','delete_asset'].includes(payload.action)) setView('assets');
+            setNotify({show:true,status:'success',message:'บันทึกสำเร็จ!',action:()=>{fetchData();setNotify({show:false});}});
+        } catch(e) {
+            setNotify({show:true,status:'error',message:'ผิดพลาด: '+e.message,action:null});
+            setTimeout(()=>setNotify({show:false}),5000);
+        }
+    };
+
+    const pmOverdue = useMemo(() => {
+        // We'll just use a rough estimate from assets for the nav badge
+        return 0; // Would need PM data loaded to calculate
+    }, [data]);
+
+    const mainProps = { data, setView, postData, selectedDept, setSelectedDept, selectedAsset, setSelectedAsset };
+
+    if(loading && data.assets.length===0) {
+        return (
+            <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'var(--bg)'}}>
+                <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:16,borderRadius:16}}><I d={ic.wrench} size={32}/></div>
+                <div style={{fontWeight:800,fontSize:20}}>MTA Asset Pro</div>
+                <div style={{display:'flex',alignItems:'center',gap:8,color:'var(--text3)'}}><Loader/> กำลังโหลด...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{display:'flex',height:'100vh',width:'100%',overflow:'hidden',background:'var(--bg)'}}>
+            <Toast notify={notify} setNotify={setNotify}/>
+            <Sidebar view={view} setView={setView} fetchData={fetchData} pmOverdue={pmOverdue}/>
+            <main style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
+                <div style={{flex:1,overflow:'hidden',position:'relative'}}>
+                    {view==='dashboard' && <Dashboard data={data} setView={setView}/>}
+                    {view==='kanban' && <KanbanBoard assets={data.assets} setSelectedAsset={setSelectedAsset} setView={setView}/>}
+                    {view==='departments' && <DeptView data={data} setSelectedDept={setSelectedDept} setView={setView} postData={postData}/>}
+                    {view==='assets' && <AssetList data={data} selectedDept={selectedDept} setView={setView} setSelectedAsset={setSelectedAsset}/>}
+                    {view==='global_search' && <GlobalSearch data={data} setView={setView} setSelectedAsset={setSelectedAsset}/>}
+                    {view==='electrical' && <UtilityView data={data} type="electrical" setView={setView} setSelectedAsset={setSelectedAsset}/>}
+                    {view==='water' && <UtilityView data={data} type="water" setView={setView} setSelectedAsset={setSelectedAsset}/>}
+                    {(view==='add_asset'||view==='edit_asset') && <AddAssetView data={data} selectedDept={selectedDept} setView={setView} postData={postData} view={view} editItem={selectedAsset}/>}
+                    {view==='detail' && <DetailView item={selectedAsset} setView={setView} postData={postData}/>}
+                    {view==='ai' && <AiAssistant data={data}/>}
+                    {view==='executive' && <ExecutiveDashboard data={data}/>}
                 </div>
-            );
-        };
+            </main>
+            <MobileNav view={view} setView={setView} pmOverdue={pmOverdue}/>
+        </div>
+    );
+};
 
-        const DetailAssetView = ({ item, setView, postData }) => { 
-            if (!item) return <div className="p-10 text-center text-gray-400">ไม่พบข้อมูลอุปกรณ์</div>;
-
-            const [tab, setTab] = useState('history'); 
-            
-            const [isEditingLog, setIsEditingLog] = useState(false);
-            const initialLogState = { date: new Date().toISOString().split('T')[0], type: 'ซ่อมแซม', description: '', labor: '', parts: [] };
-            
-            const [log, setLog] = useState(initialLogState); 
-            const [part, setPart] = useState({ name: '', price: '', image: '', pdf: '' }); 
-            const [selLog, setSelLog] = useState(null); 
-            const [fileLoading, setFileLoading] = useState(false); 
-            const [pmList, setPmList] = useState([]); 
-            const [pmLoading, setPmLoading] = useState(false); 
-            
-            const initialPmState = { schId: null, topic: '', planDate: '', status: 'รอเป้าหมาย', note: '', pmType: 'ภายใน', pmVendorName: '', pmVendorContact: '', image: '', pdf: '' };
-            const [pmForm, setPmForm] = useState(initialPmState); 
-            
-            const [isEditingPm, setIsEditingPm] = useState(false); 
-            
-            const [showImageModal, setShowImageModal] = useState(false);
-            const [popupImageSrc, setPopupImageSrc] = useState(null);
-            
-            useEffect(() => { 
-                if (tab === 'pmschedule') { fetchPmSchedules(); } 
-            }, [tab, item.id]); 
-
-            const fetchPmSchedules = async () => { setPmLoading(true); try { const response = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_pm_schedules', assetId: item.id }) }); const json = await response.json(); if (json.pmSchedules) setPmList(json.pmSchedules); } catch (err) { console.error(err); } setPmLoading(false); }; 
-            
-            const savePm = async () => { 
-                if (!pmForm.topic || !pmForm.planDate) return alert("ระบุหัวข้อและวันที่"); 
-                setPmLoading(true); 
-                await postData({ action: 'save_pm_schedule', assetId: item.id, assetName: item.name, schedule: pmForm }); 
-                setPmForm(initialPmState);
-                setIsEditingPm(false); 
-                setTimeout(fetchPmSchedules, 2000); 
-            }; 
-            
-            const deletePm = async (schId) => { if(!confirm("ลบรายการนี้?")) return; setPmLoading(true); await postData({ action: 'delete_pm_schedule', assetId: item.id, schId: schId }); setTimeout(fetchPmSchedules, 2000); }; 
-            
-            const handlePartFile = async (e, k) => { if (e.target.files[0]) { setFileLoading(true); try { const base64 = await fileToBase64(e.target.files[0]); if (base64) { setPart(prev => ({ ...prev, [k]: base64 })); alert("แนบไฟล์สำเร็จ!"); } } catch (err) { alert("Error reading file"); } finally { setFileLoading(false); } } }; 
-            
-            const handlePmFile = async (e, k) => { 
-                if (e.target.files[0]) { 
-                    setPmLoading(true); 
-                    try { 
-                        const base64 = await fileToBase64(e.target.files[0]); 
-                        if (base64) { 
-                            setPmForm(prev => ({ ...prev, [k]: base64 })); 
-                        } 
-                    } catch (err) { 
-                        alert("เกิดข้อผิดพลาดในการอ่านไฟล์"); 
-                    } finally { 
-                        setPmLoading(false); 
-                    } 
-                } 
-            };
-
-            const addPart = () => { if (part.name) { setLog(prev => ({ ...prev, parts: [...prev.parts, part] })); setPart({ name: '', price: '', image: '', pdf: '' }); } else { alert("กรุณาระบุชื่ออะไหล่"); } }; 
-            
-            const removePartFromForm = (indexToRemove) => {
-                setLog(prev => ({ ...prev, parts: prev.parts.filter((_, idx) => idx !== indexToRemove) }));
-            };
-
-            const submitLog = () => { 
-                const total = Number(log.labor) + log.parts.reduce((s, p) => s + Number(p.price), 0); 
-                let finalParts = [...log.parts]; 
-                if (part.name) finalParts.push(part); 
-                
-                const newLog = { 
-                    id: log.id || Date.now(), 
-                    date: log.date, 
-                    type: log.type, 
-                    description: log.description, 
-                    laborCost: log.labor, 
-                    totalCost: total + (part.name ? Number(part.price) : 0), 
-                    parts: finalParts 
-                }; 
-                
-                postData({ action: 'save_log', assetId: item.id, log: newLog }); 
-                
-                setLog(initialLogState);
-                setPart({ name: '', price: '', image: '', pdf: '' });
-                setIsEditingLog(false);
-                setTab('history');
-            }; 
-
-            const openImagePopup = (src) => {
-                setPopupImageSrc(src);
-                setShowImageModal(true);
-            };
-            
-            return (
-                <div className="w-full h-full flex flex-col bg-gray-50 relative overflow-y-auto pb-safe fade-in p-6 md:p-10 scroll-container">
-                    <div className="flex items-center gap-4 mb-6">
-                        <button onClick={() => setView('assets')} className="p-3 bg-white rounded-xl border shadow-sm text-gray-600 hover:bg-gray-50"><Icon path={Icons.ArrowLeft} size={20}/></button>
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-800">{item.name}</h1>
-                            <div className="text-gray-500 text-sm flex gap-3 mt-1 font-mono">
-                                <span>{item.id}</span>
-                                <span>• {item.model}</span>
-                                <span className={`px-2 rounded text-xs font-bold flex items-center ${item.status === 'ปกติ' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{item.status}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col lg:flex-row gap-6">
-                        <div className="w-full lg:w-1/3 space-y-4">
-                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
-                                <div 
-                                    className="aspect-square bg-gray-100 rounded-xl overflow-hidden cursor-pointer relative group"
-                                    onClick={() => openImagePopup(item.image)}
-                                >
-                                    {item.image ? <img src={item.image} className="w-full h-full object-cover transition duration-300 group-hover:opacity-90" /> : <div className="flex items-center justify-center h-full text-gray-300"><Icon path={Icons.Image} size={64}/></div>}
-                                    {item.image && <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white font-bold"><Icon path={Icons.Search} size={24}/> ขยายรูป</div>}
-                                </div>
-                                <div className="space-y-3 text-sm text-gray-600">
-                                    <div className="flex justify-between border-b pb-2"><span>แผนก</span><span className="font-bold text-gray-900">{item.location}</span></div>
-                                    <div className="flex justify-between border-b pb-2"><span>วันที่ซื้อ</span><span className="font-bold text-gray-900">{item.purchaseDate}</span></div>
-                                    <div className="flex justify-between border-b pb-2"><span>ผู้จำหน่าย</span><span className="font-bold text-gray-900">{item.vendor || '-'}</span></div>
-                                    {item.receiptPdf && <a href={item.receiptPdf} target="_blank" className="flex items-center justify-center gap-2 w-full py-3 mt-2 bg-orange-50 text-orange-700 rounded-xl font-bold hover:bg-orange-100 transition"><Icon path={Icons.File} size={18}/> ดูใบเสร็จ</a>}
-                                </div>
-                                
-                                <div className="flex gap-2 mt-2">
-                                    <button onClick={() => setView('edit_asset')} className="flex-1 text-blue-600 bg-blue-50 text-sm font-bold hover:bg-blue-100 py-3 rounded-xl transition flex justify-center gap-2"><Icon path={Icons.Wrench} size={18}/> แก้ไขอุปกรณ์</button>
-                                    <button onClick={() => { if (confirm('ลบอุปกรณ์นี้ถาวร?')) postData({ action: 'delete_asset', id: item.id }); }} className="flex-1 text-red-500 bg-red-50 text-sm font-bold hover:bg-red-100 py-3 rounded-xl transition flex justify-center gap-2"><Icon path={Icons.Trash} size={18}/> ลบอุปกรณ์</button>
-                                </div>
-                            </div>
-                            
-                            {item.electrical?.uses && (
-                                <div className="p-5 bg-yellow-50 rounded-2xl border border-yellow-200 shadow-sm">
-                                    <h4 className="font-bold text-yellow-800 mb-3 flex items-center gap-2"><Icon path={Icons.Zap} size={18}/> ข้อมูลระบบไฟฟ้า</h4>
-                                    <div className="space-y-2 text-sm text-yellow-800/80">
-                                        <div className="flex justify-between"><span>Breaker No.</span><span className="font-bold text-yellow-900">{item.electrical.breaker||'-'}</span></div>
-                                        <div className="flex justify-between"><span>Watt</span><span className="font-bold text-yellow-900">{item.electrical.watt||'-'}</span></div>
-                                        <div className="flex justify-between"><span>Amp</span><span className="font-bold text-yellow-900">{item.electrical.amp||'-'}</span></div>
-                                        <div className="flex justify-between"><span>HP</span><span className="font-bold text-yellow-900">{item.electrical.hp||'-'}</span></div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {item.water?.uses && (
-                                <div className="p-5 bg-blue-50 rounded-2xl border border-blue-200 shadow-sm">
-                                    <h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Icon path={Icons.Droplet} size={18}/> ข้อมูลระบบน้ำ</h4>
-                                    <div className="space-y-2 text-sm text-blue-800/80">
-                                        <div className="flex justify-between"><span>Pump No.</span><span className="font-bold text-blue-900">{item.water.pump||'-'}</span></div>
-                                        <div className="flex justify-between"><span>Water Type</span><span className="font-bold text-blue-900">{item.water.type||'-'}</span></div>
-                                    </div>
-                                </div>
-                            )}
-                            
-                        </div>
-                        
-                        <div className="w-full lg:w-2/3">
-                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[600px]">
-                                <div className="flex border-b border-gray-100 overflow-x-auto whitespace-nowrap scroll-container">
-                                    <button onClick={() => { setTab('history'); setIsEditingLog(false); setLog(initialLogState); }} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition ${tab === 'history' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>ประวัติซ่อม ({item.history?.length || 0})</button>
-                                    <button onClick={() => { setTab('newlog'); setIsEditingLog(false); setLog(initialLogState); }} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition ${tab === 'newlog' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>{isEditingLog ? '✏️ กำลังแก้ไขประวัติ' : '+ บันทึกซ่อม'}</button>
-                                    <button onClick={() => { setTab('pmschedule'); setIsEditingLog(false); setLog(initialLogState); }} className={`flex-1 min-w-[100px] py-4 text-sm font-bold border-b-2 transition ${tab === 'pmschedule' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>📅 ตาราง PM</button>
-                                </div>
-
-                                <div className="p-6">
-                                    {tab === 'newlog' && (<div className="animate-[fadeIn_0.3s_ease-out]">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="font-bold text-gray-800 text-lg">{isEditingLog ? 'แก้ไขประวัติซ่อม' : 'เพิ่มประวัติซ่อมใหม่'}</h3>
-                                            {isEditingLog && <button onClick={() => { setIsEditingLog(false); setLog(initialLogState); setTab('history'); }} className="text-sm font-bold text-gray-400 hover:text-gray-600 bg-gray-100 px-3 py-1 rounded-lg">ยกเลิก</button>}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4 mb-4"><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">วันที่</label><input type="date" className="input-box" value={log.date} onChange={e => setLog({ ...log, date: e.target.value })} /></div><div><label className="text-xs font-bold text-gray-500 mb-1.5 block">ประเภท</label><select className="input-box" value={log.type} onChange={e => setLog({ ...log, type: e.target.value })}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select></div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">อาการ / รายละเอียด</label><textarea className="input-box" rows="3" placeholder="ระบุอาการ..." value={log.description} onChange={e => setLog({ ...log, description: e.target.value })}></textarea></div><div className="bg-gray-50 p-5 rounded-2xl border border-gray-200 mb-6 relative"><p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">เพิ่มรายการอะไหล่</p><div className="flex flex-wrap gap-2 mb-3 items-center"><input className="input-box p-2 text-sm flex-1 min-w-[120px]" placeholder="ชื่ออะไหล่" value={part.name} onChange={e => setPart({ ...part, name: e.target.value })} /><input className="input-box p-2 text-sm w-24" type="number" placeholder="ราคา" value={part.price} onChange={e => setPart({ ...part, price: e.target.value })} /><label className={`border p-2 rounded-lg cursor-pointer transition ${part.image ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบรูป"><Icon path={Icons.Image} size={18}/><input type="file" className="hidden" accept="image/*" onChange={e => handlePartFile(e, 'image')} /></label><label className={`border p-2 rounded-lg cursor-pointer transition ${part.pdf ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white hover:bg-gray-100'}`} title="แนบ PDF"><Icon path={Icons.File} size={18}/><input type="file" className="hidden" accept="application/pdf" onChange={e => handlePartFile(e, 'pdf')} /></label><button onClick={addPart} className="bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-black flex items-center justify-center gap-1 transition text-xs font-bold min-w-[60px]"><Icon path={Icons.Add} size={16}/> เพิ่ม</button></div>{fileLoading && <div className="text-xs text-blue-500 animate-pulse mb-2 font-bold">กำลังอัปโหลดไฟล์...</div>}
-                                        <div className="space-y-2">
-                                            {log.parts.map((p, i) => (
-                                                <div key={i} className="text-xs flex justify-between p-3 bg-white rounded-xl border font-medium shadow-sm items-center">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-gray-700">{p.name}</span>
-                                                        {p.image && <Icon path={Icons.Image} size={12} className="text-blue-500"/>}
-                                                        {p.pdf && <Icon path={Icons.File} size={12} className="text-orange-500"/>}
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <span>฿{Number(p.price).toLocaleString()}</span>
-                                                        <button onClick={() => removePartFromForm(i)} className="text-gray-400 hover:text-red-500 transition"><Icon path={Icons.Trash} size={14}/></button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div></div><div className="mb-6"><label className="text-xs font-bold text-gray-500 mb-1.5 block">ค่าแรงช่าง (บาท)</label><input type="number" className="input-box" placeholder="0.00" value={log.labor} onChange={e => setLog({ ...log, labor: e.target.value })} /></div><button onClick={submitLog} disabled={fileLoading} className={`w-full text-white py-3.5 rounded-xl font-bold shadow-lg transition ${fileLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{isEditingLog ? '💾 บันทึกการแก้ไข' : 'บันทึกประวัติ'}</button></div>)}
-                                    {tab === 'history' && (<div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">{item.history && item.history.map((h, i) => (<div key={i} onClick={() => setSelLog(h)} className="bg-white border border-gray-100 rounded-2xl p-5 cursor-pointer hover:border-blue-400 hover:shadow-md transition group"><div className="flex justify-between items-start mb-2"><div><div className="text-xs font-bold text-gray-400 flex items-center gap-2 mb-1">{h.date} <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{h.type}</span></div><div className="font-bold text-gray-800 text-lg">{h.description}</div></div><div className="text-right"><div className="font-bold text-blue-600 text-lg">฿{Number(h.totalCost).toLocaleString()}</div></div></div>{h.parts?.length > 0 && <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">ใช้อะไหล่ {h.parts.length} รายการ</div>}</div>))}{(!item.history || item.history.length === 0) && <div className="text-center text-gray-400 py-12 flex flex-col items-center"><Icon path={Icons.Folder} size={48} className="mb-2 opacity-30"/><p>ยังไม่มีประวัติการซ่อม</p></div>}</div>)}
-                                    
-                                    {tab === 'pmschedule' && (
-                                    <div className="animate-[fadeIn_0.3s_ease-out]">
-                                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6">
-                                            <h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Icon path={Icons.Calendar} size={18}/> {isEditingPm ? 'แก้ไขตารางงาน' : 'เพิ่มตารางงานใหม่'}</h4>
-                                            
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                                <input type="date" className="input-box" value={pmForm.planDate} onChange={e => setPmForm({...pmForm, planDate: e.target.value})} />
-                                                <input type="text" className="input-box" placeholder="หัวข้อการ PM..." value={pmForm.topic} onChange={e => setPmForm({...pmForm, topic: e.target.value})} />
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                                <select className="input-box font-bold text-blue-700" value={pmForm.status} onChange={e => setPmForm({...pmForm, status: e.target.value})}>
-                                                    <option>รอเป้าหมาย</option>
-                                                    <option>ดำเนินการแล้ว</option>
-                                                    <option>ยกเลิก</option>
-                                                </select>
-                                                <input type="text" className="input-box" placeholder="หมายเหตุ (ถ้ามี)" value={pmForm.note} onChange={e => setPmForm({...pmForm, note: e.target.value})} />
-                                            </div>
-                                            
-                                            <div className="bg-white p-3 rounded-lg border border-blue-100 mb-3">
-                                                <div className="text-xs font-bold text-blue-500 mb-2">ผู้รับผิดชอบงาน PM</div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    <select className="input-box" value={pmForm.pmType} onChange={e => setPmForm({...pmForm, pmType: e.target.value})}>
-                                                        <option value="ภายใน">ภายใน (ทีมงานบริษัท)</option>
-                                                        <option value="ภายนอก">ภายนอก (Supplier)</option>
-                                                    </select>
-                                                    {pmForm.pmType === 'ภายนอก' && (
-                                                        <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 animate-[fadeIn_0.2s_ease-out]">
-                                                            <input type="text" className="input-box" placeholder="ชื่อช่าง / บริษัท" value={pmForm.pmVendorName} onChange={e => setPmForm({...pmForm, pmVendorName: e.target.value})} />
-                                                            <input type="text" className="input-box" placeholder="เบอร์ติดต่อ" value={pmForm.pmVendorContact} onChange={e => setPmForm({...pmForm, pmVendorContact: e.target.value})} />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {pmForm.status === 'ดำเนินการแล้ว' && (
-                                                <div className="mt-4 p-4 bg-white rounded-lg border border-green-200 animate-[fadeIn_0.2s_ease-out] mb-4">
-                                                    <div className="text-xs font-bold text-green-600 mb-2">แนบหลักฐานการ PM (รูปภาพ / PDF)</div>
-                                                    <div className="flex flex-col md:flex-row gap-2">
-                                                        <label className={`border border-dashed p-3 rounded-xl cursor-pointer transition flex-1 flex justify-center items-center gap-2 text-sm font-bold ${pmForm.image ? 'bg-green-50 text-green-700 border-green-300' : 'bg-gray-50 hover:bg-gray-100 text-gray-600'}`}>
-                                                            <Icon path={Icons.Image} size={18}/> {pmForm.image ? 'แนบรูปภาพแล้ว (เปลี่ยน)' : '+ แนบรูปภาพ'}
-                                                            <input type="file" className="hidden" accept="image/*" onChange={e => handlePmFile(e, 'image')} />
-                                                        </label>
-                                                        <label className={`border border-dashed p-3 rounded-xl cursor-pointer transition flex-1 flex justify-center items-center gap-2 text-sm font-bold ${pmForm.pdf ? 'bg-orange-50 text-orange-700 border-orange-300' : 'bg-gray-50 hover:bg-gray-100 text-gray-600'}`}>
-                                                            <Icon path={Icons.File} size={18}/> {pmForm.pdf ? 'แนบ PDF แล้ว (เปลี่ยน)' : '+ แนบ PDF'}
-                                                            <input type="file" className="hidden" accept="application/pdf" onChange={e => handlePmFile(e, 'pdf')} />
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className="flex gap-2">
-                                                <button onClick={savePm} disabled={pmLoading} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition flex-1">บันทึก</button>
-                                                {isEditingPm && <button onClick={() => { setIsEditingPm(false); setPmForm(initialPmState); }} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-300 transition">ยกเลิก</button>}
-                                            </div>
-                                        </div>
-                                        
-                                        {pmLoading ? <div className="text-center py-10 text-gray-400 animate-pulse">กำลังโหลดตารางงาน...</div> : (
-                                        <div className="space-y-3">
-                                            {pmList.length === 0 && <div className="text-center text-gray-400 py-10">ยังไม่มีตารางงาน</div>}
-                                            {pmList.map((pm, i) => (
-                                                <div key={i} className="bg-white border border-gray-100 p-4 rounded-xl flex justify-between items-center hover:shadow-md transition group">
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-sm font-bold">{pm.planDate}</span>
-                                                            <span className={`text-xs px-2 py-0.5 rounded border font-bold ${pm.status==='ดำเนินการแล้ว'?'bg-green-50 text-green-600 border-green-200':'bg-gray-50 text-gray-500 border-gray-200'}`}>{pm.status}</span>
-                                                        </div>
-                                                        <div className="font-bold text-gray-800">{pm.topic}</div>
-                                                        <div className="text-xs text-gray-500 mt-1 flex gap-2">
-                                                            <span>{pm.note}</span>
-                                                            {pm.pmType === 'ภายนอก' && <span className="text-blue-500 font-bold bg-blue-50 px-1 rounded">🔧 {pm.pmVendorName}</span>}
-                                                        </div>
-                                                        
-                                                        {(pm.image || pm.pdf) && (
-                                                            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-                                                                {pm.image && <button onClick={(e) => { e.stopPropagation(); openImagePopup(pm.image); }} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.Image} size={14}/> ดูรูปภาพ</button>}
-                                                                {pm.pdf && <a href={pm.pdf} target="_blank" onClick={e => e.stopPropagation()} className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.File} size={14}/> เปิด PDF</a>}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex gap-2 opacity-100 md:opacity-50 md:group-hover:opacity-100 transition">
-                                                        <button onClick={() => { setPmForm(pm); setIsEditingPm(true); }} className="p-2 hover:bg-gray-100 rounded text-blue-500"><Icon path={Icons.Wrench} size={16}/></button>
-                                                        <button onClick={() => deletePm(pm.schId)} className="p-2 hover:bg-red-50 rounded text-red-500"><Icon path={Icons.Trash} size={16}/></button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        )}
-                                    </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {showImageModal && popupImageSrc && (
-                        <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4 cursor-pointer modal-enter" onClick={() => setShowImageModal(false)}>
-                            <div className="relative max-w-4xl max-h-screen">
-                                <button onClick={() => setShowImageModal(false)} className="absolute -top-10 right-0 text-white hover:text-gray-300"><Icon path={Icons.Close} size={32}/></button>
-                                <img src={popupImageSrc} className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain" onClick={(e) => e.stopPropagation()}/>
-                            </div>
-                        </div>
-                    )}
-
-                    {selLog && (
-                        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm fade-in">
-                            <div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-                                <button onClick={() => setSelLog(null)} className="absolute top-4 right-4 bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><Icon path={Icons.Close} size={20}/></button>
-                                <div className="mb-6 border-b pb-4"><div className="text-gray-500 text-sm font-medium">{selLog.date}</div><h3 className="font-bold text-2xl text-gray-900 mt-1">{selLog.type}</h3></div>
-                                <div className="space-y-6">
-                                    <div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">อาการ / รายละเอียด</span><div className="bg-gray-50 p-4 rounded-xl text-gray-700 border border-gray-100 font-medium">{selLog.description}</div></div>
-                                    <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">รายการอะไหล่</span>
-                                        <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
-                                            {selLog.parts?.map((p, i) => (
-                                                <div key={i} className="flex flex-col p-4 border-b last:border-0 border-gray-200 bg-white">
-                                                    <div className="flex justify-between items-center mb-2"><span className="font-bold text-gray-800">{p.name}</span><span className="font-mono text-gray-600 font-bold">฿{Number(p.price).toLocaleString()}</span></div>
-                                                    <div className="flex gap-2">
-                                                        {p.image && <button onClick={(e) => { e.stopPropagation(); openImagePopup(p.image); }} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.Image} size={14}/> ดูรูป</button>}
-                                                        {p.pdf && <a href={p.pdf} target="_blank" className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition flex items-center gap-1 font-bold"><Icon path={Icons.File} size={14}/> เปิด PDF</a>}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            {(!selLog.parts || selLog.parts.length === 0) && <div className="p-6 text-center text-gray-400 text-sm">ไม่มีรายการอะไหล่</div>}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex justify-between items-center pt-4 border-t border-gray-100 mb-4">
-                                    <div className="text-sm text-gray-500 font-medium">ค่าแรงช่าง ฿{Number(selLog.laborCost).toLocaleString()}</div>
-                                    <div className="text-xl font-bold text-slate-900">รวม ฿{Number(selLog.totalCost).toLocaleString()}</div>
-                                </div>
-                                
-                                <div className="flex gap-2">
-                                    <button onClick={() => {
-                                        setLog({
-                                            id: selLog.id,
-                                            date: selLog.date,
-                                            type: selLog.type,
-                                            description: selLog.description,
-                                            labor: selLog.laborCost,
-                                            parts: selLog.parts || []
-                                        });
-                                        setIsEditingLog(true);
-                                        setTab('newlog');
-                                        setSelLog(null);
-                                    }} className="flex-1 py-3 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition text-sm">✏️ แก้ไขประวัตินี้</button>
-                                    
-                                    <button onClick={() => { if (confirm('ยืนยันลบประวัตินี้?')) { postData({ action: 'delete_log', assetId: item.id, logId: selLog.id }); setSelLog(null); } }} className="flex-1 py-3 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition text-sm">🗑️ ลบรายการนี้</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        const App = () => {
-            const [view, setView] = useState('dashboard');
-            const [data, setData] = useState({ assets: [], departments: [] });
-            const [loading, setLoading] = useState(false);
-            const [selectedDept, setSelectedDept] = useState(null);
-            const [selectedAsset, setSelectedAsset] = useState(null);
-            
-            // --- State ใหม่สำหรับ Toast Notification ---
-            const [syncNotify, setSyncNotify] = useState({ show: false, status: 'idle', message: '', action: null });
-
-            useEffect(() => { 
-                if (API_URL.includes("URL_FROM")) {
-                    alert("กรุณาแก้ไขลิงก์ API_URL ในโค้ดก่อนใช้งานครับ!");
-                } else {
-                    fetchData(); 
-                }
-            }, []);
-
-            useEffect(() => {
-                if (selectedAsset && data.assets.length > 0) {
-                    const updated = data.assets.find(a => String(a.id) === String(selectedAsset.id));
-                    if (updated) setSelectedAsset(updated);
-                }
-            }, [data.assets]);
-
-            const fetchData = async () => {
-                setLoading(true);
-                try {
-                    const res = await fetch(API_URL);
-                    const json = await res.json();
-                    if(json.assets) setData({ assets: json.assets, departments: json.departments || [] });
-                } catch (err) { console.error("Fetch Error:", err); }
-                finally { setLoading(false); }
-            };
-
-            const postData = async (payload) => {
-                // แจ้งเตือนว่ากำลังบันทึก (โชว์แบบลอย ไม่บล็อกจอ)
-                setSyncNotify({ show: true, status: 'syncing', message: 'กำลังบันทึกข้อมูลเบื้องหลัง...' });
-
-                try {
-                    await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
-                    
-                    // เปลี่ยนหน้าถ้าเป็นการลบหรือเซฟ asset
-                    if(payload.action === 'save_asset' || payload.action === 'delete_asset') { 
-                        setView('assets'); 
-                    }
-
-                    // เมื่อเสร็จแล้ว โชว์ให้กด Update
-                    setSyncNotify({
-                        show: true,
-                        status: 'success',
-                        message: 'บันทึกสำเร็จเรียบร้อย!',
-                        action: () => {
-                            fetchData(); // ให้ไปดึงข้อมูลใหม่เมื่อกดอัปเดต
-                            setSyncNotify({ show: false, status: 'idle', message: '', action: null });
-                        }
-                    });
-
-                } catch (err) { 
-                    setSyncNotify({ show: true, status: 'error', message: 'ผิดพลาด: ' + err.message, action: null });
-                    setTimeout(() => setSyncNotify({ show: false, status: 'idle', message: '', action: null }), 6000);
-                }
-            };
-
-            return (
-                <div className="flex h-screen w-full bg-slate-50 overflow-hidden text-gray-800">
-                    {/* บล็อกจอเฉพาะตอนที่ไม่มีข้อมูลเลยและกำลังโหลด (เปิดแอปครั้งแรก) */}
-                    {loading && data.assets.length === 0 && <LoadingOverlay text='กำลังดึงข้อมูลระบบ...'/>}
-                    
-                    {/* Notification Toast ทำงานเบื้องหลัง */}
-                    <SyncToast notify={syncNotify} setNotify={setSyncNotify} />
-                    
-                    <Sidebar setView={setView} view={view} fetchData={fetchData} />
-                    <main className="flex-1 h-full relative overflow-hidden flex flex-col bg-[#f8fafc]">
-                        {view === 'dashboard' && <DashboardView data={data} setView={setView} />}
-                        {view === 'departments' && <DepartmentView data={data} setSelectedDept={setSelectedDept} setView={setView} postData={postData} />}
-                        {view === 'assets' && <AssetListView data={data} selectedDept={selectedDept} setView={setView} setSelectedAsset={setSelectedAsset} />}
-                        {view === 'electrical' && <UtilitySystemsView data={data} type="electrical" setView={setView} setSelectedAsset={setSelectedAsset} />}
-                        {view === 'water' && <UtilitySystemsView data={data} type="water" setView={setView} setSelectedAsset={setSelectedAsset} />}
-                        {(view === 'add_asset' || view === 'edit_asset') && <AddAssetView data={data} selectedDept={selectedDept} setView={setView} postData={postData} view={view} editItem={selectedAsset} />}
-                        {view === 'detail' && <DetailAssetView item={selectedAsset} setView={setView} postData={postData} />}
-                        {view === 'pm_dashboard' && <PmDashboardView assets={data.assets} setSelectedAsset={setSelectedAsset} setView={setView} />}
-                    </main>
-                    <MobileNav setView={setView} view={view} fetchData={fetchData} />
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
 </body>
 </html>
