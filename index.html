@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MTA Asset Pro</title>
     
-    <script src="./tailwind.js"></script>
+    <!-- แก้ไขลิงก์ Tailwind เป็น CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -558,6 +560,7 @@ const QrModal = ({ asset, onClose }) => {
         }
     }, []);
 
+    // ===== จุดที่ 2: แก้ไขการหลีกหนี \/script เพื่อให้รันใน Babel ได้ =====
     const handlePrint = () => {
         const w = window.open('', '_blank');
         const qrHtml = qrRef.current?.innerHTML || '';
@@ -760,7 +763,7 @@ const AiAssistant = ({ data }) => {
             const reply = j.content?.[0]?.text || 'ขออภัย เกิดข้อผิดพลาดครับ';
             setMessages(prev => [...prev, {role:'bot',text:reply}]);
         } catch(e) {
-            setMessages(prev => [...prev, {role:'bot',text:'⚠️ ไม่สามารถเชื่อมต่อ AI ได้ กรุณาตรวจสอบการเชื่อมต่อ'}]);
+            setMessages(prev => [...prev, {role:'bot',text:'⚠️ ไม่สามารถเชื่อมต่อ AI ได้ กรุณาตรวจสอบการเชื่อมต่อ และให้แน่ใจว่า API ของคุณทำงานถูกต้อง'}]);
         }
         setLoading(false);
     };
