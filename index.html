@@ -64,7 +64,7 @@
         .fade-up { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards; opacity: 0; }
         .fade-in { animation: fadeIn 0.3s ease forwards; }
         .slide-in { animation: slideIn 0.3s ease forwards; }
-        .modal-in { animation: modalIn 0.3s cubic-bezier(0.16,1,0.3,1) forwards; }
+        .modal-in { animation: modalIn 0.3s cubic-bezier(0.16,1,0.3,1); }
         .spin { animation: spin 1s linear infinite; }
         .pulse-dot { animation: ping 1.5s ease-in-out infinite; }
 
@@ -195,6 +195,20 @@
             animation: shimmer 2s infinite;
             border-radius: 8px;
         }
+
+        /* View mode toggle */
+        .viewmode-btn {
+            display:flex; align-items:center; justify-content:center;
+            width:36px; height:36px; border-radius:8px;
+            color: var(--text3); border:1px solid var(--border); background:transparent;
+            cursor:pointer; transition: all 0.2s;
+        }
+        .viewmode-btn:hover { background: var(--surface2); color: var(--text); }
+        .viewmode-btn.active { background: rgba(79,142,247,0.14); color: var(--accent); border-color: var(--accent); }
+
+        /* Asset list row (list view) */
+        .asset-row { display:flex; align-items:center; gap:14px; padding:10px 14px; cursor:pointer; }
+        .asset-row:hover { border-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -206,7 +220,7 @@ const { useState, useEffect, useRef, useMemo, useCallback } = React;
 // ====== CONFIG ======
 const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
 const CLAUDE_API = "https://api.anthropic.com/v1/messages";
-const APP_VERSION = "2.0 Pro";
+const APP_VERSION = "2.1 Pro";
 
 // ====== ICONS ======
 const I = ({ d, size=20, cls="" }) => (
@@ -242,6 +256,9 @@ const ic = {
     eye: <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
     trend: <><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>,
     info: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>,
+    gridLarge: <><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></>,
+    gridSmall: <><rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/></>,
+    list: <><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>,
 };
 
 // ====== UTILS ======
@@ -273,9 +290,28 @@ const getPmCategory = (dateStr) => {
 const fmtNum = (n) => Number(n || 0).toLocaleString('th-TH');
 const fmtDate = (str) => str ? new Date(str).toLocaleDateString('th-TH', {day:'numeric',month:'short',year:'2-digit'}) : '-';
 
-// ====== COMPONENTS ======
-
+// ====== SHARED PRESENTATIONAL COMPONENTS (top-level!) ======
+// NOTE: These must live OUTSIDE any component function. If declared inside
+// a parent component's body, React treats them as a brand-new component
+// type on every re-render (since the function reference changes), which
+// forces React to unmount + remount the whole subtree -- including any
+// <input> inside it. That's what caused the "type one character, lose
+// focus" bug in the add/edit asset form.
 const Loader = ({ size=24 }) => <I d={ic.loader} size={size} cls="spin" />;
+
+const Section = ({children, title}) => (
+    <div className="card-static" style={{padding:20,marginBottom:16}}>
+        {title && <div style={{fontWeight:700,marginBottom:16,fontSize:15}}>{title}</div>}
+        {children}
+    </div>
+);
+
+const Field = ({label,value}) => (
+    <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+        <span style={{color:'var(--text2)',fontSize:13}}>{label}</span>
+        <span style={{fontWeight:600,fontSize:13,maxWidth:'60%',textAlign:'right'}}>{value||'-'}</span>
+    </div>
+);
 
 const Toast = ({ notify, setNotify }) => {
     if (!notify.show) return null;
@@ -560,7 +596,6 @@ const QrModal = ({ asset, onClose }) => {
         }
     }, []);
 
-    // ===== จุดที่ 2: แก้ไขการหลีกหนี \/script เพื่อให้รันใน Babel ได้ =====
     const handlePrint = () => {
         const w = window.open('', '_blank');
         const qrHtml = qrRef.current?.innerHTML || '';
@@ -600,7 +635,6 @@ const ExecutiveDashboard = ({ data }) => {
     const repairing = assets.filter(a => a.status === 'ส่งซ่อม').length;
     const noPm = assets.filter(a => !a.nextPmDate).length;
 
-    // Cost by dept
     const deptCost = {};
     assets.forEach(a => {
         const cost = (a.history||[]).reduce((s,h) => s + Number(h.totalCost||0), 0);
@@ -610,7 +644,6 @@ const ExecutiveDashboard = ({ data }) => {
     const deptCostArr = Object.entries(deptCost).sort((a,b) => b[1]-a[1]).slice(0,6);
     const maxCost = Math.max(...deptCostArr.map(d=>d[1]), 1);
 
-    // Most repaired
     const repairCount = assets.map(a => ({
         name: a.name, id: a.id,
         count: (a.history||[]).length,
@@ -646,7 +679,6 @@ const ExecutiveDashboard = ({ data }) => {
             </div>
 
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:24}} className="stagger">
-                {/* Cost by dept */}
                 <div className="card-static" style={{padding:20}}>
                     <h3 style={{fontWeight:700,marginBottom:16,display:'flex',alignItems:'center',gap:8}}><I d={ic.chart} size={16}/> ค่าซ่อมตามแผนก</h3>
                     {deptCostArr.length === 0 && <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:20}}>ยังไม่มีข้อมูลค่าซ่อม</div>}
@@ -665,7 +697,6 @@ const ExecutiveDashboard = ({ data }) => {
                     </div>
                 </div>
 
-                {/* Most repaired */}
                 <div className="card-static" style={{padding:20}}>
                     <h3 style={{fontWeight:700,marginBottom:16,display:'flex',alignItems:'center',gap:8}}><I d={ic.trend} size={16}/> ซ่อมบ่อยที่สุด</h3>
                     {repairCount.filter(r=>r.count>0).length === 0 && <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:20}}>ยังไม่มีประวัติซ่อม</div>}
@@ -687,7 +718,6 @@ const ExecutiveDashboard = ({ data }) => {
                 </div>
             </div>
 
-            {/* PM Compliance Gauge */}
             <div className="card-static" style={{padding:20,textAlign:'center'}}>
                 <h3 style={{fontWeight:700,marginBottom:16}}>สรุปสถานะ PM ทั้งระบบ</h3>
                 <div style={{display:'flex',justifyContent:'center',gap:32,flexWrap:'wrap'}}>
@@ -915,41 +945,117 @@ const DeptView = ({ data, setSelectedDept, setView, postData }) => {
     );
 };
 
-// ====== ASSET LIST ======
+// ====== ASSET LIST (with multiple view modes) ======
+// View modes: 'large' (big cards w/ photo), 'compact' (small grid cards), 'list' (dense text rows)
+const ASSET_VIEW_MODE_KEY_DEFAULT = 'large';
+
 const AssetList = ({ data, selectedDept, setView, setSelectedAsset }) => {
     const [q, setQ] = useState('');
+    const [viewMode, setViewMode] = useState(ASSET_VIEW_MODE_KEY_DEFAULT); // 'large' | 'compact' | 'list'
+
     const filtered = data.assets.filter(a => a.location===selectedDept && (
         String(a.name||'').toLowerCase().includes(q.toLowerCase()) ||
         String(a.id||'').toLowerCase().includes(q.toLowerCase())
     ));
+
+    const modes = [
+        { id:'large', icon:ic.gridLarge, title:'การ์ดใหญ่ (มีรูป)' },
+        { id:'compact', icon:ic.gridSmall, title:'การ์ดเล็ก (กระชับ)' },
+        { id:'list', icon:ic.list, title:'รายการ (ไม่มีรูป)' },
+    ];
+
+    const ViewModeToggle = () => (
+        <div style={{display:'flex',gap:4,background:'var(--surface2)',padding:4,borderRadius:10,border:'1px solid var(--border)'}}>
+            {modes.map(m => (
+                <button key={m.id} className={`viewmode-btn ${viewMode===m.id?'active':''}`} title={m.title} onClick={()=>setViewMode(m.id)}>
+                    <I d={m.icon} size={17}/>
+                </button>
+            ))}
+        </div>
+    );
+
     return (
         <div style={{padding:24,height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav">
             <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:16,flexShrink:0,flexWrap:'wrap'}}>
                 <button className="btn btn-ghost" style={{padding:'8px 12px'}} onClick={()=>setView('departments')}><I d={ic.back} size={18}/></button>
                 <h2 style={{fontSize:20,fontWeight:800,flex:1}}>{selectedDept}</h2>
+                <ViewModeToggle/>
                 <div style={{position:'relative'}}>
                     <I d={ic.search} size={16} cls="" style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text3)'}}/>
                     <input className="inp" value={q} onChange={e=>setQ(e.target.value)} placeholder="ค้นหา..." style={{paddingLeft:36,width:200}}/>
                 </div>
                 <button className="btn btn-primary" onClick={()=>setView('add_asset')}><I d={ic.plus} size={18}/> เพิ่ม</button>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:14,overflowY:'auto',flex:1,paddingBottom:16}}>
-                {filtered.map((item,i) => (
-                    <div key={item.id} className="card" style={{cursor:'pointer',overflow:'hidden',display:'flex',flexDirection:'column',animationDelay:`${i*30}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
-                        {!item.nextPmDate && <div style={{background:'rgba(239,68,68,0.9)',color:'white',fontSize:10,fontWeight:700,padding:'4px 10px',display:'flex',alignItems:'center',gap:4}}><I d={ic.alert} size={11}/> ไม่มีแผน PM</div>}
-                        <div style={{height:160,background:'var(--surface2)',position:'relative',overflow:'hidden'}}>
-                            {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={40}/></div>}
-                            <div style={{position:'absolute',bottom:8,right:8}}>
-                                <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`} style={{fontSize:10}}>{item.status}</span>
+
+            <div style={{fontSize:12,color:'var(--text3)',marginBottom:10,flexShrink:0}}>
+                {filtered.length} เครื่อง
+            </div>
+
+            {/* LARGE grid: big photo cards (original look, tuned) */}
+            {viewMode==='large' && (
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:14,overflowY:'auto',flex:1,paddingBottom:16}}>
+                    {filtered.map((item,i) => (
+                        <div key={item.id} className="card" style={{cursor:'pointer',overflow:'hidden',display:'flex',flexDirection:'column',animationDelay:`${i*30}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
+                            {!item.nextPmDate && <div style={{background:'rgba(239,68,68,0.9)',color:'white',fontSize:10,fontWeight:700,padding:'4px 10px',display:'flex',alignItems:'center',gap:4}}><I d={ic.alert} size={11}/> ไม่มีแผน PM</div>}
+                            <div style={{aspectRatio:'4/3',background:'var(--surface2)',position:'relative',overflow:'hidden'}}>
+                                {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={36}/></div>}
+                                <div style={{position:'absolute',bottom:8,right:8}}>
+                                    <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`} style={{fontSize:10}}>{item.status}</span>
+                                </div>
+                            </div>
+                            <div style={{padding:14,flex:1}}>
+                                <div style={{fontWeight:700,fontSize:14,marginBottom:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</div>
+                                <div style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)'}}>{item.id}</div>
                             </div>
                         </div>
-                        <div style={{padding:14,flex:1}}>
-                            <div style={{fontWeight:700,fontSize:14,marginBottom:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</div>
-                            <div style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)'}}>{item.id}</div>
+                    ))}
+                </div>
+            )}
+
+            {/* COMPACT grid: small square thumbnail + text, many per row */}
+            {viewMode==='compact' && (
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:10,overflowY:'auto',flex:1,paddingBottom:16}}>
+                    {filtered.map((item,i) => (
+                        <div key={item.id} className="card" style={{cursor:'pointer',overflow:'hidden',padding:10,display:'flex',flexDirection:'column',gap:8,animationDelay:`${i*20}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
+                            <div style={{width:'100%',aspectRatio:'1',background:'var(--surface2)',borderRadius:8,position:'relative',overflow:'hidden',flexShrink:0}}>
+                                {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={20}/></div>}
+                                {!item.nextPmDate && <div style={{position:'absolute',top:4,left:4,background:'rgba(239,68,68,0.9)',borderRadius:'50%',width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center'}}><I d={ic.alert} size={10} cls="" style={{color:'white'}}/></div>}
+                            </div>
+                            <div style={{minWidth:0}}>
+                                <div style={{fontWeight:700,fontSize:12,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</div>
+                                <div style={{fontSize:10,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.id}</div>
+                                <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`} style={{fontSize:9,marginTop:4,padding:'1px 7px'}}>{item.status}</span>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
+
+            {/* LIST view: dense rows, no photos, best for scanning many items */}
+            {viewMode==='list' && (
+                <div style={{overflowY:'auto',flex:1,paddingBottom:16,display:'flex',flexDirection:'column',gap:6}}>
+                    {filtered.map((item,i) => (
+                        <div key={item.id} className="card asset-row" style={{animationDelay:`${i*15}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
+                            <div style={{width:8,height:8,borderRadius:'50%',background:item.status==='ปกติ'?'var(--green)':'var(--orange)',flexShrink:0}}/>
+                            <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontWeight:700,fontSize:14,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</div>
+                            </div>
+                            <div style={{fontSize:12,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)',flexShrink:0,width:150}}>{item.id}</div>
+                            {item.model && <div style={{fontSize:12,color:'var(--text3)',flexShrink:0,width:120,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} className="hidden md:block">{item.model}</div>}
+                            {!item.nextPmDate && <span className="badge badge-red" style={{flexShrink:0,fontSize:10}}><I d={ic.alert} size={10}/> ไม่มี PM</span>}
+                            <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`} style={{flexShrink:0}}>{item.status}</span>
+                            <I d={ic.back} size={16} cls="" style={{color:'var(--text3)',transform:'rotate(180deg)',flexShrink:0}}/>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {filtered.length === 0 && (
+                <div style={{textAlign:'center',padding:60,color:'var(--text3)'}}>
+                    <I d={ic.building} size={40} cls="" style={{opacity:0.2,marginBottom:12}}/>
+                    <div>ไม่พบอุปกรณ์ในแผนกนี้</div>
+                </div>
+            )}
         </div>
     );
 };
@@ -978,13 +1084,6 @@ const AddAssetView = ({ data, selectedDept, setView, postData, view, editItem })
             }
         }
     }, [form.location, isEdit]);
-
-    const Section = ({children, title}) => (
-        <div className="card-static" style={{padding:20,marginBottom:16}}>
-            {title && <div style={{fontWeight:700,marginBottom:16,fontSize:15}}>{title}</div>}
-            {children}
-        </div>
-    );
 
     return (
         <div style={{padding:24,maxWidth:800,margin:'0 auto',height:'100%',overflowY:'auto'}} className="fade-up pb-nav">
@@ -1110,13 +1209,6 @@ const DetailView = ({ item, setView, postData }) => {
         if(e.target.files[0]){setFileLoading(true);try{const b=await fileToBase64(e.target.files[0]);if(b)setPart(p=>({...p,[k]:b}));}catch(e){}finally{setFileLoading(false);}};
     };
 
-    const Field = ({label,value}) => (
-        <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
-            <span style={{color:'var(--text2)',fontSize:13}}>{label}</span>
-            <span style={{fontWeight:600,fontSize:13,maxWidth:'60%',textAlign:'right'}}>{value||'-'}</span>
-        </div>
-    );
-
     return (
         <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-up pb-nav">
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexShrink:0,flexWrap:'wrap'}}>
@@ -1132,7 +1224,6 @@ const DetailView = ({ item, setView, postData }) => {
             </div>
 
             <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
-                {/* Left panel */}
                 <div style={{width:'100%',maxWidth:280,flexShrink:0,display:'flex',flexDirection:'column',gap:12}}>
                     <div className="card-static" style={{overflow:'hidden'}}>
                         <div style={{height:200,background:'var(--surface2)',cursor:'pointer',position:'relative'}} onClick={()=>item.image&&setImgPop(item.image)}>
@@ -1167,7 +1258,6 @@ const DetailView = ({ item, setView, postData }) => {
                     )}
                 </div>
 
-                {/* Right panel */}
                 <div style={{flex:1,minWidth:280}}>
                     <div className="card-static" style={{overflow:'hidden'}}>
                         <div style={{display:'flex',borderBottom:'1px solid var(--border)',overflowX:'auto'}}>
@@ -1410,7 +1500,6 @@ const App = () => {
         }
     }, [data.assets]);
 
-    // Check URL for QR param
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const assetId = params.get('asset');
@@ -1443,11 +1532,8 @@ const App = () => {
     };
 
     const pmOverdue = useMemo(() => {
-        // We'll just use a rough estimate from assets for the nav badge
-        return 0; // Would need PM data loaded to calculate
+        return 0;
     }, [data]);
-
-    const mainProps = { data, setView, postData, selectedDept, setSelectedDept, selectedAsset, setSelectedAsset };
 
     if(loading && data.assets.length===0) {
         return (
