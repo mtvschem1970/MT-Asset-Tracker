@@ -18,19 +18,19 @@
 
     <style>
         :root {
-            --bg: #0f1117;
-            --surface: #1a1d27;
-            --surface2: #22263a;
-            --border: #2e3348;
-            --accent: #4f8ef7;
-            --accent2: #7c3aed;
-            --green: #22c55e;
-            --orange: #f97316;
-            --red: #ef4444;
-            --yellow: #eab308;
-            --text: #e8eaf0;
-            --text2: #8b90a7;
-            --text3: #4a4f6a;
+            --bg: #f2f3f5;
+            --surface: #ffffff;
+            --surface2: #eef0f4;
+            --border: #d9dce3;
+            --accent: #1e3a5f;
+            --accent2: #14283f;
+            --green: #146c43;
+            --orange: #b5651d;
+            --red: #a4262c;
+            --yellow: #8a6d1a;
+            --text: #1c2230;
+            --text2: #5a6273;
+            --text3: #9aa1b0;
         }
 
         * { box-sizing: border-box; }
@@ -80,85 +80,85 @@
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 8px;
             transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
         }
-        .card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 32px rgba(79,142,247,0.08); }
-        .card-static { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+        .card:hover { border-color: var(--accent); box-shadow: 0 4px 14px rgba(28,34,48,0.08); }
+        .card-static { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
 
         /* Inputs */
         .inp {
             width: 100%; padding: 10px 14px;
             background: var(--surface2); border: 1px solid var(--border);
-            border-radius: 10px; color: var(--text);
+            border-radius: 6px; color: var(--text);
             font-family: 'Sarabun', sans-serif; font-size: 14px;
             outline: none; transition: all 0.2s;
         }
-        .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,142,247,0.12); }
+        .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,58,95,0.10); }
         .inp:disabled { opacity: 0.4; cursor: not-allowed; }
         .inp::placeholder { color: var(--text3); }
 
         /* Buttons */
-        .btn { padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; transition: all 0.2s; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn { padding: 9px 18px; border-radius: 6px; font-weight: 600; font-size: 14px; transition: all 0.2s; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
         .btn:active { transform: scale(0.97); }
         .btn-primary { background: var(--accent); color: white; }
-        .btn-primary:hover { background: #3d7ef0; }
+        .btn-primary:hover { background: #16324f; }
         .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
         .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--text3); }
-        .btn-danger { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-        .btn-danger:hover { background: rgba(239,68,68,0.2); }
-        .btn-success { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+        .btn-danger { background: rgba(164,38,44,0.1); color: var(--red); border: 1px solid rgba(164,38,44,0.2); }
+        .btn-danger:hover { background: rgba(164,38,44,0.2); }
+        .btn-success { background: rgba(20,108,67,0.1); color: var(--green); border: 1px solid rgba(20,108,67,0.2); }
 
         /* Nav */
         .nav-item { 
             display: flex; align-items: center; gap: 12px; 
-            padding: 10px 14px; border-radius: 10px; 
+            padding: 10px 14px; border-radius: 6px; 
             color: var(--text2); font-weight: 500; font-size: 14px;
             transition: all 0.2s; cursor: pointer; position: relative;
         }
         .nav-item:hover { background: var(--surface2); color: var(--text); }
-        .nav-item.active { background: rgba(79,142,247,0.12); color: var(--accent); }
+        .nav-item.active { background: rgba(30,58,95,0.12); color: var(--accent); }
         .nav-item.active::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
 
         /* Status badges */
-        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-        .badge-green { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
-        .badge-red { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-        .badge-orange { background: rgba(249,115,22,0.12); color: var(--orange); border: 1px solid rgba(249,115,22,0.2); }
-        .badge-blue { background: rgba(79,142,247,0.12); color: var(--accent); border: 1px solid rgba(79,142,247,0.2); }
-        .badge-yellow { background: rgba(234,179,8,0.12); color: var(--yellow); border: 1px solid rgba(234,179,8,0.2); }
-        .badge-gray { background: rgba(139,144,167,0.12); color: var(--text2); border: 1px solid var(--border); }
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.2px; }
+        .badge-green { background: rgba(20,108,67,0.12); color: var(--green); border: 1px solid rgba(20,108,67,0.2); }
+        .badge-red { background: rgba(164,38,44,0.12); color: var(--red); border: 1px solid rgba(164,38,44,0.2); }
+        .badge-orange { background: rgba(181,101,29,0.12); color: var(--orange); border: 1px solid rgba(181,101,29,0.2); }
+        .badge-blue { background: rgba(30,58,95,0.12); color: var(--accent); border: 1px solid rgba(30,58,95,0.2); }
+        .badge-yellow { background: rgba(138,109,26,0.12); color: var(--yellow); border: 1px solid rgba(138,109,26,0.2); }
+        .badge-gray { background: rgba(90,98,115,0.12); color: var(--text2); border: 1px solid var(--border); }
 
         /* Mobile nav */
         .mobile-nav-btn { 
             display: flex; flex-direction: column; align-items: center; gap: 3px;
             font-size: 10px; color: var(--text3); padding: 8px 12px; min-width: 56px;
-            transition: all 0.2s; cursor: pointer; border-radius: 10px;
+            transition: all 0.2s; cursor: pointer; border-radius: 6px;
         }
-        .mobile-nav-btn.active { color: var(--accent); background: rgba(79,142,247,0.08); }
+        .mobile-nav-btn.active { color: var(--accent); background: rgba(30,58,95,0.08); }
 
         /* Glow effects */
-        .glow-blue { box-shadow: 0 0 20px rgba(79,142,247,0.3); }
-        .glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.3); }
-        .glow-red { box-shadow: 0 0 20px rgba(239,68,68,0.2); }
+        .glow-blue { box-shadow: 0 0 20px rgba(30,58,95,0.3); }
+        .glow-green { box-shadow: 0 0 20px rgba(20,108,67,0.3); }
+        .glow-red { box-shadow: 0 0 20px rgba(164,38,44,0.2); }
 
         /* Grid pattern bg */
         .grid-bg {
             background-image: 
-                linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+                linear-gradient(rgba(30,58,95,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30,58,95,0.03) 1px, transparent 1px);
             background-size: 40px 40px;
         }
 
         /* Kanban */
-        .kanban-col { min-width: 300px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
-        .kanban-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; transition: all 0.2s; cursor: pointer; }
-        .kanban-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .kanban-col { min-width: 300px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+        .kanban-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 14px; transition: all 0.2s; cursor: pointer; }
+        .kanban-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(28,34,48,0.08); }
 
         /* AI Chat */
-        .ai-msg { padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.7; max-width: 85%; }
+        .ai-msg { padding: 12px 16px; border-radius: 8px; font-size: 14px; line-height: 1.7; max-width: 85%; }
         .ai-msg.bot { background: var(--surface2); border: 1px solid var(--border); align-self: flex-start; }
-        .ai-msg.user { background: rgba(79,142,247,0.15); border: 1px solid rgba(79,142,247,0.2); align-self: flex-end; }
+        .ai-msg.user { background: rgba(30,58,95,0.06); border: 1px solid rgba(30,58,95,0.18); align-self: flex-end; }
 
         /* Chart bars */
         .bar-fill { transition: height 0.8s cubic-bezier(0.16,1,0.3,1); }
@@ -167,8 +167,8 @@
         .toast { 
             position: fixed; bottom: 90px; right: 20px; z-index: 9999;
             background: var(--surface); border: 1px solid var(--border);
-            border-radius: 14px; padding: 14px 18px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            border-radius: 8px; padding: 14px 18px;
+            box-shadow: 0 8px 28px rgba(28,34,48,0.14);
             display: flex; align-items: center; gap: 12px; min-width: 280px;
             animation: modalIn 0.3s cubic-bezier(0.16,1,0.3,1);
         }
@@ -204,7 +204,7 @@
             cursor:pointer; transition: all 0.2s;
         }
         .viewmode-btn:hover { background: var(--surface2); color: var(--text); }
-        .viewmode-btn.active { background: rgba(79,142,247,0.14); color: var(--accent); border-color: var(--accent); }
+        .viewmode-btn.active { background: rgba(30,58,95,0.14); color: var(--accent); border-color: var(--accent); }
 
         /* Asset list row (list view) */
         .asset-row { display:flex; align-items:center; gap:14px; padding:10px 14px; cursor:pointer; }
@@ -351,7 +351,7 @@ const Sidebar = ({ view, setView, fetchData, pmOverdue }) => {
     return (
         <div style={{width:260,background:'var(--surface)',borderRight:'1px solid var(--border)',height:'100%',display:'flex',flexDirection:'column',padding:'24px 16px',flexShrink:0}} className="hidden md:flex">
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:32,padding:'0 4px'}}>
-                <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:10,borderRadius:12,display:'flex'}}>
+                <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:10,borderRadius:8,display:'flex'}}>
                     <I d={ic.wrench} size={22} cls="" style={{color:'white'}}/>
                 </div>
                 <div>
@@ -364,7 +364,7 @@ const Sidebar = ({ view, setView, fetchData, pmOverdue }) => {
                     <div key={n.id} className={`nav-item ${['departments','assets','detail','add_asset','edit_asset'].includes(view) && n.id==='departments' ? 'active' : view===n.id ? 'active' : ''}`} onClick={() => setView(n.id)}>
                         <I d={n.icon} size={18}/>
                         <span style={{flex:1}}>{n.label}</span>
-                        {n.badge && <span style={{background:'var(--red)',color:'white',fontSize:10,fontWeight:800,padding:'2px 7px',borderRadius:20}}>{n.badge}</span>}
+                        {n.badge && <span style={{background:'var(--red)',color:'white',fontSize:10,fontWeight:800,padding:'2px 7px',borderRadius:6}}>{n.badge}</span>}
                     </div>
                 ))}
             </nav>
@@ -390,7 +390,7 @@ const MobileNav = ({ view, setView, pmOverdue }) => {
                 <button key={n.id} className={`mobile-nav-btn ${(['departments','assets','detail','add_asset','edit_asset'].includes(view)&&n.id==='departments')||view===n.id?'active':''}`} onClick={()=>setView(n.id)} style={{position:'relative'}}>
                     <I d={n.icon} size={22}/>
                     <span>{n.label}</span>
-                    {n.badge > 0 && <span style={{position:'absolute',top:4,right:8,background:'var(--red)',color:'white',fontSize:9,fontWeight:800,padding:'1px 5px',borderRadius:20}}>{n.badge}</span>}
+                    {n.badge > 0 && <span style={{position:'absolute',top:4,right:8,background:'var(--red)',color:'white',fontSize:9,fontWeight:800,padding:'1px 5px',borderRadius:6}}>{n.badge}</span>}
                 </button>
             ))}
         </div>
@@ -423,7 +423,7 @@ const GlobalSearch = ({ data, setView, setSelectedAsset }) => {
         if (!query || !text) return text;
         const idx = String(text).toLowerCase().indexOf(query.toLowerCase());
         if (idx === -1) return text;
-        return <>{String(text).slice(0,idx)}<mark style={{background:'rgba(79,142,247,0.3)',color:'var(--accent)',borderRadius:3,padding:'0 2px'}}>{String(text).slice(idx,idx+query.length)}</mark>{String(text).slice(idx+query.length)}</>;
+        return <>{String(text).slice(0,idx)}<mark style={{background:'rgba(30,58,95,0.3)',color:'var(--accent)',borderRadius:3,padding:'0 2px'}}>{String(text).slice(idx,idx+query.length)}</mark>{String(text).slice(idx+query.length)}</>;
     };
 
     return (
@@ -447,7 +447,7 @@ const GlobalSearch = ({ data, setView, setSelectedAsset }) => {
             <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:8}}>
                 {results.map(item => (
                     <div key={item.id} className="card" style={{padding:16,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
-                        <div style={{width:56,height:56,background:'var(--surface2)',borderRadius:10,overflow:'hidden',flexShrink:0}}>
+                        <div style={{width:56,height:56,background:'var(--surface2)',borderRadius:6,overflow:'hidden',flexShrink:0}}>
                             {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={20}/></div>}
                         </div>
                         <div style={{flex:1,minWidth:0}}>
@@ -503,11 +503,11 @@ const KanbanBoard = ({ assets, setSelectedAsset, setView }) => {
     const filtered = filter === 'all' ? allPm : allPm.filter(t => t.status === filter);
 
     const cols = [
-        { id:'overdue', label:'🔴 เกินกำหนด', color:'var(--red)', bgColor:'rgba(239,68,68,0.06)', borderColor:'rgba(239,68,68,0.2)' },
-        { id:'thisWeek', label:'🟠 สัปดาห์นี้', color:'var(--orange)', bgColor:'rgba(249,115,22,0.06)', borderColor:'rgba(249,115,22,0.2)' },
-        { id:'nextWeek', label:'🔵 สัปดาห์หน้า', color:'var(--accent)', bgColor:'rgba(79,142,247,0.06)', borderColor:'rgba(79,142,247,0.2)' },
-        { id:'thisMonth', label:'🟢 เดือนนี้', color:'var(--green)', bgColor:'rgba(34,197,94,0.06)', borderColor:'rgba(34,197,94,0.2)' },
-        { id:'future', label:'⚪ อนาคต', color:'var(--text2)', bgColor:'rgba(139,144,167,0.06)', borderColor:'var(--border)' },
+        { id:'overdue', label:'🔴 เกินกำหนด', color:'var(--red)', bgColor:'rgba(164,38,44,0.06)', borderColor:'rgba(164,38,44,0.2)' },
+        { id:'thisWeek', label:'🟠 สัปดาห์นี้', color:'var(--orange)', bgColor:'rgba(181,101,29,0.06)', borderColor:'rgba(181,101,29,0.2)' },
+        { id:'nextWeek', label:'🔵 สัปดาห์หน้า', color:'var(--accent)', bgColor:'rgba(30,58,95,0.06)', borderColor:'rgba(30,58,95,0.2)' },
+        { id:'thisMonth', label:'🟢 เดือนนี้', color:'var(--green)', bgColor:'rgba(20,108,67,0.06)', borderColor:'rgba(20,108,67,0.2)' },
+        { id:'future', label:'⚪ อนาคต', color:'var(--text2)', bgColor:'rgba(90,98,115,0.06)', borderColor:'var(--border)' },
     ];
 
     const getItems = (colId) => filtered.filter(t => getPmCategory(t.planDate) === colId);
@@ -546,7 +546,7 @@ const KanbanBoard = ({ assets, setSelectedAsset, setView }) => {
                             <div key={col.id} className="kanban-col" style={{flexShrink:0,background:col.bgColor,borderColor:col.borderColor,display:'flex',flexDirection:'column',maxHeight:'100%'}}>
                                 <div style={{padding:'14px 16px',borderBottom:`1px solid ${col.borderColor}`,display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
                                     <span style={{fontWeight:700,fontSize:13,color:col.color}}>{col.label}</span>
-                                    <span style={{background:col.color+'22',color:col.color,fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:20}}>{items.length}</span>
+                                    <span style={{background:col.color+'22',color:col.color,fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:6}}>{items.length}</span>
                                 </div>
                                 <div style={{overflowY:'auto',padding:12,display:'flex',flexDirection:'column',gap:8,flex:1}}>
                                     {items.length === 0 && <div style={{textAlign:'center',padding:20,color:'var(--text3)',fontSize:12}}>ไม่มีงาน</div>}
@@ -614,7 +614,7 @@ const QrModal = ({ asset, onClose }) => {
                     <h3 style={{fontWeight:800,fontSize:16,display:'flex',alignItems:'center',gap:8}}><I d={ic.qr} size={18}/> QR Code</h3>
                     <button onClick={onClose} style={{color:'var(--text3)'}}><I d={ic.x} size={20}/></button>
                 </div>
-                <div style={{background:'white',padding:16,borderRadius:12,display:'inline-block',marginBottom:16}}>
+                <div style={{background:'white',padding:16,borderRadius:8,display:'inline-block',marginBottom:16}}>
                     <div ref={qrRef}/>
                 </div>
                 <div style={{fontWeight:700,marginBottom:4}}>{asset.name}</div>
@@ -656,7 +656,7 @@ const ExecutiveDashboard = ({ data }) => {
     const StatCard = ({label, value, sub, color='var(--accent)', icon}) => (
         <div className="card-static fade-up" style={{padding:20}}>
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
-                <div style={{background:color+'18',color,padding:10,borderRadius:10}}>{icon}</div>
+                <div style={{background:color+'18',color,padding:10,borderRadius:6}}>{icon}</div>
                 <div style={{color:'var(--text3)',fontSize:12,fontWeight:600}}>{label}</div>
             </div>
             <div style={{fontSize:28,fontWeight:800,color}}>{value}</div>
@@ -702,7 +702,7 @@ const ExecutiveDashboard = ({ data }) => {
                     {repairCount.filter(r=>r.count>0).length === 0 && <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:20}}>ยังไม่มีประวัติซ่อม</div>}
                     <div style={{display:'flex',flexDirection:'column',gap:8}}>
                         {repairCount.filter(r=>r.count>0).map((r,i) => (
-                            <div key={r.id} style={{display:'flex',gap:12,alignItems:'center',padding:'8px 10px',background:'var(--surface2)',borderRadius:10}}>
+                            <div key={r.id} style={{display:'flex',gap:12,alignItems:'center',padding:'8px 10px',background:'var(--surface2)',borderRadius:6}}>
                                 <div style={{fontWeight:800,fontSize:18,color:'var(--text3)',width:24,textAlign:'center'}}>{i+1}</div>
                                 <div style={{flex:1,minWidth:0}}>
                                     <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.name}</div>
@@ -809,7 +809,7 @@ const AiAssistant = ({ data }) => {
         <div style={{height:'100%',display:'flex',flexDirection:'column',maxWidth:800,margin:'0 auto',padding:24,paddingBottom:0}} className="fade-up">
             <div style={{marginBottom:16,flexShrink:0}}>
                 <h2 style={{fontSize:22,fontWeight:800,display:'flex',alignItems:'center',gap:10}}>
-                    <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:8,borderRadius:10}}><I d={ic.bot} size={20}/></div>
+                    <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:8,borderRadius:6}}><I d={ic.bot} size={20}/></div>
                     AI Maintenance Assistant
                 </h2>
                 <p style={{fontSize:13,color:'var(--text2)',marginTop:4}}>วิเคราะห์อุปกรณ์และแนะนำการบำรุงรักษา ด้วย Claude AI</p>
@@ -876,7 +876,7 @@ const Dashboard = ({ data, setView }) => {
                 {stats.map((s,i) => (
                     <div key={i} className="card" style={{padding:20,cursor:s.action?'pointer':'default',animationDelay:`${i*60}ms`}} onClick={s.action}>
                         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:16}}>
-                            <div style={{background:s.color+'18',color:s.color,padding:10,borderRadius:10}}><I d={s.icon} size={20}/></div>
+                            <div style={{background:s.color+'18',color:s.color,padding:10,borderRadius:6}}><I d={s.icon} size={20}/></div>
                             {s.action && <I d={ic.back} size={16} cls="" style={{color:'var(--text3)',transform:'rotate(180deg)'}}/>}
                         </div>
                         <div style={{fontSize:30,fontWeight:800,color:s.color,marginBottom:4}}>{s.value}</div>
@@ -919,7 +919,7 @@ const DeptView = ({ data, setSelectedDept, setView, postData }) => {
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:14,overflowY:'auto',flex:1,paddingBottom:16}}>
                 {data.departments.map((d,i) => (
                     <div key={d.name} className="card" style={{padding:20,textAlign:'center',cursor:'pointer',animationDelay:`${i*40}ms`}} onClick={()=>{setSelectedDept(d.name);setView('assets');}}>
-                        <div style={{background:'rgba(79,142,247,0.1)',color:'var(--accent)',padding:12,borderRadius:12,display:'inline-flex',marginBottom:12}}><I d={ic.building} size={24}/></div>
+                        <div style={{background:'rgba(30,58,95,0.1)',color:'var(--accent)',padding:12,borderRadius:8,display:'inline-flex',marginBottom:12}}><I d={ic.building} size={24}/></div>
                         <div style={{fontWeight:700,marginBottom:4}}>{d.name}</div>
                         <div style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:'var(--text3)',marginBottom:8}}>{d.code}</div>
                         <span className="badge badge-blue">{data.assets.filter(a=>a.location===d.name).length} เครื่อง</span>
@@ -965,7 +965,7 @@ const AssetList = ({ data, selectedDept, setView, setSelectedAsset }) => {
     ];
 
     const ViewModeToggle = () => (
-        <div style={{display:'flex',gap:4,background:'var(--surface2)',padding:4,borderRadius:10,border:'1px solid var(--border)'}}>
+        <div style={{display:'flex',gap:4,background:'var(--surface2)',padding:4,borderRadius:6,border:'1px solid var(--border)'}}>
             {modes.map(m => (
                 <button key={m.id} className={`viewmode-btn ${viewMode===m.id?'active':''}`} title={m.title} onClick={()=>setViewMode(m.id)}>
                     <I d={m.icon} size={17}/>
@@ -996,7 +996,7 @@ const AssetList = ({ data, selectedDept, setView, setSelectedAsset }) => {
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:14,overflowY:'auto',flex:1,paddingBottom:16}}>
                     {filtered.map((item,i) => (
                         <div key={item.id} className="card" style={{cursor:'pointer',overflow:'hidden',display:'flex',flexDirection:'column',animationDelay:`${i*30}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
-                            {!item.nextPmDate && <div style={{background:'rgba(239,68,68,0.9)',color:'white',fontSize:10,fontWeight:700,padding:'4px 10px',display:'flex',alignItems:'center',gap:4}}><I d={ic.alert} size={11}/> ไม่มีแผน PM</div>}
+                            {!item.nextPmDate && <div style={{background:'rgba(164,38,44,0.9)',color:'white',fontSize:10,fontWeight:700,padding:'4px 10px',display:'flex',alignItems:'center',gap:4}}><I d={ic.alert} size={11}/> ไม่มีแผน PM</div>}
                             <div style={{aspectRatio:'4/3',background:'var(--surface2)',position:'relative',overflow:'hidden'}}>
                                 {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={36}/></div>}
                                 <div style={{position:'absolute',bottom:8,right:8}}>
@@ -1019,7 +1019,7 @@ const AssetList = ({ data, selectedDept, setView, setSelectedAsset }) => {
                         <div key={item.id} className="card" style={{cursor:'pointer',overflow:'hidden',padding:10,display:'flex',flexDirection:'column',gap:8,animationDelay:`${i*20}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
                             <div style={{width:'100%',aspectRatio:'1',background:'var(--surface2)',borderRadius:8,position:'relative',overflow:'hidden',flexShrink:0}}>
                                 {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={20}/></div>}
-                                {!item.nextPmDate && <div style={{position:'absolute',top:4,left:4,background:'rgba(239,68,68,0.9)',borderRadius:'50%',width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center'}}><I d={ic.alert} size={10} cls="" style={{color:'white'}}/></div>}
+                                {!item.nextPmDate && <div style={{position:'absolute',top:4,left:4,background:'rgba(164,38,44,0.9)',borderRadius:'50%',width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center'}}><I d={ic.alert} size={10} cls="" style={{color:'white'}}/></div>}
                             </div>
                             <div style={{minWidth:0}}>
                                 <div style={{fontWeight:700,fontSize:12,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</div>
@@ -1094,7 +1094,7 @@ const AddAssetView = ({ data, selectedDept, setView, postData, view, editItem })
             <Section>
                 <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
                     <div style={{width:140,flexShrink:0}}>
-                        <div style={{aspectRatio:'1',background:'var(--surface2)',border:'2px dashed var(--border)',borderRadius:12,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',position:'relative',overflow:'hidden'}}>
+                        <div style={{aspectRatio:'1',background:'var(--surface2)',border:'2px dashed var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',position:'relative',overflow:'hidden'}}>
                             {form.image ? <img src={form.image} style={{width:'100%',height:'100%',objectFit:'cover',position:'absolute',inset:0}}/> : <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,color:'var(--text3)'}}><I d={ic.img} size={28}/><span style={{fontSize:11}}>เพิ่มรูป</span></div>}
                             <input type="file" accept="image/*" style={{position:'absolute',inset:0,opacity:0,cursor:'pointer'}} onChange={e=>handleFile(e,'image')}/>
                         </div>
@@ -1241,7 +1241,7 @@ const DetailView = ({ item, setView, postData }) => {
                         </div>
                     </div>
                     {item.electrical?.uses && (
-                        <div style={{background:'rgba(234,179,8,0.08)',border:'1px solid rgba(234,179,8,0.2)',borderRadius:12,padding:16}}>
+                        <div style={{background:'rgba(138,109,26,0.08)',border:'1px solid rgba(138,109,26,0.2)',borderRadius:8,padding:16}}>
                             <div style={{color:'var(--yellow)',fontWeight:700,fontSize:13,marginBottom:10,display:'flex',alignItems:'center',gap:6}}><I d={ic.zap} size={15}/> ระบบไฟฟ้า</div>
                             <Field label="Breaker" value={item.electrical.breaker}/>
                             <Field label="Watt" value={item.electrical.watt}/>
@@ -1250,7 +1250,7 @@ const DetailView = ({ item, setView, postData }) => {
                         </div>
                     )}
                     {item.water?.uses && (
-                        <div style={{background:'rgba(79,142,247,0.08)',border:'1px solid rgba(79,142,247,0.2)',borderRadius:12,padding:16}}>
+                        <div style={{background:'rgba(30,58,95,0.08)',border:'1px solid rgba(30,58,95,0.2)',borderRadius:8,padding:16}}>
                             <div style={{color:'var(--accent)',fontWeight:700,fontSize:13,marginBottom:10,display:'flex',alignItems:'center',gap:6}}><I d={ic.drop} size={15}/> ระบบน้ำ</div>
                             <Field label="Pump" value={item.water.pump}/>
                             <Field label="Type" value={item.water.type}/>
@@ -1295,7 +1295,7 @@ const DetailView = ({ item, setView, postData }) => {
                                         <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ประเภท</label><select className="inp" value={log.type} onChange={e=>setLog({...log,type:e.target.value})}><option>ซ่อมแซม</option><option>บำรุงรักษา</option></select></div>
                                     </div>
                                     <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>รายละเอียด</label><textarea className="inp" rows={3} value={log.description} onChange={e=>setLog({...log,description:e.target.value})} placeholder="อาการ..."/></div>
-                                    <div style={{background:'var(--surface2)',borderRadius:10,padding:14}}>
+                                    <div style={{background:'var(--surface2)',borderRadius:6,padding:14}}>
                                         <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,marginBottom:10}}>เพิ่มอะไหล่</div>
                                         <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
                                             <input className="inp" value={part.name} onChange={e=>setPart({...part,name:e.target.value})} placeholder="ชื่ออะไหล่" style={{flex:2,minWidth:100}}/>
@@ -1320,7 +1320,7 @@ const DetailView = ({ item, setView, postData }) => {
                             )}
                             {tab==='pmschedule' && (
                                 <div>
-                                    <div style={{background:'rgba(79,142,247,0.08)',border:'1px solid rgba(79,142,247,0.15)',borderRadius:12,padding:16,marginBottom:16}}>
+                                    <div style={{background:'rgba(30,58,95,0.08)',border:'1px solid rgba(30,58,95,0.15)',borderRadius:8,padding:16,marginBottom:16}}>
                                         <div style={{fontWeight:700,marginBottom:12,fontSize:13,color:'var(--accent)'}}>📅 เพิ่มตารางงาน</div>
                                         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
                                             <input type="date" className="inp" value={pmForm.planDate} onChange={e=>setPmForm({...pmForm,planDate:e.target.value})}/>
@@ -1354,7 +1354,7 @@ const DetailView = ({ item, setView, postData }) => {
                                                 const diff = daysDiff(pm.planDate);
                                                 const catColor = diff < 0 ? 'var(--red)' : diff <= 7 ? 'var(--orange)' : 'var(--accent)';
                                                 return (
-                                                    <div key={i} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderLeft:`3px solid ${catColor}`,borderRadius:10,padding:12,display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                                                    <div key={i} style={{background:'var(--surface2)',border:'1px solid var(--border)',borderLeft:`3px solid ${catColor}`,borderRadius:6,padding:12,display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
                                                         <div style={{flex:1}}>
                                                             <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4,flexWrap:'wrap'}}>
                                                                 <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:catColor,fontWeight:700}}>{pm.planDate}</span>
@@ -1400,7 +1400,7 @@ const DetailView = ({ item, setView, postData }) => {
                             <div><div style={{fontSize:12,color:'var(--text3)',marginBottom:4,fontFamily:'IBM Plex Mono,monospace'}}>{selLog.date}</div><h3 style={{fontWeight:800,fontSize:18}}>{selLog.type}</h3></div>
                             <button onClick={()=>setSelLog(null)} style={{color:'var(--text3)'}}><I d={ic.x} size={20}/></button>
                         </div>
-                        <div style={{background:'var(--surface2)',borderRadius:10,padding:14,marginBottom:16,fontSize:14}}>{selLog.description}</div>
+                        <div style={{background:'var(--surface2)',borderRadius:6,padding:14,marginBottom:16,fontSize:14}}>{selLog.description}</div>
                         <div style={{marginBottom:16}}>
                             <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,marginBottom:8}}>อะไหล่</div>
                             {(!selLog.parts||selLog.parts.length===0) && <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',padding:16}}>ไม่มีรายการอะไหล่</div>}
@@ -1538,7 +1538,7 @@ const App = () => {
     if(loading && data.assets.length===0) {
         return (
             <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'var(--bg)'}}>
-                <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:16,borderRadius:16}}><I d={ic.wrench} size={32}/></div>
+                <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:16,borderRadius:8}}><I d={ic.wrench} size={32}/></div>
                 <div style={{fontWeight:800,fontSize:20}}>MTA Asset Pro</div>
                 <div style={{display:'flex',alignItems:'center',gap:8,color:'var(--text3)'}}><Loader/> กำลังโหลด...</div>
             </div>
