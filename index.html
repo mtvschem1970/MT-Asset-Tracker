@@ -157,8 +157,10 @@
         .detail-layout { display:flex; gap:16px; flex-wrap:wrap; }
         .asset-side { width:clamp(320px,32vw,420px); max-width:420px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
         .detail-main { flex:1; min-width:280px; }
-        .detail-tabs { display:flex; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none; }
-        .detail-tabs::-webkit-scrollbar { display:none; }
+        .detail-tabs { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:8px; padding:10px; border-bottom:1px solid var(--border); background:var(--surface2); }
+        .detail-tab-btn { min-height:42px; padding:9px 11px; border:1px solid var(--border); border-radius:7px; background:var(--surface); color:var(--text2); font-size:12px; font-weight:700; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.3; }
+        .detail-tab-btn:hover { border-color:var(--accent); color:var(--accent); }
+        .detail-tab-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 2px 6px rgba(22,58,95,.18); }
         .asset-image-shell { min-height:260px; max-height:65vh; background:#e9edf2; cursor:zoom-in; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; border-bottom:1px solid var(--border); }
         .asset-image { display:block; width:100%; height:auto; max-height:65vh; object-fit:contain; }
         .field-row { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -260,7 +262,8 @@
             .asset-image { max-height:none; }
             .field-row { gap:8px; }
             .field-value { max-width:68%; }
-            .detail-tabs > button { flex:0 0 auto !important; min-width:120px; min-height:48px; padding:11px 13px !important; }
+            .detail-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; padding:8px; }
+            .detail-tab-btn { min-width:0; min-height:48px; padding:9px 7px; font-size:11px; white-space:normal; }
             .card, .card-static { border-radius:7px; }
             .btn { min-height:42px; padding:9px 14px; }
             .inp { min-height:44px; font-size:16px; background:#fff; }
@@ -1293,7 +1296,7 @@ const DetailView = ({ item, setView, postData }) => {
                     <div className="card-static" style={{overflow:'hidden'}}>
                         <div className="detail-tabs">
                             {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:'+ บันทึกซ่อม'},{id:'spares',label:`รายการ Spare Part (${spareParts.length})${lowStockCount ? ` ⚠️ ${lowStockCount}` : ''}`},{id:'newspare',label:'+ เพิ่ม Spare Part'},{id:'pmtemplates',label:'📋 แม่แบบ PM'},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
-                                <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:'12px 16px',fontSize:13,fontWeight:700,borderBottom:`2px solid ${tab===t.id?'var(--accent)':'transparent'}`,color:tab===t.id?'var(--accent)':'var(--text3)',whiteSpace:'nowrap',background:'transparent',transition:'all 0.2s',cursor:'pointer'}}>
+                                <button key={t.id} className={`detail-tab-btn ${tab===t.id?'active':''}`} onClick={()=>setTab(t.id)}>
                                     {t.label}
                                 </button>
                             ))}
