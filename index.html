@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#163a5f">
     <title>ระบบบริหารงานซ่อมบำรุง | MTA Asset</title>
-    <link rel="icon" type="image/png" href="./ChatGPT Image Jul 17, 2026, 10_30_40 AM.png">
+    <link rel="icon" type="image/png" href="./Logo.png">
     
     <!-- แก้ไขลิงก์ Tailwind เป็น CDN -->
     <script src="./tailwind.js"></script>
@@ -288,13 +288,16 @@
 <body>
 <div id="root" style="width:100%;height:100vh;"></div>
 
+<!-- โหลดโมดูล PM ก่อนแอปหลัก เพื่อป้องกันการเรียก component ก่อนพร้อมใช้งาน -->
+<script type="text/babel" src="./pm-documents.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
 // ====== CONFIG ======
 const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
+window.MTA_API_URL = API_URL;
 const APP_VERSION = "2.3 Pro";
-const BRAND_LOGO = "./ChatGPT Image Jul 17, 2026, 10_30_40 AM.png";
+const BRAND_LOGO = "./Logo.png";
 
 // ====== ICONS ======
 const I = ({ d, size=20, cls="" }) => (
@@ -1410,8 +1413,9 @@ const DetailView = ({ item, setView, postData }) => {
                                     </div>
                                 </div>
                             )}
-                            {tab==='pmtemplates' && (
-                                <window.AssetPMTemplatesPanel asset={item} onLaunch={(templateId)=>{window.pmLaunchContext={assetId:item.id,templateId};setView('pm_documents');}}/>
+                            {tab==='pmtemplates' && (window.AssetPMTemplatesPanel
+                                ? <window.AssetPMTemplatesPanel asset={item} onLaunch={(templateId)=>{window.pmLaunchContext={assetId:item.id,templateId};setView('pm_documents');}}/>
+                                : <div style={{padding:30,textAlign:'center',color:'var(--red)'}}><b>ไม่พบไฟล์ pm-documents.js</b><div style={{fontSize:12,marginTop:6}}>ตรวจสอบว่าอัปโหลดไฟล์ไว้ในโฟลเดอร์เดียวกับ index.html และชื่อไฟล์ตรงกัน</div></div>
                             )}
                             {tab==='pmschedule' && (
                                 <div>
@@ -1651,7 +1655,10 @@ const App = () => {
                 <div className="view-content">
                     {view==='dashboard' && <Dashboard data={data} setView={setView}/>}
                     {view==='kanban' && <KanbanBoard assets={data.assets} setSelectedAsset={setSelectedAsset} setView={setView}/>}
-                    {view==='pm_documents' && <window.PMDocumentsView data={data}/>}
+                    {view==='pm_documents' && (window.PMDocumentsView
+                        ? <window.PMDocumentsView data={data}/>
+                        : <div style={{padding:40,textAlign:'center',color:'var(--red)'}}><h3 style={{fontWeight:800}}>ไม่สามารถโหลดระบบเอกสาร PM</h3><p style={{marginTop:8}}>ไม่พบไฟล์ pm-documents.js กรุณาตรวจสอบชื่อและตำแหน่งไฟล์บน GitHub</p></div>
+                    )}
                     {view==='departments' && <DeptView data={data} setSelectedDept={setSelectedDept} setView={setView} postData={postData}/>}
                     {view==='assets' && <AssetList data={data} selectedDept={selectedDept} setView={setView} setSelectedAsset={setSelectedAsset}/>}
                     {view==='global_search' && <GlobalSearch data={data} setView={setView} setSelectedAsset={setSelectedAsset}/>}
@@ -1670,6 +1677,5 @@ const App = () => {
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App/>);
 </script>
-<script type="text/babel" src="./pm-documents.js"></script>
 </body>
 </html>
