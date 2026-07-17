@@ -13,7 +13,7 @@ const PMDocumentsView = ({ data }) => {
   const [message,setMessage] = useState('');
 
   const api = async (action,payload={}) => {
-    const res = await fetch(API_URL,{method:'POST',body:JSON.stringify({action,...payload})});
+    const res = await fetch(window.MTA_API_URL,{method:'POST',body:JSON.stringify({action,...payload})});
     const json = await res.json();
     if(json.status==='error') throw new Error(json.message||'เกิดข้อผิดพลาด');
     return json;
@@ -103,7 +103,7 @@ window.PMDocumentsView = PMDocumentsView;
 const AssetPMTemplatesPanel = ({ asset, onLaunch }) => {
   const {useState,useEffect}=React;
   const [templates,setTemplates]=useState([]),[selected,setSelected]=useState([]),[busy,setBusy]=useState(true),[msg,setMsg]=useState('');
-  const api=async(action,payload={})=>{const r=await fetch(API_URL,{method:'POST',body:JSON.stringify({action,...payload})});const j=await r.json();if(j.status==='error')throw new Error(j.message||'เกิดข้อผิดพลาด');return j;};
+  const api=async(action,payload={})=>{const r=await fetch(window.MTA_API_URL,{method:'POST',body:JSON.stringify({action,...payload})});const j=await r.json();if(j.status==='error')throw new Error(j.message||'เกิดข้อผิดพลาด');return j;};
   const load=async()=>{setBusy(true);try{const [t,a]=await Promise.all([api('get_pm_templates'),api('get_asset_pm_templates',{assetId:asset.id})]);setTemplates(t.templates||[]);setSelected((a.templateIds||[]).map(String));}catch(e){setMsg(e.message)}setBusy(false);};
   useEffect(()=>{load();},[asset.id]);
   const toggle=id=>setSelected(s=>s.includes(String(id))?s.filter(x=>x!==String(id)):[...s,String(id)]);
