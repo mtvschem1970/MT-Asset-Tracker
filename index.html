@@ -268,6 +268,7 @@
             .asset-photo-large { min-height:220px; }
             .asset-photo-compact { height:125px; min-height:125px; }
             .asset-card-compact { min-height:205px !important; }
+            .spare-form-layout { grid-template-columns:1fr !important; }
             .pb-nav { padding-bottom:82px !important; }
         }
 
@@ -1136,7 +1137,7 @@ const DetailView = ({ item, setView, postData }) => {
     const [showQr, setShowQr] = useState(false);
     const [imgPop, setImgPop] = useState(null);
     const [fileLoading, setFileLoading] = useState(false);
-    const emptySpare = {id:null,name:'',vendor:'',price:'',stock:'',lastPurchaseDate:'',minStock:'',note:''};
+    const emptySpare = {id:null,name:'',vendor:'',price:'',stock:'',lastPurchaseDate:'',minStock:'',note:'',image:'',removeImage:false};
     const [spareParts, setSpareParts] = useState(() => item.spareParts || []);
     const [spareForm, setSpareForm] = useState(emptySpare);
 
@@ -1184,6 +1185,16 @@ const DetailView = ({ item, setView, postData }) => {
         if(e.target.files[0]){setFileLoading(true);try{const b=await fileToBase64(e.target.files[0]);if(b)setPart(p=>({...p,[k]:b}));}catch(e){}finally{setFileLoading(false);}};
     };
 
+    const handleSpareImage = async (e) => {
+        if(!e.target.files[0]) return;
+        setFileLoading(true);
+        try {
+            const image = await fileToBase64(e.target.files[0]);
+            if(image) setSpareForm(prev => ({...prev,image,removeImage:false}));
+        } catch(e) { alert('ไม่สามารถอ่านไฟล์รูปได้'); }
+        finally { setFileLoading(false); }
+    };
+
     const saveSparePart = () => {
         if(!spareForm.name.trim()) return alert('กรุณาระบุชื่อ Spare Part');
         if(spareForm.stock === '' || Number(spareForm.stock) < 0) return alert('กรุณาระบุจำนวนสต๊อกให้ถูกต้อง');
@@ -1204,6 +1215,7 @@ const DetailView = ({ item, setView, postData }) => {
         setSpareParts(next);
         postData({action:'save_spare_part',assetId:item.id,sparePart:saved});
         setSpareForm(emptySpare);
+        setTab('spares');
     };
 
     const deleteSparePart = (id) => {
@@ -1268,7 +1280,7 @@ const DetailView = ({ item, setView, postData }) => {
                 <div className="detail-main">
                     <div className="card-static" style={{overflow:'hidden'}}>
                         <div className="detail-tabs">
-                            {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:'+ บันทึกซ่อม'},{id:'spares',label:`Spare Part (${spareParts.length})${lowStockCount ? ` ⚠️ ${lowStockCount}` : ''}`},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
+                            {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:'+ บันทึกซ่อม'},{id:'spares',label:`รายการ Spare Part (${spareParts.length})${lowStockCount ? ` ⚠️ ${lowStockCount}` : ''}`},{id:'newspare',label:'+ เพิ่ม Spare Part'},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
                                 <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:'12px 16px',fontSize:13,fontWeight:700,borderBottom:`2px solid ${tab===t.id?'var(--accent)':'transparent'}`,color:tab===t.id?'var(--accent)':'var(--text3)',whiteSpace:'nowrap',background:'transparent',transition:'all 0.2s',cursor:'pointer'}}>
                                     {t.label}
                                 </button>
@@ -1332,21 +1344,9 @@ const DetailView = ({ item, setView, postData }) => {
                                             <I d={ic.alert} size={17}/> มี Spare Part สต๊อกต่ำกว่าจุดแจ้งเตือน {lowStockCount} รายการ
                                         </div>
                                     )}
-                                    <div style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:16,marginBottom:16}}>
-                                        <div style={{fontWeight:700,marginBottom:12,color:'var(--accent)'}}>{spareForm.id ? 'แก้ไข Spare Part' : 'เพิ่ม Spare Part'}</div>
-                                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10}}>
-                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ชื่ออะไหล่ *</label><input className="inp" value={spareForm.name} onChange={e=>setSpareForm({...spareForm,name:e.target.value})} placeholder="เช่น Mechanical Seal"/></div>
-                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ซื้อจากร้าน/บริษัท</label><input className="inp" value={spareForm.vendor} onChange={e=>setSpareForm({...spareForm,vendor:e.target.value})} placeholder="ชื่อผู้จำหน่าย"/></div>
-                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ราคาล่าสุด (฿)</label><input type="number" min="0" className="inp" value={spareForm.price} onChange={e=>setSpareForm({...spareForm,price:e.target.value})} placeholder="0"/></div>
-                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>สต๊อกล่าสุด *</label><input type="number" min="0" className="inp" value={spareForm.stock} onChange={e=>setSpareForm({...spareForm,stock:e.target.value})} placeholder="0"/></div>
-                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ซื้อล่าสุดเมื่อ</label><input type="date" className="inp" value={spareForm.lastPurchaseDate} onChange={e=>setSpareForm({...spareForm,lastPurchaseDate:e.target.value})}/></div>
-                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>แจ้งเตือนเมื่อน้อยกว่า *</label><input type="number" min="0" className="inp" value={spareForm.minStock} onChange={e=>setSpareForm({...spareForm,minStock:e.target.value})} placeholder="เช่น 2"/></div>
-                                        </div>
-                                        <div style={{marginTop:10}}><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>หมายเหตุ</label><textarea className="inp" rows="2" value={spareForm.note} onChange={e=>setSpareForm({...spareForm,note:e.target.value})} placeholder="รายละเอียดเพิ่มเติม"/></div>
-                                        <div style={{display:'flex',gap:8,marginTop:12}}>
-                                            <button className="btn btn-primary" onClick={saveSparePart}><I d={ic.plus} size={15}/> {spareForm.id ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ'}</button>
-                                            {spareForm.id && <button className="btn btn-ghost" onClick={()=>setSpareForm(emptySpare)}>ยกเลิก</button>}
-                                        </div>
+                                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}}>
+                                        <div><div style={{fontWeight:800}}>รายการ Spare Part</div><div style={{fontSize:12,color:'var(--text3)'}}>อะไหล่สำหรับ {item.name}</div></div>
+                                        <button className="btn btn-primary" onClick={()=>{setSpareForm(emptySpare);setTab('newspare');}}><I d={ic.plus} size={15}/> เพิ่ม Spare Part</button>
                                     </div>
                                     <div style={{display:'flex',flexDirection:'column',gap:8}}>
                                         {spareParts.length===0 && <div style={{textAlign:'center',padding:36,color:'var(--text3)'}}>ยังไม่มีรายการ Spare Part</div>}
@@ -1354,6 +1354,9 @@ const DetailView = ({ item, setView, postData }) => {
                                             const low = Number(p.stock) < Number(p.minStock);
                                             return <div key={p.id} className="card" style={{padding:14,borderLeft:`4px solid ${low?'var(--red)':'var(--green)'}`}}>
                                                 <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',flexWrap:'wrap'}}>
+                                                    <div style={{width:90,height:90,borderRadius:7,overflow:'hidden',background:'var(--surface2)',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>p.image&&setImgPop(p.image)}>
+                                                        {p.image ? <img src={p.image} alt={p.name} style={{width:'100%',height:'100%',objectFit:'contain',cursor:'zoom-in'}}/> : <I d={ic.img} size={26}/>} 
+                                                    </div>
                                                     <div style={{flex:1,minWidth:180}}>
                                                         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}><span style={{fontWeight:800}}>{p.name}</span>{low ? <span className="badge badge-red">สต๊อกต่ำ</span> : <span className="badge badge-green">สต๊อกปกติ</span>}</div>
                                                         <div style={{fontSize:12,color:'var(--text2)',marginTop:6}}>ผู้จำหน่าย: {p.vendor||'-'} · ซื้อล่าสุด: {fmtDate(p.lastPurchaseDate)}</div>
@@ -1361,9 +1364,40 @@ const DetailView = ({ item, setView, postData }) => {
                                                     </div>
                                                     <div style={{textAlign:'right'}}><div style={{fontSize:22,fontWeight:800,color:low?'var(--red)':'var(--green)'}}>{fmtNum(p.stock)} <span style={{fontSize:11}}>ชิ้น</span></div><div style={{fontSize:11,color:'var(--text3)'}}>แจ้งเตือนเมื่อน้อยกว่า {fmtNum(p.minStock)} · ฿{fmtNum(p.price)}</div></div>
                                                 </div>
-                                                <div style={{display:'flex',gap:6,justifyContent:'flex-end',marginTop:10}}><button className="btn btn-ghost" style={{padding:'6px 10px',fontSize:11}} onClick={()=>setSpareForm({...p})}><I d={ic.wrench} size={13}/> แก้ไข</button><button className="btn btn-danger" style={{padding:'6px 10px',fontSize:11}} onClick={()=>deleteSparePart(p.id)}><I d={ic.trash} size={13}/> ลบ</button></div>
+                                                <div style={{display:'flex',gap:6,justifyContent:'flex-end',marginTop:10}}><button className="btn btn-ghost" style={{padding:'6px 10px',fontSize:11}} onClick={()=>{setSpareForm({...p});setTab('newspare');}}><I d={ic.wrench} size={13}/> แก้ไข</button><button className="btn btn-danger" style={{padding:'6px 10px',fontSize:11}} onClick={()=>deleteSparePart(p.id)}><I d={ic.trash} size={13}/> ลบ</button></div>
                                             </div>;
                                         })}
+                                    </div>
+                                </div>
+                            )}
+                            {tab==='newspare' && (
+                                <div>
+                                    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:18}}>
+                                        <button className="btn btn-ghost" onClick={()=>{setSpareForm(emptySpare);setTab('spares');}}><I d={ic.back} size={16}/> กลับ</button>
+                                        <div><div style={{fontWeight:800,fontSize:17}}>{spareForm.id ? 'แก้ไข Spare Part' : 'เพิ่ม Spare Part ใหม่'}</div><div style={{fontSize:12,color:'var(--text3)'}}>บันทึกเข้าคลังอะไหล่ของ {item.name}</div></div>
+                                    </div>
+                                    <div style={{display:'grid',gridTemplateColumns:'minmax(220px,300px) 1fr',gap:18}} className="spare-form-layout">
+                                        <div>
+                                            <label style={{display:'block',border:'1px dashed var(--border)',borderRadius:8,background:'var(--surface2)',overflow:'hidden',cursor:'pointer'}}>
+                                                <div style={{height:220,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}>
+                                                    {spareForm.image ? <img src={spareForm.image} alt="รูป Spare Part" style={{width:'100%',height:'100%',objectFit:'contain'}}/> : <div style={{textAlign:'center'}}><I d={ic.img} size={38}/><div style={{marginTop:8,fontWeight:700}}>เลือกรูป Spare Part</div><div style={{fontSize:11,marginTop:4}}>ไฟล์รูปไม่เกิน 5MB</div></div>}
+                                                </div>
+                                                <input type="file" accept="image/*" onChange={handleSpareImage} style={{display:'none'}}/>
+                                            </label>
+                                            {spareForm.image && <button className="btn btn-danger" style={{width:'100%',justifyContent:'center',marginTop:8}} onClick={()=>setSpareForm({...spareForm,image:'',removeImage:true})}>ลบรูปที่เลือก</button>}
+                                        </div>
+                                        <div>
+                                            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10}}>
+                                                <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ชื่ออะไหล่ *</label><input className="inp" value={spareForm.name} onChange={e=>setSpareForm({...spareForm,name:e.target.value})} placeholder="เช่น Mechanical Seal"/></div>
+                                                <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ซื้อจากร้าน/บริษัท</label><input className="inp" value={spareForm.vendor} onChange={e=>setSpareForm({...spareForm,vendor:e.target.value})} placeholder="ชื่อผู้จำหน่าย"/></div>
+                                                <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ราคาล่าสุด (฿)</label><input type="number" min="0" className="inp" value={spareForm.price} onChange={e=>setSpareForm({...spareForm,price:e.target.value})} placeholder="0"/></div>
+                                                <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>สต๊อกล่าสุด *</label><input type="number" min="0" className="inp" value={spareForm.stock} onChange={e=>setSpareForm({...spareForm,stock:e.target.value})} placeholder="0"/></div>
+                                                <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ซื้อล่าสุดเมื่อ</label><input type="date" className="inp" value={spareForm.lastPurchaseDate} onChange={e=>setSpareForm({...spareForm,lastPurchaseDate:e.target.value})}/></div>
+                                                <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>แจ้งเตือนเมื่อน้อยกว่า *</label><input type="number" min="0" className="inp" value={spareForm.minStock} onChange={e=>setSpareForm({...spareForm,minStock:e.target.value})} placeholder="เช่น 2"/></div>
+                                            </div>
+                                            <div style={{marginTop:10}}><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>หมายเหตุ</label><textarea className="inp" rows="3" value={spareForm.note} onChange={e=>setSpareForm({...spareForm,note:e.target.value})} placeholder="รายละเอียดเพิ่มเติม"/></div>
+                                            <div style={{display:'flex',gap:8,marginTop:14,flexWrap:'wrap'}}><button className="btn btn-primary" onClick={saveSparePart} disabled={fileLoading}><I d={ic.plus} size={15}/> {spareForm.id ? 'บันทึกการแก้ไข' : 'บันทึก Spare Part'}</button><button className="btn btn-ghost" onClick={()=>{setSpareForm(emptySpare);setTab('spares');}}>ยกเลิก</button></div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
