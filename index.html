@@ -151,10 +151,14 @@
         .system-status-dot { width:7px; height:7px; border-radius:50%; background:var(--green); }
         .view-content { flex:1; overflow:hidden; position:relative; }
         .detail-layout { display:flex; gap:16px; flex-wrap:wrap; }
-        .asset-side { width:100%; max-width:280px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
+        .asset-side { width:clamp(320px,32vw,420px); max-width:420px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
         .detail-main { flex:1; min-width:280px; }
         .detail-tabs { display:flex; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none; }
         .detail-tabs::-webkit-scrollbar { display:none; }
+        .asset-image-shell { min-height:260px; max-height:65vh; background:#e9edf2; cursor:zoom-in; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; border-bottom:1px solid var(--border); }
+        .asset-image { display:block; width:100%; height:auto; max-height:65vh; object-fit:contain; }
+        .field-row { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:10px 0; border-bottom:1px solid var(--border); }
+        .field-value { font-weight:600; font-size:13px; max-width:65%; text-align:right; overflow-wrap:anywhere; white-space:normal; }
 
         /* Glow effects */
         .glow-blue { box-shadow: 0 0 20px rgba(30,58,95,0.3); }
@@ -236,8 +240,12 @@
             .system-status { font-size:10px; padding:5px 8px; }
             .view-content > div { padding-left:12px !important; padding-right:12px !important; }
             .detail-layout { display:block; }
-            .asset-side { max-width:none; margin-bottom:12px; }
+            .asset-side { width:100%; max-width:none; margin-bottom:12px; }
             .detail-main { min-width:0; width:100%; }
+            .asset-image-shell { min-height:220px; max-height:none; }
+            .asset-image { max-height:none; }
+            .field-row { gap:8px; }
+            .field-value { max-width:68%; }
             .detail-tabs > button { flex:0 0 auto !important; min-width:120px; min-height:48px; padding:11px 13px !important; }
             .card, .card-static { border-radius:7px; }
             .btn { min-height:42px; padding:9px 14px; }
@@ -350,9 +358,9 @@ const Section = ({children, title}) => (
 );
 
 const Field = ({label,value}) => (
-    <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+    <div className="field-row">
         <span style={{color:'var(--text2)',fontSize:13}}>{label}</span>
-        <span style={{fontWeight:600,fontSize:13,maxWidth:'60%',textAlign:'right'}}>{value||'-'}</span>
+        <span className="field-value">{value||'-'}</span>
     </div>
 );
 
@@ -1211,8 +1219,8 @@ const DetailView = ({ item, setView, postData }) => {
             <div className="detail-layout">
                 <div className="asset-side">
                     <div className="card-static" style={{overflow:'hidden'}}>
-                        <div style={{height:200,background:'var(--surface2)',cursor:'pointer',position:'relative'}} onClick={()=>item.image&&setImgPop(item.image)}>
-                            {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={40}/></div>}
+                        <div className="asset-image-shell" onClick={()=>item.image&&setImgPop(item.image)} title={item.image ? 'กดเพื่อดูรูปขนาดเต็ม' : ''}>
+                            {item.image ? <img src={item.image} className="asset-image" alt={item.name}/> : <div style={{width:'100%',minHeight:220,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={40}/></div>}
                         </div>
                         <div style={{padding:16}}>
                             <Field label="แผนก" value={item.location}/>
