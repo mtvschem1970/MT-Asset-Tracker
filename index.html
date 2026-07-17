@@ -227,6 +227,13 @@
         /* Asset list row (list view) */
         .asset-row { display:flex; align-items:center; gap:14px; padding:10px 14px; cursor:pointer; }
         .asset-row:hover { border-color: var(--accent); }
+        .asset-grid-large, .asset-grid-compact { display:grid; overflow-y:auto; flex:1; min-height:0; padding-bottom:16px; align-content:start; grid-auto-rows:max-content; }
+        .asset-grid-large { grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+        .asset-grid-compact { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+        .asset-card-large, .asset-card-compact { height:auto !important; min-height:max-content; align-self:start; }
+        .asset-photo-large { width:100%; aspect-ratio:4/3; min-height:170px; background:var(--surface2); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+        .asset-photo-compact { width:100%; height:140px; min-height:140px; background:var(--surface2); border-radius:6px; position:relative; overflow:hidden; flex:none; display:flex; align-items:center; justify-content:center; }
+        .asset-list-photo { width:100%; height:100%; object-fit:contain; display:block; background:#e9edf2; }
 
         @media (max-width: 767px) {
             body { height:100dvh; }
@@ -254,6 +261,11 @@
             .toast { left:12px; right:12px; bottom:76px; min-width:0; padding:12px 14px; }
             .kanban-col { min-width:86vw; }
             .asset-row { padding:12px; gap:10px; }
+            .asset-grid-large { grid-template-columns:1fr; gap:12px; }
+            .asset-grid-compact { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+            .asset-photo-large { min-height:220px; }
+            .asset-photo-compact { height:125px; min-height:125px; }
+            .asset-card-compact { min-height:205px; }
             .pb-nav { padding-bottom:82px !important; }
         }
 
@@ -946,12 +958,12 @@ const AssetList = ({ data, selectedDept, setView, setSelectedAsset }) => {
 
             {/* LARGE grid: big photo cards (original look, tuned) */}
             {viewMode==='large' && (
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:14,overflowY:'auto',flex:1,paddingBottom:16}}>
+                <div className="asset-grid-large">
                     {filtered.map((item,i) => (
-                        <div key={item.id} className="card" style={{cursor:'pointer',overflow:'hidden',display:'flex',flexDirection:'column',animationDelay:`${i*30}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
+                        <div key={item.id} className="card asset-card-large" style={{cursor:'pointer',overflow:'hidden',display:'flex',flexDirection:'column',animationDelay:`${i*30}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
                             {!item.nextPmDate && <div style={{background:'rgba(164,38,44,0.9)',color:'white',fontSize:10,fontWeight:700,padding:'4px 10px',display:'flex',alignItems:'center',gap:4}}><I d={ic.alert} size={11}/> ไม่มีแผน PM</div>}
-                            <div style={{aspectRatio:'4/3',background:'var(--surface2)',position:'relative',overflow:'hidden'}}>
-                                {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={36}/></div>}
+                            <div className="asset-photo-large">
+                                {item.image ? <img src={item.image} className="asset-list-photo" alt={item.name}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={36}/></div>}
                                 <div style={{position:'absolute',bottom:8,right:8}}>
                                     <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`} style={{fontSize:10}}>{item.status}</span>
                                 </div>
@@ -967,11 +979,11 @@ const AssetList = ({ data, selectedDept, setView, setSelectedAsset }) => {
 
             {/* COMPACT grid: small square thumbnail + text, many per row */}
             {viewMode==='compact' && (
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:10,overflowY:'auto',flex:1,paddingBottom:16}}>
+                <div className="asset-grid-compact">
                     {filtered.map((item,i) => (
-                        <div key={item.id} className="card" style={{cursor:'pointer',overflow:'hidden',padding:10,display:'flex',flexDirection:'column',gap:8,animationDelay:`${i*20}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
-                            <div style={{width:'100%',aspectRatio:'1',background:'var(--surface2)',borderRadius:8,position:'relative',overflow:'hidden',flexShrink:0}}>
-                                {item.image ? <img src={item.image} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={20}/></div>}
+                        <div key={item.id} className="card asset-card-compact" style={{cursor:'pointer',overflow:'hidden',padding:10,display:'flex',flexDirection:'column',gap:8,animationDelay:`${i*20}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
+                            <div className="asset-photo-compact">
+                                {item.image ? <img src={item.image} className="asset-list-photo" alt={item.name}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={20}/></div>}
                                 {!item.nextPmDate && <div style={{position:'absolute',top:4,left:4,background:'rgba(164,38,44,0.9)',borderRadius:'50%',width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center'}}><I d={ic.alert} size={10} cls="" style={{color:'white'}}/></div>}
                             </div>
                             <div style={{minWidth:0}}>
