@@ -155,11 +155,6 @@
         .kanban-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 14px; transition: all 0.2s; cursor: pointer; }
         .kanban-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(28,34,48,0.08); }
 
-        /* AI Chat */
-        .ai-msg { padding: 12px 16px; border-radius: 8px; font-size: 14px; line-height: 1.7; max-width: 85%; }
-        .ai-msg.bot { background: var(--surface2); border: 1px solid var(--border); align-self: flex-start; }
-        .ai-msg.user { background: rgba(30,58,95,0.06); border: 1px solid rgba(30,58,95,0.18); align-self: flex-end; }
-
         /* Chart bars */
         .bar-fill { transition: height 0.8s cubic-bezier(0.16,1,0.3,1); }
 
@@ -219,8 +214,7 @@ const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
 // ====== CONFIG ======
 const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
-const CLAUDE_API = "https://api.anthropic.com/v1/messages";
-const APP_VERSION = "2.1 Pro";
+const APP_VERSION = "2.2 Pro";
 
 // ====== ICONS ======
 const I = ({ d, size=20, cls="" }) => (
@@ -290,6 +284,20 @@ const getPmCategory = (dateStr) => {
 const fmtNum = (n) => Number(n || 0).toLocaleString('th-TH');
 const fmtDate = (str) => str ? new Date(str).toLocaleDateString('th-TH', {day:'numeric',month:'short',year:'2-digit'}) : '-';
 
+// Spare parts are stored per asset in this browser.
+const SPARE_STORAGE_KEY = 'mta_asset_spare_parts_v1';
+const loadSpareParts = (assetId) => {
+    try {
+        const all = JSON.parse(localStorage.getItem(SPARE_STORAGE_KEY) || '{}');
+        return Array.isArray(all[assetId]) ? all[assetId] : [];
+    } catch(e) { return []; }
+};
+const persistSpareParts = (assetId, parts) => {
+    const all = JSON.parse(localStorage.getItem(SPARE_STORAGE_KEY) || '{}');
+    all[assetId] = parts;
+    localStorage.setItem(SPARE_STORAGE_KEY, JSON.stringify(all));
+};
+
 // ====== SHARED PRESENTATIONAL COMPONENTS (top-level!) ======
 // NOTE: These must live OUTSIDE any component function. If declared inside
 // a parent component's body, React treats them as a brand-new component
@@ -345,7 +353,6 @@ const Sidebar = ({ view, setView, fetchData, pmOverdue }) => {
         { id:'global_search', label:'ค้นหาทั่วระบบ', icon:ic.search },
         { id:'electrical', label:'ระบบไฟฟ้า', icon:ic.zap },
         { id:'water', label:'ระบบน้ำ', icon:ic.drop },
-        { id:'ai', label:'AI Assistant', icon:ic.bot },
         { id:'executive', label:'รายงานผู้บริหาร', icon:ic.chart },
     ];
     return (
@@ -381,7 +388,6 @@ const MobileNav = ({ view, setView, pmOverdue }) => {
         { id:'kanban', label:'PM', icon:ic.kanban, badge:pmOverdue },
         { id:'departments', label:'อุปกรณ์', icon:ic.building },
         { id:'global_search', label:'ค้นหา', icon:ic.search },
-        { id:'ai', label:'AI', icon:ic.bot },
         { id:'executive', label:'รายงาน', icon:ic.chart },
     ];
     return (
@@ -738,119 +744,6 @@ const ExecutiveDashboard = ({ data }) => {
     );
 };
 
-// ====== AI ASSISTANT ======
-const AiAssistant = ({ data }) => {
-    const [messages, setMessages] = useState([
-        { role:'bot', text:`สวัสดีครับ! ผมคือ AI Assistant สำหรับระบบ MTA Asset Maintenance 🤖\n\nผมสามารถช่วยได้:\n• วิเคราะห์ประวัติซ่อมและแนะนำการ PM\n• หาเครื่องจักรที่ซ่อมบ่อยที่สุด\n• แนะนำตารางงาน PM\n• ตอบคำถามเกี่ยวกับอุปกรณ์\n\nลองถามได้เลยครับ!` }
-    ]);
-    const [input, setInput] = useState('');
-    const [loading, setLoading] = useState(false);
-    const bottomRef = useRef();
-
-    useEffect(() => { bottomRef.current?.scrollIntoView({behavior:'smooth'}); }, [messages]);
-
-    const systemPrompt = () => {
-        const summary = {
-            totalAssets: data.assets.length,
-            departments: data.departments?.map(d=>d.name),
-            mostRepaired: data.assets.map(a => ({
-                name: a.name, id: a.id, location: a.location,
-                repairCount: (a.history||[]).length,
-                totalCost: (a.history||[]).reduce((s,h) => s+Number(h.totalCost||0),0),
-                recentIssues: (a.history||[]).slice(-3).map(h=>h.description),
-                status: a.status
-            })).sort((a,b)=>b.repairCount-a.repairCount).slice(0,10),
-            noPmAssets: data.assets.filter(a=>!a.nextPmDate).length,
-            repairing: data.assets.filter(a=>a.status==='ส่งซ่อม').length,
-        };
-        return `คุณเป็น AI Assistant ของระบบ MTA Asset Maintenance ที่ช่วยช่างซ่อมบำรุงวิเคราะห์ข้อมูลอุปกรณ์และแนะนำการบำรุงรักษา
-ตอบเป็นภาษาไทยเสมอ ตอบกระชับ ชัดเจน ใช้ emoji เพื่อให้อ่านง่าย
-ข้อมูลระบบปัจจุบัน: ${JSON.stringify(summary, null, 2)}`;
-    };
-
-    const send = async () => {
-        if (!input.trim() || loading) return;
-        const userMsg = input.trim();
-        setInput('');
-        setMessages(prev => [...prev, {role:'user',text:userMsg}]);
-        setLoading(true);
-        try {
-            const history = messages.slice(-10).filter(m=>m.role!=='bot'||messages.indexOf(m)>0).map(m => ({
-                role: m.role==='bot'?'assistant':'user',
-                content: m.text
-            }));
-            const res = await fetch(CLAUDE_API, {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 1000,
-                    system: systemPrompt(),
-                    messages: [...history, {role:'user',content:userMsg}]
-                })
-            });
-            const j = await res.json();
-            const reply = j.content?.[0]?.text || 'ขออภัย เกิดข้อผิดพลาดครับ';
-            setMessages(prev => [...prev, {role:'bot',text:reply}]);
-        } catch(e) {
-            setMessages(prev => [...prev, {role:'bot',text:'⚠️ ไม่สามารถเชื่อมต่อ AI ได้ กรุณาตรวจสอบการเชื่อมต่อ และให้แน่ใจว่า API ของคุณทำงานถูกต้อง'}]);
-        }
-        setLoading(false);
-    };
-
-    const quickQ = [
-        'เครื่องไหนซ่อมบ่อยที่สุด?',
-        'อุปกรณ์ไหนควร PM ด่วน?',
-        'สรุปค่าใช้จ่ายซ่อมให้หน่อย',
-        'แนะนำตาราง PM ที่ดี',
-    ];
-
-    return (
-        <div style={{height:'100%',display:'flex',flexDirection:'column',maxWidth:800,margin:'0 auto',padding:24,paddingBottom:0}} className="fade-up">
-            <div style={{marginBottom:16,flexShrink:0}}>
-                <h2 style={{fontSize:22,fontWeight:800,display:'flex',alignItems:'center',gap:10}}>
-                    <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:8,borderRadius:6}}><I d={ic.bot} size={20}/></div>
-                    AI Maintenance Assistant
-                </h2>
-                <p style={{fontSize:13,color:'var(--text2)',marginTop:4}}>วิเคราะห์อุปกรณ์และแนะนำการบำรุงรักษา ด้วย Claude AI</p>
-            </div>
-
-            <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:12,paddingBottom:16}} className="scroll-y">
-                {messages.map((m,i) => (
-                    <div key={i} className={`ai-msg ${m.role}`} style={{whiteSpace:'pre-wrap',lineHeight:1.7}}>
-                        {m.role==='bot' && <div style={{fontSize:11,color:'var(--accent)',fontWeight:700,marginBottom:6,display:'flex',alignItems:'center',gap:4}}><I d={ic.bot} size={12}/> AI Assistant</div>}
-                        {m.text}
-                    </div>
-                ))}
-                {loading && (
-                    <div className="ai-msg bot" style={{display:'flex',alignItems:'center',gap:8,color:'var(--text3)'}}>
-                        <Loader size={16}/> กำลังวิเคราะห์...
-                    </div>
-                )}
-                <div ref={bottomRef}/>
-            </div>
-
-            {messages.length <= 1 && (
-                <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12,flexShrink:0}}>
-                    {quickQ.map(q => (
-                        <button key={q} className="btn btn-ghost" style={{padding:'6px 14px',fontSize:12}} onClick={()=>setInput(q)}>
-                            {q}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            <div style={{display:'flex',gap:10,paddingBottom:24,flexShrink:0}}>
-                <input className="inp" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()} placeholder="ถามเกี่ยวกับอุปกรณ์..." style={{flex:1}}/>
-                <button className="btn btn-primary" onClick={send} disabled={loading||!input.trim()} style={{flexShrink:0}}>
-                    <I d={ic.send} size={18}/>
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// ====== DASHBOARD ======
 const Dashboard = ({ data, setView }) => {
     const total = data.assets.length;
     const repairing = data.assets.filter(a=>a.status==='ส่งซ่อม').length;
@@ -889,7 +782,6 @@ const Dashboard = ({ data, setView }) => {
                 {[
                     {label:'PM Kanban Board', desc:'ดูงาน PM แบบ Kanban', icon:ic.kanban, id:'kanban', color:'var(--accent)'},
                     {label:'ค้นหาทั่วระบบ', desc:'ค้นข้ามแผนก ทุก field', icon:ic.search, id:'global_search', color:'var(--accent2)'},
-                    {label:'AI Assistant', desc:'วิเคราะห์และแนะนำ PM', icon:ic.bot, id:'ai', color:'var(--green)'},
                     {label:'รายงานผู้บริหาร', desc:'กราฟค่าซ่อมและสถิติ', icon:ic.chart, id:'executive', color:'var(--yellow)'},
                 ].map((f,i) => (
                     <div key={i} className="card" style={{padding:16,cursor:'pointer',animationDelay:`${i*60}ms`}} onClick={()=>setView(f.id)}>
@@ -1169,6 +1061,14 @@ const DetailView = ({ item, setView, postData }) => {
     const [showQr, setShowQr] = useState(false);
     const [imgPop, setImgPop] = useState(null);
     const [fileLoading, setFileLoading] = useState(false);
+    const emptySpare = {id:null,name:'',vendor:'',price:'',stock:'',lastPurchaseDate:'',minStock:'',note:''};
+    const [spareParts, setSpareParts] = useState(() => loadSpareParts(item.id));
+    const [spareForm, setSpareForm] = useState(emptySpare);
+
+    useEffect(() => {
+        setSpareParts(loadSpareParts(item.id));
+        setSpareForm(emptySpare);
+    }, [item.id]);
 
     useEffect(() => { if(tab==='pmschedule') fetchPm(); }, [tab]);
 
@@ -1208,6 +1108,38 @@ const DetailView = ({ item, setView, postData }) => {
     const handlePartFile = async (e,k) => {
         if(e.target.files[0]){setFileLoading(true);try{const b=await fileToBase64(e.target.files[0]);if(b)setPart(p=>({...p,[k]:b}));}catch(e){}finally{setFileLoading(false);}};
     };
+
+    const saveSparePart = () => {
+        if(!spareForm.name.trim()) return alert('กรุณาระบุชื่อ Spare Part');
+        if(spareForm.stock === '' || Number(spareForm.stock) < 0) return alert('กรุณาระบุจำนวนสต๊อกให้ถูกต้อง');
+        if(spareForm.minStock === '' || Number(spareForm.minStock) < 0) return alert('กรุณาระบุจุดแจ้งเตือนให้ถูกต้อง');
+        const saved = {
+            ...spareForm,
+            id: spareForm.id || Date.now(),
+            name: spareForm.name.trim(),
+            vendor: spareForm.vendor.trim(),
+            price: Number(spareForm.price || 0),
+            stock: Number(spareForm.stock),
+            minStock: Number(spareForm.minStock),
+            updatedAt: new Date().toISOString()
+        };
+        const next = spareForm.id
+            ? spareParts.map(p => String(p.id) === String(spareForm.id) ? saved : p)
+            : [...spareParts, saved];
+        setSpareParts(next);
+        persistSpareParts(item.id, next);
+        setSpareForm(emptySpare);
+    };
+
+    const deleteSparePart = (id) => {
+        if(!confirm('ลบ Spare Part รายการนี้?')) return;
+        const next = spareParts.filter(p => String(p.id) !== String(id));
+        setSpareParts(next);
+        persistSpareParts(item.id, next);
+        if(String(spareForm.id) === String(id)) setSpareForm(emptySpare);
+    };
+
+    const lowStockCount = spareParts.filter(p => Number(p.stock) < Number(p.minStock)).length;
 
     return (
         <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-up pb-nav">
@@ -1261,7 +1193,7 @@ const DetailView = ({ item, setView, postData }) => {
                 <div style={{flex:1,minWidth:280}}>
                     <div className="card-static" style={{overflow:'hidden'}}>
                         <div style={{display:'flex',borderBottom:'1px solid var(--border)',overflowX:'auto'}}>
-                            {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:'+ บันทึกซ่อม'},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
+                            {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:'+ บันทึกซ่อม'},{id:'spares',label:`Spare Part (${spareParts.length})${lowStockCount ? ` ⚠️ ${lowStockCount}` : ''}`},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
                                 <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:'12px 16px',fontSize:13,fontWeight:700,borderBottom:`2px solid ${tab===t.id?'var(--accent)':'transparent'}`,color:tab===t.id?'var(--accent)':'var(--text3)',whiteSpace:'nowrap',background:'transparent',transition:'all 0.2s',cursor:'pointer'}}>
                                     {t.label}
                                 </button>
@@ -1316,6 +1248,48 @@ const DetailView = ({ item, setView, postData }) => {
                                     </div>
                                     <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ค่าแรง (฿)</label><input type="number" className="inp" value={log.labor} onChange={e=>setLog({...log,labor:e.target.value})} placeholder="0"/></div>
                                     <button className="btn btn-primary" style={{justifyContent:'center',padding:12}} onClick={submitLog} disabled={fileLoading}>บันทึกประวัติ</button>
+                                </div>
+                            )}
+                            {tab==='spares' && (
+                                <div>
+                                    {lowStockCount > 0 && (
+                                        <div style={{background:'rgba(164,38,44,0.08)',border:'1px solid rgba(164,38,44,0.25)',color:'var(--red)',borderRadius:8,padding:12,marginBottom:14,fontWeight:700,fontSize:13,display:'flex',alignItems:'center',gap:8}}>
+                                            <I d={ic.alert} size={17}/> มี Spare Part สต๊อกต่ำกว่าจุดแจ้งเตือน {lowStockCount} รายการ
+                                        </div>
+                                    )}
+                                    <div style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:16,marginBottom:16}}>
+                                        <div style={{fontWeight:700,marginBottom:12,color:'var(--accent)'}}>{spareForm.id ? 'แก้ไข Spare Part' : 'เพิ่ม Spare Part'}</div>
+                                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10}}>
+                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ชื่ออะไหล่ *</label><input className="inp" value={spareForm.name} onChange={e=>setSpareForm({...spareForm,name:e.target.value})} placeholder="เช่น Mechanical Seal"/></div>
+                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ซื้อจากร้าน/บริษัท</label><input className="inp" value={spareForm.vendor} onChange={e=>setSpareForm({...spareForm,vendor:e.target.value})} placeholder="ชื่อผู้จำหน่าย"/></div>
+                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ราคาล่าสุด (฿)</label><input type="number" min="0" className="inp" value={spareForm.price} onChange={e=>setSpareForm({...spareForm,price:e.target.value})} placeholder="0"/></div>
+                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>สต๊อกล่าสุด *</label><input type="number" min="0" className="inp" value={spareForm.stock} onChange={e=>setSpareForm({...spareForm,stock:e.target.value})} placeholder="0"/></div>
+                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>ซื้อล่าสุดเมื่อ</label><input type="date" className="inp" value={spareForm.lastPurchaseDate} onChange={e=>setSpareForm({...spareForm,lastPurchaseDate:e.target.value})}/></div>
+                                            <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>แจ้งเตือนเมื่อน้อยกว่า *</label><input type="number" min="0" className="inp" value={spareForm.minStock} onChange={e=>setSpareForm({...spareForm,minStock:e.target.value})} placeholder="เช่น 2"/></div>
+                                        </div>
+                                        <div style={{marginTop:10}}><label style={{fontSize:11,color:'var(--text2)',fontWeight:600}}>หมายเหตุ</label><textarea className="inp" rows="2" value={spareForm.note} onChange={e=>setSpareForm({...spareForm,note:e.target.value})} placeholder="รายละเอียดเพิ่มเติม"/></div>
+                                        <div style={{display:'flex',gap:8,marginTop:12}}>
+                                            <button className="btn btn-primary" onClick={saveSparePart}><I d={ic.plus} size={15}/> {spareForm.id ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ'}</button>
+                                            {spareForm.id && <button className="btn btn-ghost" onClick={()=>setSpareForm(emptySpare)}>ยกเลิก</button>}
+                                        </div>
+                                    </div>
+                                    <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                                        {spareParts.length===0 && <div style={{textAlign:'center',padding:36,color:'var(--text3)'}}>ยังไม่มีรายการ Spare Part</div>}
+                                        {spareParts.map(p => {
+                                            const low = Number(p.stock) < Number(p.minStock);
+                                            return <div key={p.id} className="card" style={{padding:14,borderLeft:`4px solid ${low?'var(--red)':'var(--green)'}`}}>
+                                                <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',flexWrap:'wrap'}}>
+                                                    <div style={{flex:1,minWidth:180}}>
+                                                        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}><span style={{fontWeight:800}}>{p.name}</span>{low ? <span className="badge badge-red">สต๊อกต่ำ</span> : <span className="badge badge-green">สต๊อกปกติ</span>}</div>
+                                                        <div style={{fontSize:12,color:'var(--text2)',marginTop:6}}>ผู้จำหน่าย: {p.vendor||'-'} · ซื้อล่าสุด: {fmtDate(p.lastPurchaseDate)}</div>
+                                                        {p.note && <div style={{fontSize:12,color:'var(--text3)',marginTop:4}}>{p.note}</div>}
+                                                    </div>
+                                                    <div style={{textAlign:'right'}}><div style={{fontSize:22,fontWeight:800,color:low?'var(--red)':'var(--green)'}}>{fmtNum(p.stock)} <span style={{fontSize:11}}>ชิ้น</span></div><div style={{fontSize:11,color:'var(--text3)'}}>แจ้งเตือนเมื่อน้อยกว่า {fmtNum(p.minStock)} · ฿{fmtNum(p.price)}</div></div>
+                                                </div>
+                                                <div style={{display:'flex',gap:6,justifyContent:'flex-end',marginTop:10}}><button className="btn btn-ghost" style={{padding:'6px 10px',fontSize:11}} onClick={()=>setSpareForm({...p})}><I d={ic.wrench} size={13}/> แก้ไข</button><button className="btn btn-danger" style={{padding:'6px 10px',fontSize:11}} onClick={()=>deleteSparePart(p.id)}><I d={ic.trash} size={13}/> ลบ</button></div>
+                                            </div>;
+                                        })}
+                                    </div>
                                 </div>
                             )}
                             {tab==='pmschedule' && (
@@ -1560,7 +1534,6 @@ const App = () => {
                     {view==='water' && <UtilityView data={data} type="water" setView={setView} setSelectedAsset={setSelectedAsset}/>}
                     {(view==='add_asset'||view==='edit_asset') && <AddAssetView data={data} selectedDept={selectedDept} setView={setView} postData={postData} view={view} editItem={selectedAsset}/>}
                     {view==='detail' && <DetailView item={selectedAsset} setView={setView} postData={postData}/>}
-                    {view==='ai' && <AiAssistant data={data}/>}
                     {view==='executive' && <ExecutiveDashboard data={data}/>}
                 </div>
             </main>
