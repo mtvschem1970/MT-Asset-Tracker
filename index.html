@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#163a5f">
     <title>ระบบบริหารงานซ่อมบำรุง | MTA Asset</title>
+    <link rel="icon" type="image/png" href="./ChatGPT Image Jul 17, 2026, 10_30_40 AM.png">
     
     <!-- แก้ไขลิงก์ Tailwind เป็น CDN -->
     <script src="./tailwind.js"></script>
@@ -149,6 +150,9 @@
         .app-topbar-subtitle { font-size:11px; color:var(--text3); margin-top:2px; }
         .system-status { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--green); background:rgba(20,108,67,.08); border:1px solid rgba(20,108,67,.18); padding:6px 10px; border-radius:6px; }
         .system-status-dot { width:7px; height:7px; border-radius:50%; background:var(--green); }
+        .brand-logo-shell { width:62px; height:50px; background:#fff; border:1px solid var(--border); border-radius:8px; padding:3px; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
+        .brand-logo { width:100%; height:100%; object-fit:contain; display:block; }
+        .topbar-brand-logo { display:none; width:38px; height:34px; object-fit:contain; border-radius:5px; background:#fff; }
         .view-content { flex:1; overflow:hidden; position:relative; }
         .detail-layout { display:flex; gap:16px; flex-wrap:wrap; }
         .asset-side { width:clamp(320px,32vw,420px); max-width:420px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
@@ -244,6 +248,7 @@
             .mobile-nav-btn { flex:1; min-width:0; min-height:52px; padding:6px 2px; border-radius:7px; font-weight:600; }
             .mobile-nav-btn.active { background:rgba(22,58,95,.09); }
             .app-topbar { height:58px; padding:0 14px; }
+            .topbar-brand-logo { display:block; }
             .app-topbar-title { font-size:15px; }
             .app-topbar-subtitle { display:none; }
             .system-status { font-size:10px; padding:5px 8px; }
@@ -287,6 +292,7 @@ const { useState, useEffect, useRef, useMemo, useCallback } = React;
 // ====== CONFIG ======
 const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
 const APP_VERSION = "2.3 Pro";
+const BRAND_LOGO = "./ChatGPT Image Jul 17, 2026, 10_30_40 AM.png";
 
 // ====== ICONS ======
 const I = ({ d, size=20, cls="" }) => (
@@ -416,9 +422,7 @@ const Sidebar = ({ view, setView, fetchData, pmOverdue }) => {
     return (
         <aside className="desktop-sidebar">
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:32,padding:'0 4px'}}>
-                <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:10,borderRadius:8,display:'flex'}}>
-                    <I d={ic.wrench} size={22} cls="" style={{color:'white'}}/>
-                </div>
+                <div className="brand-logo-shell"><img src={BRAND_LOGO} className="brand-logo" alt="โลโก้แผนกซ่อมบำรุง"/></div>
                 <div>
                     <div style={{fontWeight:800,fontSize:16,letterSpacing:'-0.5px'}}>ระบบงานซ่อมบำรุง</div>
                     <div style={{fontSize:11,color:'var(--text3)',fontFamily:'IBM Plex Mono, monospace'}}>MTA ASSET · v{APP_VERSION}</div>
@@ -470,9 +474,10 @@ const AppTopbar = ({ view, selectedDept, selectedAsset }) => {
     };
     return (
         <header className="app-topbar">
-            <div style={{minWidth:0}}>
-                <div className="app-topbar-title" style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{titles[view] || 'ระบบบริหารงานซ่อมบำรุง'}</div>
-                <div className="app-topbar-subtitle">MAINTENANCE MANAGEMENT SYSTEM</div>
+            <div style={{minWidth:0,display:'flex',alignItems:'center',gap:9}}>
+                <img src={BRAND_LOGO} className="topbar-brand-logo" alt="โลโก้"/>
+                <div style={{minWidth:0}}><div className="app-topbar-title" style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{titles[view] || 'ระบบบริหารงานซ่อมบำรุง'}</div>
+                <div className="app-topbar-subtitle">MAINTENANCE MANAGEMENT SYSTEM</div></div>
             </div>
             <div className="system-status"><span className="system-status-dot"/> ระบบพร้อมใช้งาน</div>
         </header>
@@ -1623,8 +1628,8 @@ const App = () => {
     if(loading && data.assets.length===0) {
         return (
             <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'var(--bg)'}}>
-                <div style={{background:'linear-gradient(135deg,var(--accent),var(--accent2))',padding:16,borderRadius:8}}><I d={ic.wrench} size={32}/></div>
-                <div style={{fontWeight:800,fontSize:20}}>MTA Asset Pro</div>
+                <div style={{width:150,height:100,background:'#fff',border:'1px solid var(--border)',padding:6,borderRadius:10}}><img src={BRAND_LOGO} style={{width:'100%',height:'100%',objectFit:'contain'}} alt="โลโก้แผนกซ่อมบำรุง"/></div>
+                <div style={{fontWeight:800,fontSize:20}}>ระบบบริหารงานซ่อมบำรุง</div>
                 <div style={{display:'flex',alignItems:'center',gap:8,color:'var(--text3)'}}><Loader/> กำลังโหลด...</div>
             </div>
         );
