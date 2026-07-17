@@ -1,9 +1,10 @@
 const PMDocumentsView = ({ data }) => {
   const { useState, useEffect } = React;
+  const launchContext = window.pmLaunchContext || null;
   const blankItem = () => ({id:'ITEM-'+Date.now()+'-'+Math.random().toString(16).slice(2),label:'',type:'radio',options:['ปกติ','ไม่ปกติ','อื่นๆ'],unit:'',required:true});
   const blankTemplate = () => ({id:null,name:'',category:'ปั๊ม',description:'',items:[blankItem()]});
-  const blankDocument = () => ({templateId:'',assetId:'',inspectionDate:new Date().toISOString().slice(0,10),inspector:'',overallStatus:'ผ่าน',notes:'',responses:{}});
-  const [page,setPage] = useState('templates');
+  const blankDocument = () => ({templateId:launchContext?.templateId||'',assetId:launchContext?.assetId||'',inspectionDate:new Date().toISOString().slice(0,10),inspector:'',overallStatus:'ผ่าน',notes:'',responses:{}});
+  const [page,setPage] = useState(launchContext?'run':'templates');
   const [templates,setTemplates] = useState([]);
   const [documents,setDocuments] = useState([]);
   const [template,setTemplate] = useState(blankTemplate());
@@ -25,7 +26,7 @@ const PMDocumentsView = ({ data }) => {
     } catch(e) { setMessage(e.message); }
     setBusy(false);
   };
-  useEffect(()=>{load();},[]);
+  useEffect(()=>{load();return()=>{window.pmLaunchContext=null;}},[]);
 
   const saveTemplate = async () => {
     if(!template.name.trim()) return alert('กรุณาระบุชื่อแม่แบบ');
@@ -83,7 +84,7 @@ const PMDocumentsView = ({ data }) => {
 
     {page==='run'&&<div className="card-static" style={{padding:18,maxWidth:950,margin:'0 auto'}}>
       <div style={{fontWeight:800,fontSize:18,marginBottom:15}}>บันทึกผลการตรวจ PM</div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10}}><div><label style={inputStyle}>แม่แบบ PM *</label><select className="inp" value={documentForm.templateId} onChange={e=>setDocumentForm({...blankDocument(),templateId:e.target.value})}><option value="">-- เลือกแม่แบบ --</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div><label style={inputStyle}>อุปกรณ์ *</label><select className="inp" value={documentForm.assetId} onChange={e=>setDocumentForm({...documentForm,assetId:e.target.value})}><option value="">-- เลือกอุปกรณ์ --</option>{data.assets.map(a=><option key={a.id} value={a.id}>{a.name} ({a.id})</option>)}</select></div><div><label style={inputStyle}>วันที่ตรวจ</label><input type="date" className="inp" value={documentForm.inspectionDate} onChange={e=>setDocumentForm({...documentForm,inspectionDate:e.target.value})}/></div><div><label style={inputStyle}>ผู้ตรวจ *</label><input className="inp" value={documentForm.inspector} onChange={e=>setDocumentForm({...documentForm,inspector:e.target.value})}/></div></div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10}}><div><label style={inputStyle}>แม่แบบ PM *</label><select className="inp" value={documentForm.templateId} disabled={!!launchContext?.templateId} onChange={e=>setDocumentForm({...blankDocument(),templateId:e.target.value})}><option value="">-- เลือกแม่แบบ --</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div><label style={inputStyle}>อุปกรณ์ *</label>{launchContext?.assetId?<div className="inp" style={{background:'var(--surface2)',fontWeight:700}}>{selectedAsset?.name||launchContext.assetId} ({launchContext.assetId})</div>:<select className="inp" value={documentForm.assetId} onChange={e=>setDocumentForm({...documentForm,assetId:e.target.value})}><option value="">-- เลือกอุปกรณ์ --</option>{data.assets.map(a=><option key={a.id} value={a.id}>{a.name} ({a.id})</option>)}</select>}</div><div><label style={inputStyle}>วันที่ตรวจ</label><input type="date" className="inp" value={documentForm.inspectionDate} onChange={e=>setDocumentForm({...documentForm,inspectionDate:e.target.value})}/></div><div><label style={inputStyle}>ผู้ตรวจ *</label><input className="inp" value={documentForm.inspector} onChange={e=>setDocumentForm({...documentForm,inspector:e.target.value})}/></div></div>
       {selectedTemplate&&<div style={{marginTop:18,display:'flex',flexDirection:'column',gap:10}}>{selectedTemplate.items.map((it,index)=><div key={it.id} style={{padding:14,border:'1px solid var(--border)',borderRadius:7}}><div style={{fontWeight:700,marginBottom:8}}>{index+1}. {it.label} {it.required&&<span style={{color:'var(--red)'}}>*</span>}</div>
         {it.type==='radio'&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{it.options.map(o=><label key={o} className="btn btn-ghost"><input type="radio" name={it.id} checked={documentForm.responses[it.id]===o} onChange={()=>setResponse(it.id,o)}/>{o}</label>)}</div>}
         {it.type==='checkbox'&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{it.options.map(o=>{const arr=documentForm.responses[it.id]||[];return <label key={o} className="btn btn-ghost"><input type="checkbox" checked={arr.includes(o)} onChange={e=>setResponse(it.id,e.target.checked?[...arr,o]:arr.filter(x=>x!==o))}/>{o}</label>})}</div>}
@@ -98,3 +99,21 @@ const PMDocumentsView = ({ data }) => {
   </div>;
 };
 window.PMDocumentsView = PMDocumentsView;
+
+const AssetPMTemplatesPanel = ({ asset, onLaunch }) => {
+  const {useState,useEffect}=React;
+  const [templates,setTemplates]=useState([]),[selected,setSelected]=useState([]),[busy,setBusy]=useState(true),[msg,setMsg]=useState('');
+  const api=async(action,payload={})=>{const r=await fetch(API_URL,{method:'POST',body:JSON.stringify({action,...payload})});const j=await r.json();if(j.status==='error')throw new Error(j.message||'เกิดข้อผิดพลาด');return j;};
+  const load=async()=>{setBusy(true);try{const [t,a]=await Promise.all([api('get_pm_templates'),api('get_asset_pm_templates',{assetId:asset.id})]);setTemplates(t.templates||[]);setSelected((a.templateIds||[]).map(String));}catch(e){setMsg(e.message)}setBusy(false);};
+  useEffect(()=>{load();},[asset.id]);
+  const toggle=id=>setSelected(s=>s.includes(String(id))?s.filter(x=>x!==String(id)):[...s,String(id)]);
+  const save=async()=>{setBusy(true);try{await api('save_asset_pm_templates',{assetId:asset.id,templateIds:selected});setMsg('บันทึกแม่แบบสำหรับอุปกรณ์นี้แล้ว');}catch(e){setMsg(e.message)}setBusy(false);};
+  const allowed=templates.filter(t=>selected.includes(String(t.id)));
+  return <div>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,marginBottom:14,flexWrap:'wrap'}}><div><div style={{fontWeight:800,fontSize:17}}>แม่แบบ PM ของอุปกรณ์</div><div style={{fontSize:12,color:'var(--text3)',marginTop:3}}>เลือกแม่แบบที่อนุญาตให้ใช้กับ {asset.name}</div></div><button className="btn btn-primary" onClick={save} disabled={busy}>บันทึกการตั้งค่า</button></div>
+    {msg&&<div style={{padding:10,borderRadius:7,background:'var(--surface2)',marginBottom:12}}>{msg}</div>}
+    {busy&&!templates.length?<div style={{padding:30,textAlign:'center',color:'var(--text3)'}}>กำลังโหลด...</div>:<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:8}}>{templates.map(t=><label key={t.id} className="card" style={{padding:13,cursor:'pointer',display:'flex',gap:10,alignItems:'flex-start',borderColor:selected.includes(String(t.id))?'var(--accent)':'var(--border)'}}><input type="checkbox" checked={selected.includes(String(t.id))} onChange={()=>toggle(t.id)} style={{marginTop:4}}/><div><div style={{fontWeight:700}}>{t.name}</div><div style={{fontSize:11,color:'var(--text3)',marginTop:3}}>{t.category} · {t.items?.length||0} หัวข้อตรวจ</div></div></label>)}</div>}
+    <div style={{borderTop:'1px solid var(--border)',marginTop:18,paddingTop:16}}><div style={{fontWeight:800,marginBottom:10}}>เริ่มตรวจ PM จากแม่แบบที่เลือกไว้</div>{!allowed.length?<div style={{color:'var(--text3)',fontSize:13}}>ยังไม่ได้เลือกแม่แบบสำหรับอุปกรณ์นี้</div>:<div style={{display:'flex',flexDirection:'column',gap:7}}>{allowed.map(t=><div key={t.id} className="card" style={{padding:12,display:'flex',justifyContent:'space-between',alignItems:'center',gap:10}}><div><div style={{fontWeight:700}}>{t.name}</div><div style={{fontSize:11,color:'var(--text3)'}}>{t.items?.length||0} รายการตรวจ</div></div><button className="btn btn-primary" onClick={()=>onLaunch(t.id)}>เริ่มตรวจ PM</button></div>)}</div>}</div>
+  </div>;
+};
+window.AssetPMTemplatesPanel=AssetPMTemplatesPanel;
