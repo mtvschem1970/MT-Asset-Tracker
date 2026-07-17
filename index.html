@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#163a5f">
     <title>ระบบบริหารงานซ่อมบำรุง | MTA Asset</title>
-    <link rel="icon" type="image/png" href="./Logo.png">
+    <link rel="icon" type="image/png" href="./ChatGPT Image Jul 17, 2026, 10_30_40 AM.png">
     
     <!-- แก้ไขลิงก์ Tailwind เป็น CDN -->
     <script src="./tailwind.js"></script>
@@ -294,7 +294,7 @@ const { useState, useEffect, useRef, useMemo, useCallback } = React;
 // ====== CONFIG ======
 const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
 const APP_VERSION = "2.3 Pro";
-const BRAND_LOGO = "./Logo.png";
+const BRAND_LOGO = "./ChatGPT Image Jul 17, 2026, 10_30_40 AM.png";
 
 // ====== ICONS ======
 const I = ({ d, size=20, cls="" }) => (
@@ -1289,7 +1289,7 @@ const DetailView = ({ item, setView, postData }) => {
                 <div className="detail-main">
                     <div className="card-static" style={{overflow:'hidden'}}>
                         <div className="detail-tabs">
-                            {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:'+ บันทึกซ่อม'},{id:'spares',label:`รายการ Spare Part (${spareParts.length})${lowStockCount ? ` ⚠️ ${lowStockCount}` : ''}`},{id:'newspare',label:'+ เพิ่ม Spare Part'},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
+                            {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:'+ บันทึกซ่อม'},{id:'spares',label:`รายการ Spare Part (${spareParts.length})${lowStockCount ? ` ⚠️ ${lowStockCount}` : ''}`},{id:'newspare',label:'+ เพิ่ม Spare Part'},{id:'pmtemplates',label:'📋 แม่แบบ PM'},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
                                 <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:'12px 16px',fontSize:13,fontWeight:700,borderBottom:`2px solid ${tab===t.id?'var(--accent)':'transparent'}`,color:tab===t.id?'var(--accent)':'var(--text3)',whiteSpace:'nowrap',background:'transparent',transition:'all 0.2s',cursor:'pointer'}}>
                                     {t.label}
                                 </button>
@@ -1409,6 +1409,9 @@ const DetailView = ({ item, setView, postData }) => {
                                         </div>
                                     </div>
                                 </div>
+                            )}
+                            {tab==='pmtemplates' && (
+                                <window.AssetPMTemplatesPanel asset={item} onLaunch={(templateId)=>{window.pmLaunchContext={assetId:item.id,templateId};setView('pm_documents');}}/>
                             )}
                             {tab==='pmschedule' && (
                                 <div>
