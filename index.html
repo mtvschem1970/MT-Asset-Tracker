@@ -379,6 +379,8 @@
         .pmp-overdue { background: #c2410c !important; border: 1px solid #c2410c !important; color: #fff !important; }
         .pmp-new { background: rgba(21,128,61,.12) !important; border: 1.5px solid var(--green) !important; color: var(--green) !important; }
         .pmp-remove { background: rgba(164,38,44,.08) !important; border: 1.5px dashed var(--red) !important; color: var(--red) !important; text-decoration: line-through; }
+        .pmp-donecell { background: rgba(21,128,61,.14) !important; border: 1px solid var(--green) !important; color: var(--green) !important; }
+        .pmp-cancelcell { background: rgba(164,38,44,.06) !important; border: 1px solid rgba(164,38,44,.35) !important; color: var(--red) !important; }
         .pmp-mark { position: absolute; top: -6px; right: -6px; font-size: 10px; line-height: 15px; min-width: 15px; padding: 0 3px; border-radius: 8px; color: #fff; text-decoration: none; display: inline-block; }
         .pmp-done { background: var(--green); }
         .pmp-cancel { background: var(--red); }
@@ -389,6 +391,9 @@
         .pmp-asset:hover { text-decoration: underline; }
         .pmp-iconbtn { width: 26px; height: 26px; flex-shrink: 0; border-radius: 6px; border: 1px solid var(--border); color: var(--text2); font-weight: 700; }
         .pmp-iconbtn:hover { border-color: var(--accent); color: var(--accent); }
+        .pmp-menu { position: fixed; z-index: 61; width: 260px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 30px rgba(15,27,45,.18); padding: 4px; display: flex; flex-direction: column; }
+        .pmp-menu button { text-align: left; padding: 9px 10px; border-radius: 7px; font-size: 13px; font-weight: 600; }
+        .pmp-menu button:hover { background: var(--surface2); }
         .pmp-savebar { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 -4px 16px rgba(15,27,45,.06); }
         @media (max-width: 767px) { .pmp-page { height: auto !important; } .pmp-wrap { flex: none; max-height: 65vh; } .pmp-savebar { bottom: 70px; } }
     </style>
@@ -729,6 +734,8 @@ const PM_PENDING = 'รอเป้าหมาย';
 const pmPad = n => String(n).padStart(2, '0');
 const pmMonthOf = d => Number(String(d).slice(5, 7)) - 1;
 const pmYearOf = d => Number(String(d).slice(0, 4));
+// แผนกำหนดแค่ "เดือน" -> วันครบกำหนดคือวันสุดท้ายของเดือน (ทำวันไหนก็ได้ภายในเดือนนั้น)
+const pmMonthEnd = d => { const y = Number(String(d).slice(0, 4)), m = Number(String(d).slice(5, 7)); return `${String(d).slice(0, 7)}-${pmPad(new Date(y, m, 0).getDate())}`; };
 const pmPatternMonths = (step, start) => PM_MONTHS.map((_, m) => step > 0 && m >= start && (m - start) % step === 0);
 
 let pmRowSeq = 0;
@@ -763,7 +770,7 @@ const buildPmRows = (assets, allPm, year) => {
     return rows;
 };
 
-const computePmChanges = (rows, year, day) => {
+const computePmChanges = (rows, year) => {
     const creates = [], updates = [], deletes = [], assetIds = new Set();
     rows.forEach(r => {
         const topic = r.topic.trim() || PM_DEFAULT_TOPIC;
@@ -772,9 +779,8 @@ const computePmChanges = (rows, year, day) => {
         r.existing.forEach((list, m) => {
             const pending = list.filter(p => p.status === PM_PENDING);
             if (r.sel[m] && !pending.length) {
-                const d = Math.min(day, new Date(year, m + 1, 0).getDate());
                 creates.push({ assetId: r.assetId, assetName: r.assetName, schedule: {
-                    topic, planDate: `${year}-${pmPad(m + 1)}-${pmPad(d)}`, status: PM_PENDING, note: '',
+                    topic, planMonth: `${year}-${pmPad(m + 1)}`, planDate: pmMonthEnd(`${year}-${pmPad(m + 1)}`), status: PM_PENDING, note: 'ทำภายในเดือนที่กำหนด',
                     pmType: r.pmType, pmVendorName: vendor, pmVendorContact: '', image: '', pdf: '' } });
                 assetIds.add(r.assetId);
             }
@@ -798,7 +804,7 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
     const [dept, setDept] = useState('');
     const [q, setQ] = useState('');
     const [onlyPlanned, setOnlyPlanned] = useState(false);
-    const [day, setDay] = useState(1);
+    const [menu, setMenu] = useState(null);   // เมนูของช่องที่มีแผนแล้ว {key, m, x, y}
     const [allPm, setAllPm] = useState([]);
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -817,7 +823,7 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
     useEffect(() => { load(); }, []);
     useEffect(() => { setRows(buildPmRows(data.assets, allPm, year)); }, [allPm, year, data.assets]);
 
-    const changes = useMemo(() => computePmChanges(rows, year, day), [rows, year, day]);
+    const changes = useMemo(() => computePmChanges(rows, year), [rows, year]);
     const changeCount = changes.creates.length + changes.deletes.length + changes.updates.length;
 
     const visible = useMemo(() => {
@@ -871,6 +877,35 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
         await load();
     };
 
+    const leaveIfDirty = () => !changeCount || confirm('มีการแก้ไขแผนที่ยังไม่บันทึก จะหายไปถ้าทำต่อ ต้องการทำต่อหรือไม่?');
+    const menuRow = menu && rows.find(r => r.key === menu.key);
+    const menuPending = menuRow ? menuRow.existing[menu.m].filter(p => p.status === PM_PENDING) : [];
+    const recordDocument = async () => {
+        if (!menuRow || !leaveIfDirty()) return;
+        // ถ้าเครื่องนี้ผูกแม่แบบ PM ไว้แบบเดียว เลือกแม่แบบให้อัตโนมัติ
+        let templateId = '';
+        try { const t = await mtaCall({ action: 'get_asset_pm_templates', assetId: menuRow.assetId }); if ((t.templateIds || []).length === 1) templateId = t.templateIds[0]; } catch (e) {}
+        const monthEnd = pmMonthEnd(`${year}-${pmPad(menu.m + 1)}-01`);
+        // วันที่ตรวจเริ่มต้น: วันนี้ ถ้าอยู่ในเดือนแผน / วันสุดท้ายของเดือน ถ้าเป็นเดือนที่ผ่านไปแล้ว (แก้ได้ในฟอร์ม)
+        const inspectionDate = monthEnd < today ? monthEnd : (today.slice(0, 7) === monthEnd.slice(0, 7) ? today : `${monthEnd.slice(0, 7)}-01`);
+        window.pmLaunchContext = { assetId: menuRow.assetId, templateId, inspectionDate, fromPlan: true };
+        setMenu(null); setView('pm_documents');
+    };
+    const markDone = async () => {
+        if (!menuRow || !menuPending.length || !leaveIfDirty()) return;
+        const doneDate = prompt('วันที่ทำ PM (ปปปป-ดด-วว) — บันทึกเป็นทำแล้วโดยไม่มีเอกสาร', pmMonthEnd(menuPending[0].planDate) < today ? pmMonthEnd(menuPending[0].planDate) : today);
+        setMenu(null);
+        if (!doneDate) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(doneDate.trim())) { setMsg({ type: 'error', text: 'รูปแบบวันที่ไม่ถูกต้อง ต้องเป็น ปปปป-ดด-วว (ค.ศ.) เช่น 2026-09-20' }); return; }
+        setSaving(true);
+        const j = await mtaCall({ action: 'save_pm_plan', assetIds: [menuRow.assetId],
+            updates: menuPending.filter(p => p.schId).map(p => ({ schId: p.schId, patch: { status: 'ดำเนินการแล้ว', doneDate: doneDate.trim() } })) });
+        setSaving(false);
+        setMsg(j.status === 'error' ? { type: 'error', text: 'บันทึกไม่สำเร็จ: ' + j.message } : { type: 'success', text: `บันทึก ${menuRow.assetId} ${PM_MONTHS[menu.m]} เป็น "ทำแล้ว"` });
+        await load();
+    };
+    const removeFromMenu = () => { if (menuRow) toggleCell(menuRow.key, menu.m); setMenu(null); };
+
     const monthTotals = PM_MONTHS.map((_, m) => visible.reduce((s, r) => s + (r.sel[m] ? 1 : 0) + r.existing[m].filter(p => p.status === 'ดำเนินการแล้ว').length, 0));
     const plannedRows = visible.filter(r => r.sel.some(Boolean) || r.existing.some(l => l.length)).length;
     const deptNames = (data.departments || []).map(d => d.name).filter(Boolean);
@@ -884,17 +919,24 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
         const want = r.sel[m];
         let cls = 'pmp-cell', label = '', title = PM_MONTHS[m] + ' ' + (year + 543);
         if (want && pending.length) {
-            const overdue = pending.some(p => p.planDate < today);
+            const overdue = pending.some(p => pmMonthEnd(p.planDate) < today);
             cls += overdue ? ' pmp-overdue' : ' pmp-planned'; label = overdue ? '!' : 'P';
-            title += ` · ตามแผน ${pending.map(p => p.planDate).join(', ')}${overdue ? ' (เลยกำหนด)' : ''}`;
+            title += overdue ? ' · เลยกำหนด ยังไม่มีเอกสาร PM (คลิกเพื่อบันทึกย้อนหลัง)' : ' · ตามแผน (คลิกเพื่อบันทึกเอกสาร PM)';
         } else if (want) { cls += ' pmp-new'; label = '+'; title += ' · จะเพิ่มเมื่อกดบันทึก'; }
         else if (pending.length) { cls += ' pmp-remove'; label = 'P'; title += ' · จะลบเมื่อกดบันทึก'; }
+        else if (done > 0) { cls += ' pmp-donecell'; label = '✓'; }
+        else if (cancel > 0) { cls += ' pmp-cancelcell'; label = '✗'; }
+        const badgeDone = done > 0 && label !== '✓', badgeCancel = cancel > 0 && label !== '✗';
+        if (done > 0 && !want && !pending.length) title += ` · ทำแล้ว ${list.filter(p => p.status === 'ดำเนินการแล้ว').map(p => p.doneDate || '').filter(Boolean).join(', ')}`;
         return (
             <td key={m} className="pmp-td">
-                <button type="button" className={cls} title={title} onClick={() => toggleCell(r.key, m)} aria-pressed={want}>
+                <button type="button" className={cls} title={title} aria-pressed={want} onClick={e => {
+                    if (want && pending.length) { const b = e.currentTarget.getBoundingClientRect(); setMenu({ key: r.key, m, x: b.left, y: b.bottom + 4 }); }
+                    else toggleCell(r.key, m);
+                }}>
                     {label}
-                    {done > 0 && <span className="pmp-mark pmp-done">✓{done > 1 ? done : ''}</span>}
-                    {cancel > 0 && <span className="pmp-mark pmp-cancel">✗</span>}
+                    {badgeDone && <span className="pmp-mark pmp-done">✓{done > 1 ? done : ''}</span>}
+                    {badgeCancel && <span className="pmp-mark pmp-cancel">✗</span>}
                 </button>
             </td>
         );
@@ -905,7 +947,7 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
                 <div style={{ flex: '1 1 260px' }}>
                     <h2 style={{ fontSize: 22, fontWeight: 800 }}>ตั้งแผน PM ประจำปี</h2>
-                    <p style={{ fontSize: 13, color: 'var(--text2)' }}>คลิกช่องเดือนเพื่อเลือก/ยกเลิก หรือใช้รูปแบบสำเร็จรูป แล้วกดบันทึกครั้งเดียว · ใช้กับเอกสาร FM-MT-04</p>
+                    <p style={{ fontSize: 13, color: 'var(--text2)' }}>กำหนดแค่เดือน ทำวันไหนก็ได้ภายในเดือนนั้น · คลิกช่องว่างเพื่อเลือกเดือน คลิกช่องที่มีแผนเพื่อบันทึกเอกสาร PM (ย้อนหลังได้) · ใช้กับเอกสาร FM-MT-04</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <button className="btn btn-ghost" style={{ padding: '6px 10px' }} onClick={() => changeYear(year - 1)} aria-label="ปีก่อนหน้า">‹</button>
@@ -922,12 +964,6 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
                 <input className="inp" style={{ flex: '1 1 180px', width: 'auto' }} value={q} onChange={e => setQ(e.target.value)} placeholder="ค้นหารหัส / ชื่อเครื่อง / หัวข้อ"/>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text2)' }}>
                     <input type="checkbox" checked={onlyPlanned} onChange={e => setOnlyPlanned(e.target.checked)}/> เฉพาะที่มีแผน
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text2)' }}>
-                    วันที่ในเดือนสำหรับแผนใหม่
-                    <select className="inp" style={{ width: 'auto' }} value={day} onChange={e => setDay(Number(e.target.value))}>
-                        {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
-                    </select>
                 </label>
                 <div style={{ flexBasis: '100%', height: 0 }}/>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>ตั้งทีเดียวทั้งหน้า:</span>
@@ -1017,9 +1053,22 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
                 <span><b className="pmp-legend pmp-new">+</b> จะเพิ่ม</span>
                 <span><b className="pmp-legend pmp-remove">P</b> จะลบ</span>
                 <span><b className="pmp-legend pmp-overdue">!</b> เลยกำหนด</span>
-                <span><b style={{ color: 'var(--green)' }}>✓</b> ทำแล้ว · <b style={{ color: 'var(--red)' }}>✗</b> ยกเลิก (ไม่ถูกแก้ไข)</span>
+                <span><b className="pmp-legend pmp-donecell">✓</b> ทำแล้ว (มีเอกสาร PM หรือกดทำแล้ว)</span>
+                <span><b className="pmp-legend pmp-cancelcell">✗</b> ยกเลิก</span>
                 <span>คลิกชื่อเดือนที่หัวตาราง = เลือกทั้งคอลัมน์</span>
             </div>
+
+            {menu && menuRow && ReactDOM.createPortal(
+                <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 60 }} onClick={() => setMenu(null)}/>
+                    <div className="pmp-menu" style={{ left: Math.min(menu.x, window.innerWidth - 270), top: Math.min(menu.y, window.innerHeight - 200) }}>
+                        <div style={{ fontSize: 12, color: 'var(--text3)', padding: '6px 10px 4px' }}>{menuRow.assetId} · {PM_MONTHS[menu.m]} {year + 543} · {menuRow.topic}</div>
+                        <button type="button" onClick={recordDocument}>📝 บันทึกเอกสาร PM{pmMonthEnd(`${year}-${pmPad(menu.m + 1)}-01`) < today ? ' (ย้อนหลัง)' : ''}</button>
+                        <button type="button" onClick={markDone}>✓ ทำแล้ว (ไม่มีเอกสาร)</button>
+                        <button type="button" onClick={removeFromMenu} style={{ color: 'var(--red)' }}>✗ เอาแผนเดือนนี้ออก</button>
+                    </div>
+                </>, document.body
+            )}
 
             <div className="pmp-savebar">
                 <span style={{ fontSize: 13, color: changeCount ? 'var(--text)' : 'var(--text3)', fontWeight: changeCount ? 700 : 400 }}>

@@ -233,7 +233,8 @@
             const groups = new Map();
             items.forEach(p => { const k = `${p.assetId}||${p.topic || ''}`; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); });
             const today = new Date().toISOString().slice(0, 10);
-            const mark = (p) => p.status === 'ดำเนินการแล้ว' ? ['D', '✓'] : p.status === 'ยกเลิก' ? ['X', '✗'] : p.planDate < today ? ['O', '!'] : ['P', 'P'];
+            const monthEnd = (d) => { const y = Number(d.slice(0, 4)), m = Number(d.slice(5, 7)); return `${d.slice(0, 7)}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`; };
+            const mark = (p) => p.status === 'ดำเนินการแล้ว' ? ['D', '✓'] : p.status === 'ยกเลิก' ? ['X', '✗'] : monthEnd(String(p.planDate)) < today ? ['O', '!'] : ['P', 'P'];
             const rows = [...groups.entries()].sort((x, y) => x[0].localeCompare(y[0])).map(([k, list], i) => {
                 const a = assetsById.get(String(list[0].assetId)) || { id: list[0].assetId, name: list[0].assetName };
                 const cells = Array.from({ length: 12 }, (_, m) => {

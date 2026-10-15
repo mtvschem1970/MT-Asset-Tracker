@@ -3,7 +3,7 @@ const PMDocumentsView = ({ data }) => {
   const launchContext = window.pmLaunchContext || null;
   const blankItem = () => ({id:'ITEM-'+Date.now()+'-'+Math.random().toString(16).slice(2),label:'',type:'radio',options:['ปกติ','ไม่ปกติ','อื่นๆ'],unit:'',required:true});
   const blankTemplate = () => ({id:null,name:'',category:'ปั๊ม',description:'',items:[blankItem()]});
-  const blankDocument = () => ({templateId:launchContext?.templateId||'',assetId:launchContext?.assetId||'',inspectionDate:new Date().toISOString().slice(0,10),inspector:'',overallStatus:'ผ่าน',notes:'',responses:{}});
+  const blankDocument = () => ({templateId:launchContext?.templateId||'',assetId:launchContext?.assetId||'',inspectionDate:launchContext?.inspectionDate||new Date().toISOString().slice(0,10),inspector:'',overallStatus:'ผ่าน',notes:'',responses:{}});
   const [page,setPage] = useState(launchContext?'run':'templates');
   const [templates,setTemplates] = useState([]);
   const [documents,setDocuments] = useState([]);

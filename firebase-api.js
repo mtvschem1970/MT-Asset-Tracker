@@ -126,6 +126,29 @@
         if ((await ref.get()).exists) await ref.update({ nextPmDate: next });
     };
 
+    // แผน PM ที่ยัง "รอเป้าหมาย" แต่มีเอกสาร PM ของเครื่องเดียวกันในเดือนเดียวกันแล้ว -> เปลี่ยนเป็น "ดำเนินการแล้ว"
+    // ใช้ทั้งตอนบันทึกเอกสาร (รวมเอกสารย้อนหลัง) และตอนโหลดแผน เพื่อแก้ข้อมูลเก่าให้ตรงกันอัตโนมัติ
+    const reconcilePmWithDocuments = async (pmList, docs) => {
+        const byMonth = new Map();
+        docs.forEach(d => {
+            if (!d.assetId || !d.inspectionDate) return;
+            const k = `${d.assetId}|${String(d.inspectionDate).slice(0, 7)}`;
+            if (!byMonth.has(k)) byMonth.set(k, d);
+        });
+        const fixes = pmList.filter(p => p.status === 'รอเป้าหมาย' && p.planDate && p.schId &&
+            byMonth.has(`${p.assetId}|${String(p.planDate).slice(0, 7)}`));
+        if (!fixes.length) return pmList;
+        const batch = db.batch();
+        fixes.forEach(p => {
+            const d = byMonth.get(`${p.assetId}|${String(p.planDate).slice(0, 7)}`);
+            Object.assign(p, { status: 'ดำเนินการแล้ว', doneDate: d.inspectionDate, pmDocumentId: d.id || '' });
+            batch.update(db.collection(C.pm).doc(docId(p.schId)), { status: p.status, doneDate: p.doneDate, pmDocumentId: p.pmDocumentId });
+        });
+        await batch.commit();
+        for (const id of new Set(fixes.map(p => String(p.assetId)))) await refreshNextPm(id);
+        return pmList;
+    };
+
     // ====== ACTIONS ======
     const actions = {
         async save_dept(p) {
@@ -227,7 +250,9 @@
         },
 
         async get_all_pm_dashboard() {
-            return { allPm: await listAll(C.pm) };
+            const [pm, docs] = await Promise.all([listAll(C.pm), listAll(C.docs)]);
+            try { await reconcilePmWithDocuments(pm, docs); } catch (e) { console.warn('reconcile PM', e); }
+            return { allPm: pm };
         },
 
         async get_pm_templates() {
@@ -251,6 +276,10 @@
         async save_pm_document(p) {
             const d = await storeFilesDeep({ ...p.document, id: p.document.id || 'PMDOC-' + Date.now() }, 'pm-documents');
             await db.collection(C.docs).doc(docId(d.id)).set(clean(d));
+            if (d.assetId) {
+                const pmList = (await db.collection(C.pm).where('assetId', '==', String(d.assetId)).get()).docs.map(x => x.data());
+                await reconcilePmWithDocuments(pmList, [d]);
+            }
         },
 
         async get_asset_pm_templates(p) {
