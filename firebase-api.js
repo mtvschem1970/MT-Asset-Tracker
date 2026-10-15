@@ -206,6 +206,26 @@
             await refreshNextPm(p.assetId);
         },
 
+        // บันทึกแผน PM ทั้งปีจากหน้า "ตั้งแผน PM ประจำปี" ในครั้งเดียว
+        // creates: [{assetId, assetName, schedule}], updates: [{schId, patch}], deletes: [schId] (เฉพาะรายการที่ยังรอเป้าหมาย)
+        async save_pm_plan(p) {
+            const ops = [];
+            (p.creates || []).forEach((c, i) => {
+                const s = { ...c.schedule, schId: c.schedule.schId || `SCH-${Date.now()}-${i}` };
+                ops.push(b => b.set(db.collection(C.pm).doc(docId(s.schId)), clean({ ...s, assetId: String(c.assetId), assetName: c.assetName || '' })));
+            });
+            (p.updates || []).forEach(u => ops.push(b => b.update(db.collection(C.pm).doc(docId(u.schId)), clean(u.patch))));
+            (p.deletes || []).forEach(id => ops.push(b => b.delete(db.collection(C.pm).doc(docId(id)))));
+            for (let i = 0; i < ops.length; i += 400) {
+                const batch = db.batch();
+                ops.slice(i, i + 400).forEach(op => op(batch));
+                await batch.commit();
+            }
+            const assetIds = new Set([...(p.assetIds || []), ...(p.creates || []).map(c => String(c.assetId))]);
+            for (const id of assetIds) await refreshNextPm(id);
+            return { created: (p.creates || []).length, deleted: (p.deletes || []).length, updated: (p.updates || []).length };
+        },
+
         async get_all_pm_dashboard() {
             return { allPm: await listAll(C.pm) };
         },

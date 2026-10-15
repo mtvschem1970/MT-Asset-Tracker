@@ -360,6 +360,37 @@
             .desktop-sidebar { width:220px; }
             .app-topbar { padding:0 18px; }
         }
+        /* ===== ตั้งแผน PM ประจำปี ===== */
+        .pmp-wrap { flex: 1; overflow: auto; min-height: 240px; }
+        .pmp-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+        .pmp-table th { position: sticky; top: 0; z-index: 2; background: var(--surface2); border-bottom: 1px solid var(--border); padding: 8px 6px; text-align: left; font-size: 12px; color: var(--text2); white-space: nowrap; }
+        .pmp-table td { border-bottom: 1px solid var(--border); padding: 6px; vertical-align: middle; background: var(--surface); }
+        .pmp-table tr.pmp-first td { border-top: 1px solid var(--border-strong, #cfd6e0); }
+        .pmp-table tfoot td { position: sticky; bottom: 0; background: var(--surface2); border-top: 1px solid var(--border); }
+        .pmp-sticky { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--border); }
+        .pmp-table th.pmp-sticky { z-index: 3; }
+        .pmp-month { text-align: center !important; padding: 4px 2px !important; }
+        .pmp-month button { width: 100%; padding: 4px 0; border-radius: 6px; font-weight: 700; color: var(--text2); }
+        .pmp-month button:hover { background: rgba(29,78,137,.1); color: var(--accent); }
+        .pmp-td { text-align: center; padding: 3px !important; }
+        .pmp-cell { position: relative; width: 38px; height: 34px; border-radius: 7px; border: 1px dashed var(--border); font-weight: 800; font-size: 13px; color: var(--text3); background: transparent; cursor: pointer; transition: background .12s, border-color .12s; }
+        .pmp-cell:hover { border-color: var(--accent); background: rgba(29,78,137,.06); }
+        .pmp-planned { background: var(--accent) !important; border: 1px solid var(--accent) !important; color: #fff !important; }
+        .pmp-overdue { background: #c2410c !important; border: 1px solid #c2410c !important; color: #fff !important; }
+        .pmp-new { background: rgba(21,128,61,.12) !important; border: 1.5px solid var(--green) !important; color: var(--green) !important; }
+        .pmp-remove { background: rgba(164,38,44,.08) !important; border: 1.5px dashed var(--red) !important; color: var(--red) !important; text-decoration: line-through; }
+        .pmp-mark { position: absolute; top: -6px; right: -6px; font-size: 10px; line-height: 15px; min-width: 15px; padding: 0 3px; border-radius: 8px; color: #fff; text-decoration: none; display: inline-block; }
+        .pmp-done { background: var(--green); }
+        .pmp-cancel { background: var(--red); }
+        .pmp-legend { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 20px; border-radius: 5px; margin-right: 4px; font-size: 11px; }
+        .pmp-total { text-align: center; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+        .pmp-inp { min-height: 32px !important; padding: 4px 8px !important; font-size: 13px !important; }
+        .pmp-asset { font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: var(--accent); font-size: 12px; }
+        .pmp-asset:hover { text-decoration: underline; }
+        .pmp-iconbtn { width: 26px; height: 26px; flex-shrink: 0; border-radius: 6px; border: 1px solid var(--border); color: var(--text2); font-weight: 700; }
+        .pmp-iconbtn:hover { border-color: var(--accent); color: var(--accent); }
+        .pmp-savebar { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 -4px 16px rgba(15,27,45,.06); }
+        @media (max-width: 767px) { .pmp-page { height: auto !important; } .pmp-wrap { flex: none; max-height: 65vh; } .pmp-savebar { bottom: 70px; } }
     </style>
 </head>
 <body>
@@ -499,6 +530,7 @@ const Sidebar = ({ view, setView, fetchData, pmOverdue, backupDue }) => {
         ]},
         { title:'งานบำรุงรักษา', items:[
             { id:'kanban', label:'แผนงาน PM', icon:ic.kanban, badge: pmOverdue > 0 ? pmOverdue : null },
+            { id:'pm_planner', label:'ตั้งแผน PM ประจำปี', icon:ic.cal },
             { id:'pm_documents', label:'เอกสารและแบบตรวจ PM', icon:ic.file },
             { id:'iso_docs', label:'เอกสาร ISO 14001', icon:ic.list },
         ]},
@@ -567,7 +599,7 @@ const MobileNav = ({ view, setView, pmOverdue }) => {
 
 const AppTopbar = ({ view, selectedDept, selectedAsset }) => {
     const titles = {
-        dashboard:'ภาพรวมงานซ่อมบำรุง', kanban:'แผนงานบำรุงรักษา PM', pm_documents:'ระบบเอกสาร PM', departments:'แผนกและอุปกรณ์',
+        dashboard:'ภาพรวมงานซ่อมบำรุง', kanban:'แผนงานบำรุงรักษา PM', pm_planner:'แผนการบำรุงรักษาเชิงป้องกันประจำปี', pm_documents:'ระบบเอกสาร PM', departments:'แผนกและอุปกรณ์',
         assets:selectedDept || 'รายการอุปกรณ์', global_search:'ค้นหาข้อมูลอุปกรณ์', electrical:'ระบบไฟฟ้า',
         water:'ระบบน้ำ', add_asset:'ลงทะเบียนอุปกรณ์ใหม่', edit_asset:'แก้ไขข้อมูลอุปกรณ์',
         detail:selectedAsset?.name || 'รายละเอียดอุปกรณ์', executive:'รายงานสำหรับผู้บริหาร', backup:'สำรองข้อมูล', iso_docs:'เอกสาร ISO 14001'
@@ -679,6 +711,329 @@ const GlobalSearch = ({ data, setView, setSelectedAsset }) => {
     );
 };
 
+// ====== ANNUAL PM PLANNER (ตั้งแผน PM ประจำปีในหน้าเดียว) ======
+// แถว = อุปกรณ์ + หัวข้อ PM, คอลัมน์ = 12 เดือน คลิกช่องเพื่อเลือก/ยกเลิกเดือน แล้วกดบันทึกครั้งเดียว
+// รายการที่ทำแล้ว (✓) หรือยกเลิก (✗) จะไม่ถูกแก้ ลบได้เฉพาะรายการที่ยัง "รอเป้าหมาย"
+const PM_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const PM_PATTERNS = [
+    { id:'1', label:'ทุกเดือน', step:1 },
+    { id:'2', label:'ทุก 2 เดือน', step:2 },
+    { id:'3', label:'ทุก 3 เดือน (ไตรมาส)', step:3 },
+    { id:'4', label:'ทุก 4 เดือน', step:4 },
+    { id:'6', label:'ทุก 6 เดือน', step:6 },
+    { id:'12', label:'ปีละครั้ง', step:12 },
+    { id:'clear', label:'ล้างทั้งปี', step:0 },
+];
+const PM_DEFAULT_TOPIC = 'บำรุงรักษาเชิงป้องกัน (PM)';
+const PM_PENDING = 'รอเป้าหมาย';
+const pmPad = n => String(n).padStart(2, '0');
+const pmMonthOf = d => Number(String(d).slice(5, 7)) - 1;
+const pmYearOf = d => Number(String(d).slice(0, 4));
+const pmPatternMonths = (step, start) => PM_MONTHS.map((_, m) => step > 0 && m >= start && (m - start) % step === 0);
+
+let pmRowSeq = 0;
+const makePmRow = (asset, topic, items) => {
+    const existing = PM_MONTHS.map(() => []);
+    items.forEach(p => existing[pmMonthOf(p.planDate)]?.push(p));
+    const first = items[0] || {};
+    const t = topic || PM_DEFAULT_TOPIC;
+    return {
+        key: 'r' + (++pmRowSeq), assetId: String(asset.id), assetName: asset.name || '', dept: asset.location || '',
+        topic: t, origTopic: t, pmType: first.pmType || 'ภายใน', origPmType: first.pmType || 'ภายใน',
+        vendor: first.pmVendorName || '', origVendor: first.pmVendorName || '',
+        existing, sel: existing.map(list => list.some(p => p.status === PM_PENDING)), hasSaved: items.length > 0
+    };
+};
+
+const buildPmRows = (assets, allPm, year) => {
+    const byAsset = new Map();
+    allPm.filter(p => p.planDate && pmYearOf(p.planDate) === year).forEach(p => {
+        const k = String(p.assetId);
+        if (!byAsset.has(k)) byAsset.set(k, []);
+        byAsset.get(k).push(p);
+    });
+    const rows = [];
+    assets.forEach(a => {
+        const list = byAsset.get(String(a.id)) || [];
+        if (!list.length) { rows.push(makePmRow(a, '', [])); return; }
+        const byTopic = new Map();
+        list.forEach(p => { const t = p.topic || ''; if (!byTopic.has(t)) byTopic.set(t, []); byTopic.get(t).push(p); });
+        byTopic.forEach((items, t) => rows.push(makePmRow(a, t, items)));
+    });
+    return rows;
+};
+
+const computePmChanges = (rows, year, day) => {
+    const creates = [], updates = [], deletes = [], assetIds = new Set();
+    rows.forEach(r => {
+        const topic = r.topic.trim() || PM_DEFAULT_TOPIC;
+        const vendor = r.pmType === 'ภายนอก' ? r.vendor.trim() : '';
+        const removed = new Set();
+        r.existing.forEach((list, m) => {
+            const pending = list.filter(p => p.status === PM_PENDING);
+            if (r.sel[m] && !pending.length) {
+                const d = Math.min(day, new Date(year, m + 1, 0).getDate());
+                creates.push({ assetId: r.assetId, assetName: r.assetName, schedule: {
+                    topic, planDate: `${year}-${pmPad(m + 1)}-${pmPad(d)}`, status: PM_PENDING, note: '',
+                    pmType: r.pmType, pmVendorName: vendor, pmVendorContact: '', image: '', pdf: '' } });
+                assetIds.add(r.assetId);
+            }
+            if (!r.sel[m] && pending.length) {
+                pending.filter(p => p.schId).forEach(p => { deletes.push(p.schId); removed.add(p.schId); });
+                assetIds.add(r.assetId);
+            }
+        });
+        if (topic !== r.origTopic || r.pmType !== r.origPmType || vendor !== (r.origPmType === 'ภายนอก' ? r.origVendor : '')) {
+            r.existing.flat().filter(p => p.schId && !removed.has(p.schId)).forEach(p =>
+                updates.push({ schId: p.schId, patch: { topic, pmType: r.pmType, pmVendorName: vendor } }));
+        }
+    });
+    return { creates, updates, deletes, assetIds: [...assetIds] };
+};
+
+const PmPlanner = ({ data, setView, setSelectedAsset }) => {
+    const thisYear = new Date().getFullYear();
+    const today = new Date().toISOString().slice(0, 10);
+    const [year, setYear] = useState(thisYear);
+    const [dept, setDept] = useState('');
+    const [q, setQ] = useState('');
+    const [onlyPlanned, setOnlyPlanned] = useState(false);
+    const [day, setDay] = useState(1);
+    const [allPm, setAllPm] = useState([]);
+    const [rows, setRows] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [msg, setMsg] = useState(null);
+    const [bulkPattern, setBulkPattern] = useState('3');
+    const [bulkStart, setBulkStart] = useState(0);
+
+    const load = async () => {
+        setLoading(true);
+        const j = await mtaCall({ action: 'get_all_pm_dashboard' });
+        if (j.status === 'error') setMsg({ type: 'error', text: 'โหลดแผน PM ไม่สำเร็จ: ' + j.message });
+        setAllPm(j.allPm || []);
+        setLoading(false);
+    };
+    useEffect(() => { load(); }, []);
+    useEffect(() => { setRows(buildPmRows(data.assets, allPm, year)); }, [allPm, year, data.assets]);
+
+    const changes = useMemo(() => computePmChanges(rows, year, day), [rows, year, day]);
+    const changeCount = changes.creates.length + changes.deletes.length + changes.updates.length;
+
+    const visible = useMemo(() => {
+        const s = q.trim().toLowerCase();
+        return rows.filter(r =>
+            (!dept || r.dept === dept) &&
+            (!s || r.assetId.toLowerCase().includes(s) || r.assetName.toLowerCase().includes(s) || r.topic.toLowerCase().includes(s)) &&
+            (!onlyPlanned || r.sel.some(Boolean) || r.existing.some(l => l.length)));
+    }, [rows, dept, q, onlyPlanned]);
+
+    const patchRow = (key, fn) => setRows(rs => rs.map(r => r.key === key ? { ...r, ...fn(r) } : r));
+    const toggleCell = (key, m) => patchRow(key, r => ({ sel: r.sel.map((v, i) => i === m ? !v : v) }));
+    const applyRowPattern = (key, pid) => {
+        const p = PM_PATTERNS.find(x => x.id === pid); if (!p) return;
+        patchRow(key, r => { const start = Math.max(0, r.sel.indexOf(true)); return { sel: pmPatternMonths(p.step, start) }; });
+    };
+    const visibleKeys = new Set(visible.map(r => r.key));
+    const applyBulk = () => {
+        const p = PM_PATTERNS.find(x => x.id === bulkPattern); if (!p || !visible.length) return;
+        if (!confirm(`ตั้งรูปแบบ "${p.label}"${p.step ? ` เริ่ม ${PM_MONTHS[bulkStart]}` : ''} ให้ ${visible.length} รายการที่แสดงอยู่?`)) return;
+        setRows(rs => rs.map(r => visibleKeys.has(r.key) ? { ...r, sel: pmPatternMonths(p.step, bulkStart) } : r));
+    };
+    const toggleColumn = (m) => {
+        if (!visible.length) return;
+        const allOn = visible.every(r => r.sel[m]);
+        setRows(rs => rs.map(r => visibleKeys.has(r.key) ? { ...r, sel: r.sel.map((v, i) => i === m ? !allOn : v) } : r));
+    };
+    const addTopicRow = (r) => {
+        const asset = data.assets.find(a => String(a.id) === r.assetId) || { id: r.assetId, name: r.assetName, location: r.dept };
+        const nr = makePmRow(asset, '', []); nr.topic = ''; nr.origTopic = '';
+        setRows(rs => { const i = rs.findIndex(x => x.key === r.key); return [...rs.slice(0, i + 1), nr, ...rs.slice(i + 1)]; });
+    };
+    const removeTopicRow = (key) => setRows(rs => rs.filter(r => r.key !== key));
+
+    const changeYear = (y) => {
+        if (changeCount && !confirm('มีการแก้ไขที่ยังไม่บันทึก ต้องการเปลี่ยนปีโดยไม่บันทึกหรือไม่?')) return;
+        setYear(y);
+    };
+    const resetEdits = () => { if (confirm('ยกเลิกการแก้ไขทั้งหมดที่ยังไม่บันทึก?')) setRows(buildPmRows(data.assets, allPm, year)); };
+
+    const save = async () => {
+        if (!changeCount) return;
+        const { creates, updates, deletes } = changes;
+        const lines = [creates.length && `• เพิ่มแผน PM ${creates.length} ครั้ง`, deletes.length && `• ลบแผนที่ยังไม่ทำ ${deletes.length} ครั้ง`, updates.length && `• แก้หัวข้อ/ผู้ดำเนินการ ${updates.length} รายการ`].filter(Boolean);
+        if (!confirm(`บันทึกแผน PM ปี ${year + 543}\n\n${lines.join('\n')}\n\nยืนยัน?`)) return;
+        setSaving(true); setMsg(null);
+        const j = await mtaCall({ action: 'save_pm_plan', ...changes });
+        setSaving(false);
+        if (j.status === 'error') { setMsg({ type: 'error', text: 'บันทึกไม่สำเร็จ: ' + j.message }); return; }
+        setMsg({ type: 'success', text: `บันทึกแผน PM ปี ${year + 543} เรียบร้อย (${lines.map(l => l.slice(2)).join(', ')})` });
+        await load();
+    };
+
+    const monthTotals = PM_MONTHS.map((_, m) => visible.reduce((s, r) => s + (r.sel[m] ? 1 : 0) + r.existing[m].filter(p => p.status === 'ดำเนินการแล้ว').length, 0));
+    const plannedRows = visible.filter(r => r.sel.some(Boolean) || r.existing.some(l => l.length)).length;
+    const deptNames = (data.departments || []).map(d => d.name).filter(Boolean);
+    const openAsset = (id) => { const a = data.assets.find(x => String(x.id) === id); if (a) { setSelectedAsset(a); setView('detail'); } };
+
+    const cell = (r, m) => {
+        const list = r.existing[m];
+        const done = list.filter(p => p.status === 'ดำเนินการแล้ว').length;
+        const cancel = list.filter(p => p.status === 'ยกเลิก').length;
+        const pending = list.filter(p => p.status === PM_PENDING);
+        const want = r.sel[m];
+        let cls = 'pmp-cell', label = '', title = PM_MONTHS[m] + ' ' + (year + 543);
+        if (want && pending.length) {
+            const overdue = pending.some(p => p.planDate < today);
+            cls += overdue ? ' pmp-overdue' : ' pmp-planned'; label = overdue ? '!' : 'P';
+            title += ` · ตามแผน ${pending.map(p => p.planDate).join(', ')}${overdue ? ' (เลยกำหนด)' : ''}`;
+        } else if (want) { cls += ' pmp-new'; label = '+'; title += ' · จะเพิ่มเมื่อกดบันทึก'; }
+        else if (pending.length) { cls += ' pmp-remove'; label = 'P'; title += ' · จะลบเมื่อกดบันทึก'; }
+        return (
+            <td key={m} className="pmp-td">
+                <button type="button" className={cls} title={title} onClick={() => toggleCell(r.key, m)} aria-pressed={want}>
+                    {label}
+                    {done > 0 && <span className="pmp-mark pmp-done">✓{done > 1 ? done : ''}</span>}
+                    {cancel > 0 && <span className="pmp-mark pmp-cancel">✗</span>}
+                </button>
+            </td>
+        );
+    };
+
+    return (
+        <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }} className="fade-up pb-nav pmp-page">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+                <div style={{ flex: '1 1 260px' }}>
+                    <h2 style={{ fontSize: 22, fontWeight: 800 }}>ตั้งแผน PM ประจำปี</h2>
+                    <p style={{ fontSize: 13, color: 'var(--text2)' }}>คลิกช่องเดือนเพื่อเลือก/ยกเลิก หรือใช้รูปแบบสำเร็จรูป แล้วกดบันทึกครั้งเดียว · ใช้กับเอกสาร FM-MT-04</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button className="btn btn-ghost" style={{ padding: '6px 10px' }} onClick={() => changeYear(year - 1)} aria-label="ปีก่อนหน้า">‹</button>
+                    <div style={{ fontWeight: 800, fontSize: 18, minWidth: 90, textAlign: 'center' }}>พ.ศ. {year + 543}</div>
+                    <button className="btn btn-ghost" style={{ padding: '6px 10px' }} onClick={() => changeYear(year + 1)} aria-label="ปีถัดไป">›</button>
+                </div>
+            </div>
+
+            <div className="card-static" style={{ padding: 14, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                <select className="inp" style={{ width: 'auto', minWidth: 160 }} value={dept} onChange={e => setDept(e.target.value)}>
+                    <option value="">ทุกแผนก</option>
+                    {deptNames.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <input className="inp" style={{ flex: '1 1 180px', width: 'auto' }} value={q} onChange={e => setQ(e.target.value)} placeholder="ค้นหารหัส / ชื่อเครื่อง / หัวข้อ"/>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text2)' }}>
+                    <input type="checkbox" checked={onlyPlanned} onChange={e => setOnlyPlanned(e.target.checked)}/> เฉพาะที่มีแผน
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text2)' }}>
+                    วันที่ในเดือนสำหรับแผนใหม่
+                    <select className="inp" style={{ width: 'auto' }} value={day} onChange={e => setDay(Number(e.target.value))}>
+                        {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
+                    </select>
+                </label>
+                <div style={{ flexBasis: '100%', height: 0 }}/>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>ตั้งทีเดียวทั้งหน้า:</span>
+                <select className="inp" style={{ width: 'auto' }} value={bulkPattern} onChange={e => setBulkPattern(e.target.value)}>
+                    {PM_PATTERNS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                </select>
+                {bulkPattern !== 'clear' && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text2)' }}>เริ่มเดือน
+                        <select className="inp" style={{ width: 'auto' }} value={bulkStart} onChange={e => setBulkStart(Number(e.target.value))}>
+                            {PM_MONTHS.map((mm, i) => <option key={i} value={i}>{mm}</option>)}
+                        </select>
+                    </label>
+                )}
+                <button className="btn btn-ghost" onClick={applyBulk} disabled={!visible.length}>ใช้กับ {visible.length} รายการที่แสดง</button>
+            </div>
+
+            {msg && <div style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: msg.type === 'error' ? 'rgba(164,38,44,.08)' : 'rgba(20,108,67,.08)', color: msg.type === 'error' ? 'var(--red)' : 'var(--green)' }}>{msg.text}</div>}
+
+            {loading ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--text3)' }}><Loader/> กำลังโหลดแผน PM...</div>
+            ) : (
+                <div className="card-static pmp-wrap">
+                    <table className="pmp-table">
+                        <thead>
+                            <tr>
+                                <th className="pmp-sticky" style={{ minWidth: 190 }}>อุปกรณ์</th>
+                                <th style={{ minWidth: 190 }}>หัวข้อ PM</th>
+                                <th style={{ minWidth: 110 }}>ทำโดย</th>
+                                {PM_MONTHS.map((mm, m) => <th key={m} className="pmp-month"><button type="button" onClick={() => toggleColumn(m)} title={`เลือก/ยกเลิก ${mm} ทุกรายการที่แสดง`}>{mm}</button></th>)}
+                                <th style={{ minWidth: 130 }}>รูปแบบด่วน</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {visible.length === 0 && <tr><td colSpan={16} style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>ไม่พบอุปกรณ์</td></tr>}
+                            {visible.map((r, i) => {
+                                const firstOfAsset = i === 0 || visible[i - 1].assetId !== r.assetId;
+                                return (
+                                    <tr key={r.key} className={firstOfAsset ? 'pmp-first' : ''}>
+                                        <td className="pmp-sticky">
+                                            {firstOfAsset ? (
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                        <button type="button" className="pmp-asset" onClick={() => openAsset(r.assetId)}>{r.assetId}</button>
+                                                        <div style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }} title={r.assetName}>{r.assetName}</div>
+                                                    </div>
+                                                    <button type="button" className="pmp-iconbtn" title="เพิ่มหัวข้อ PM อื่นของเครื่องนี้" onClick={() => addTopicRow(r)}>+</button>
+                                                </div>
+                                            ) : <div style={{ fontSize: 11, color: 'var(--text3)', paddingLeft: 8 }}>↳ หัวข้อเพิ่มเติม</div>}
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                <input className="inp pmp-inp" value={r.topic} placeholder={PM_DEFAULT_TOPIC} onChange={e => { const v = e.target.value; patchRow(r.key, () => ({ topic: v })); }}/>
+                                                {!r.hasSaved && !firstOfAsset && <button type="button" className="pmp-iconbtn" title="ลบแถวนี้" onClick={() => removeTopicRow(r.key)}>×</button>}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <select className="inp pmp-inp" value={r.pmType} onChange={e => { const v = e.target.value; patchRow(r.key, () => ({ pmType: v })); }}>
+                                                <option>ภายใน</option><option>ภายนอก</option>
+                                            </select>
+                                            {r.pmType === 'ภายนอก' && <input className="inp pmp-inp" style={{ marginTop: 4 }} value={r.vendor} placeholder="ชื่อผู้รับจ้าง" onChange={e => { const v = e.target.value; patchRow(r.key, () => ({ vendor: v })); }}/>}
+                                        </td>
+                                        {PM_MONTHS.map((_, m) => cell(r, m))}
+                                        <td>
+                                            <select className="inp pmp-inp" value="" onChange={e => applyRowPattern(r.key, e.target.value)} title="เริ่มจากเดือนแรกที่เลือกไว้ (ถ้าไม่มี เริ่ม ม.ค.)">
+                                                <option value="">เลือก...</option>
+                                                {PM_PATTERNS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td className="pmp-sticky" colSpan={1} style={{ fontWeight: 700 }}>รวมต่อเดือน</td>
+                                <td colSpan={2} style={{ fontSize: 12, color: 'var(--text3)' }}>{plannedRows} รายการมีแผน</td>
+                                {monthTotals.map((n, m) => <td key={m} className="pmp-total">{n || ''}</td>)}
+                                <td/>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            )}
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', fontSize: 12, color: 'var(--text2)' }}>
+                <span><b className="pmp-legend pmp-planned">P</b> ตามแผน (บันทึกแล้ว)</span>
+                <span><b className="pmp-legend pmp-new">+</b> จะเพิ่ม</span>
+                <span><b className="pmp-legend pmp-remove">P</b> จะลบ</span>
+                <span><b className="pmp-legend pmp-overdue">!</b> เลยกำหนด</span>
+                <span><b style={{ color: 'var(--green)' }}>✓</b> ทำแล้ว · <b style={{ color: 'var(--red)' }}>✗</b> ยกเลิก (ไม่ถูกแก้ไข)</span>
+                <span>คลิกชื่อเดือนที่หัวตาราง = เลือกทั้งคอลัมน์</span>
+            </div>
+
+            <div className="pmp-savebar">
+                <span style={{ fontSize: 13, color: changeCount ? 'var(--text)' : 'var(--text3)', fontWeight: changeCount ? 700 : 400 }}>
+                    {changeCount ? `ยังไม่บันทึก: เพิ่ม ${changes.creates.length} · ลบ ${changes.deletes.length} · แก้ ${changes.updates.length}` : 'ไม่มีการเปลี่ยนแปลง'}
+                </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-ghost" onClick={resetEdits} disabled={!changeCount || saving}>ยกเลิกการแก้ไข</button>
+                    <button className="btn btn-primary" onClick={save} disabled={!changeCount || saving}>{saving ? <><Loader size={16}/> กำลังบันทึก...</> : 'บันทึกแผนทั้งปี'}</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ====== KANBAN PM BOARD ======
 const KanbanBoard = ({ assets, setSelectedAsset, setView }) => {
     const [allPm, setAllPm] = useState([]);
@@ -724,6 +1079,7 @@ const KanbanBoard = ({ assets, setSelectedAsset, setView }) => {
                     <p style={{fontSize:13,color:'var(--text2)'}}>ภาพรวมตารางงาน PM ทั้งหมด</p>
                 </div>
                 <div style={{marginLeft:'auto',display:'flex',gap:6,flexWrap:'wrap'}}>
+                    <button className="btn btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={()=>setView('pm_planner')}><I d={ic.cal} size={14}/> ตั้งแผนทั้งปี</button>
                     {statuses.map(s => (
                         <button key={s} className={`btn ${filter===s?'btn-primary':'btn-ghost'}`} style={{padding:'6px 14px',fontSize:12}} onClick={()=>setFilter(s)}>
                             {s==='all'?'ทั้งหมด':s}
@@ -2143,6 +2499,7 @@ const App = () => {
                     {view==='iso_docs' && <DocumentsView data={data}/>}
                     {view==='backup' && <BackupView data={data} backupStatus={backupStatus} refreshBackupStatus={refreshBackupStatus}/>}
                     {view==='kanban' && <KanbanBoard assets={data.assets} setSelectedAsset={setSelectedAsset} setView={setView}/>}
+                    {view==='pm_planner' && <PmPlanner data={data} setView={setView} setSelectedAsset={setSelectedAsset}/>}
                     {view==='pm_documents' && (window.PMDocumentsView
                         ? <window.PMDocumentsView data={data}/>
                         : <div style={{padding:40,textAlign:'center',color:'var(--red)'}}><h3 style={{fontWeight:800}}>ไม่สามารถโหลดระบบเอกสาร PM</h3><p style={{marginTop:8}}>ไม่พบไฟล์ pm-documents.js กรุณาตรวจสอบชื่อและตำแหน่งไฟล์บน GitHub</p></div>
