@@ -22,45 +22,90 @@
     <script src="./firebase-config.js"></script>
     <script src="./firebase-api.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --bg: #f4f6f8;
+            /* Surfaces */
+            --bg: #f3f5f8;
             --surface: #ffffff;
-            --surface2: #f1f4f7;
-            --border: #d7dde5;
-            --accent: #163a5f;
-            --accent2: #0e273f;
-            --green: #146c43;
-            --orange: #b5651d;
-            --red: #a4262c;
-            --yellow: #8a6d1a;
-            --text: #1c2230;
-            --text2: #5a6273;
-            --text3: #9aa1b0;
+            --surface2: #f6f8fb;
+            --border: #e3e8ef;
+            --border-strong: #cdd5e0;
+            /* Brand */
+            --accent: #1d4e89;
+            --accent2: #12355f;
+            --accent-soft: rgba(29,78,137,0.08);
+            --sidebar: #0f2744;
+            --sidebar2: #15335a;
+            /* Status */
+            --green: #15803d;
+            --orange: #c2410c;
+            --red: #b42318;
+            --yellow: #a16207;
+            /* Text */
+            --text: #0f1b2d;
+            --text2: #4b5565;
+            --text3: #8a94a6;
+            /* Shape */
+            --radius: 10px;
+            --radius-sm: 8px;
+            --shadow-sm: 0 1px 2px rgba(15,27,45,0.05);
+            --shadow-md: 0 6px 20px -6px rgba(15,27,45,0.14);
         }
 
         * { box-sizing: border-box; }
-        body { 
-            font-family: 'Sarabun', sans-serif; 
-            background: var(--bg); 
+        body {
+            font-family: 'IBM Plex Sans Thai', system-ui, sans-serif;
+            background: var(--bg);
             color: var(--text);
-            -webkit-tap-highlight-color: transparent; 
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
             overflow: hidden;
             height: 100vh;
             margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
         }
         button, input, select, textarea { font: inherit; }
         button { border: 0; }
-        
+        h1, h2, h3 { letter-spacing: -0.01em; }
+
         .mono { font-family: 'IBM Plex Mono', monospace; }
 
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+        ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--text3); }
+
+        /* Page header (shared by all views) */
+        .page-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+        .eyebrow { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); margin-bottom:4px; }
+        .page-title { font-size:22px; font-weight:700; color:var(--text); margin:0; line-height:1.3; }
+        .page-sub { font-size:13px; color:var(--text2); margin-top:2px; }
+
+        /* KPI tiles */
+        .kpi { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:10px; transition:all .2s; position:relative; overflow:hidden; }
+        .kpi.clickable { cursor:pointer; }
+        .kpi.clickable:hover { border-color:var(--border-strong); box-shadow:var(--shadow-md); transform:translateY(-1px); }
+        .kpi-top { display:flex; align-items:center; justify-content:space-between; }
+        .kpi-label { font-size:13px; font-weight:500; color:var(--text2); }
+        .kpi-icon { width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; }
+        .kpi-value { font-size:28px; font-weight:700; line-height:1.1; color:var(--text); font-variant-numeric:tabular-nums; }
+        .kpi-sub { font-size:12px; color:var(--text3); }
+
+        /* Panels */
+        .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); }
+        .panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-bottom:1px solid var(--border); }
+        .panel-title { font-size:14px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; }
+        .panel-body { padding:16px 18px; }
+        .link-btn { font-size:12px; font-weight:600; color:var(--accent); background:none; cursor:pointer; padding:0; }
+        .link-btn:hover { text-decoration:underline; }
+        .meter { height:6px; background:var(--surface2); border-radius:99px; overflow:hidden; }
+        .meter > span { display:block; height:100%; border-radius:99px; background:var(--accent); transition:width .8s cubic-bezier(.16,1,.3,1); }
 
         /* Animations */
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
@@ -91,54 +136,59 @@
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            transition: border-color .2s, box-shadow .2s, transform .2s;
         }
-        .card:hover { border-color: #a9b7c7; box-shadow: 0 4px 14px rgba(28,34,48,0.08); }
-        .card-static { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 1px 2px rgba(15,39,63,0.03); }
+        .card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+        .card-static { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
 
         /* Inputs */
         .inp {
-            width: 100%; padding: 10px 14px;
-            background: var(--surface2); border: 1px solid var(--border);
-            border-radius: 6px; color: var(--text);
-            font-family: 'Sarabun', sans-serif; font-size: 14px;
-            outline: none; transition: all 0.2s;
+            width: 100%; padding: 9px 12px; min-height: 40px;
+            background: var(--surface); border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm); color: var(--text);
+            font-family: inherit; font-size: 14px;
+            outline: none; transition: border-color .15s, box-shadow .15s;
         }
-        .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,58,95,0.10); }
-        .inp:disabled { opacity: 0.4; cursor: not-allowed; }
+        .inp:hover { border-color: var(--text3); }
+        .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(29,78,137,0.15); }
+        .inp:disabled { opacity: 0.5; cursor: not-allowed; background: var(--surface2); }
         .inp::placeholder { color: var(--text3); }
 
         /* Buttons */
-        .btn { padding: 9px 18px; border-radius: 6px; font-weight: 600; font-size: 14px; transition: all 0.2s; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
-        .btn:active { transform: scale(0.97); }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-primary:hover { background: #16324f; }
-        .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
-        .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--text3); }
-        .btn-danger { background: rgba(164,38,44,0.1); color: var(--red); border: 1px solid rgba(164,38,44,0.2); }
-        .btn-danger:hover { background: rgba(164,38,44,0.2); }
-        .btn-success { background: rgba(20,108,67,0.1); color: var(--green); border: 1px solid rgba(20,108,67,0.2); }
+        .btn { min-height: 38px; padding: 8px 16px; border-radius: var(--radius-sm); font-weight: 600; font-size: 14px; transition: background .15s, border-color .15s, color .15s, box-shadow .15s; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .btn:active { transform: translateY(1px); }
+        .btn:focus-visible, .nav-item:focus-visible, .detail-tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-primary { background: var(--accent); color: white; box-shadow: 0 1px 2px rgba(15,27,45,.15); }
+        .btn-primary:hover { background: var(--accent2); }
+        .btn-ghost { background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); }
+        .btn-ghost:hover { background: var(--surface2); border-color: var(--text3); }
+        .btn-danger { background: #fef3f2; color: var(--red); border: 1px solid #fecdca; }
+        .btn-danger:hover { background: #fee4e2; }
+        .btn-success { background: #ecfdf3; color: var(--green); border: 1px solid #abefc6; }
 
-        /* Nav */
-        .nav-item { 
-            display: flex; align-items: center; gap: 12px; 
-            padding: 10px 14px; border-radius: 6px; 
-            color: var(--text2); font-weight: 500; font-size: 14px;
-            transition: all 0.2s; cursor: pointer; position: relative;
+        /* Nav (dark sidebar) */
+        .nav-section { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.4); padding: 14px 12px 6px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 9px 12px; border-radius: var(--radius-sm);
+            color: rgba(255,255,255,.72); font-weight: 500; font-size: 14px;
+            transition: background .15s, color .15s; cursor: pointer; position: relative;
         }
-        .nav-item:hover { background: var(--surface2); color: var(--text); }
-        .nav-item.active { background: rgba(30,58,95,0.12); color: var(--accent); }
-        .nav-item.active::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
+        .nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+        .nav-item.active { background: rgba(255,255,255,.12); color: #fff; }
+        .nav-item.active::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; background: #7cb4ff; border-radius: 0 3px 3px 0; }
 
         /* Status badges */
-        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.2px; }
-        .badge-green { background: rgba(20,108,67,0.12); color: var(--green); border: 1px solid rgba(20,108,67,0.2); }
-        .badge-red { background: rgba(164,38,44,0.12); color: var(--red); border: 1px solid rgba(164,38,44,0.2); }
-        .badge-orange { background: rgba(181,101,29,0.12); color: var(--orange); border: 1px solid rgba(181,101,29,0.2); }
-        .badge-blue { background: rgba(30,58,95,0.12); color: var(--accent); border: 1px solid rgba(30,58,95,0.2); }
-        .badge-yellow { background: rgba(138,109,26,0.12); color: var(--yellow); border: 1px solid rgba(138,109,26,0.2); }
-        .badge-gray { background: rgba(90,98,115,0.12); color: var(--text2); border: 1px solid var(--border); }
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 600; line-height: 1.6; white-space: nowrap; }
+        .badge-green { background: #ecfdf3; color: #067647; box-shadow: inset 0 0 0 1px #abefc6; }
+        .badge-red { background: #fef3f2; color: var(--red); box-shadow: inset 0 0 0 1px #fecdca; }
+        .badge-orange { background: #fff4ed; color: var(--orange); box-shadow: inset 0 0 0 1px #f9dbaf; }
+        .badge-blue { background: #eff6ff; color: var(--accent); box-shadow: inset 0 0 0 1px #c7dcf5; }
+        .badge-yellow { background: #fefbe8; color: var(--yellow); box-shadow: inset 0 0 0 1px #f5e3a3; }
+        .badge-gray { background: var(--surface2); color: var(--text2); box-shadow: inset 0 0 0 1px var(--border); }
 
         /* Mobile nav */
         .mobile-nav-btn { 
@@ -149,25 +199,31 @@
         .mobile-nav-btn.active { color: var(--accent); background: rgba(30,58,95,0.08); }
 
         /* Application shell */
-        .desktop-sidebar { width:260px; background:var(--surface); border-right:1px solid var(--border); height:100%; display:flex; flex-direction:column; padding:20px 16px; flex-shrink:0; }
+        .desktop-sidebar { width:256px; background:linear-gradient(180deg,var(--sidebar) 0%,#0c2038 100%); color:#fff; height:100%; display:flex; flex-direction:column; padding:18px 12px; flex-shrink:0; }
+        .brand-name { font-weight:700; font-size:15px; color:#fff; line-height:1.3; }
+        .brand-meta { font-size:11px; color:rgba(255,255,255,.5); font-family:'IBM Plex Mono', monospace; }
+        .sidebar-foot { border-top:1px solid rgba(255,255,255,.1); padding-top:10px; margin-top:10px; }
         .mobile-bottom-nav { display:none; }
-        .app-topbar { height:64px; flex-shrink:0; background:rgba(255,255,255,.96); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; }
-        .app-topbar-title { font-size:17px; font-weight:800; color:var(--accent2); }
-        .app-topbar-subtitle { font-size:11px; color:var(--text3); margin-top:2px; }
-        .system-status { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--green); background:rgba(20,108,67,.08); border:1px solid rgba(20,108,67,.18); padding:6px 10px; border-radius:6px; }
-        .system-status-dot { width:7px; height:7px; border-radius:50%; background:var(--green); }
-        .brand-logo-shell { width:62px; height:50px; background:#fff; border:1px solid var(--border); border-radius:8px; padding:3px; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
+        .app-topbar { height:60px; flex-shrink:0; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 28px; }
+        .app-topbar-title { font-size:16px; font-weight:600; color:var(--text); }
+        .app-topbar-subtitle { font-size:12px; color:var(--text3); display:flex; align-items:center; gap:6px; }
+        .topbar-right { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+        .topbar-date { font-size:13px; color:var(--text2); }
+        .system-status { display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:#067647; background:#ecfdf3; box-shadow:inset 0 0 0 1px #abefc6; padding:5px 10px; border-radius:99px; }
+        .system-status-dot { width:7px; height:7px; border-radius:50%; background:#17b26a; box-shadow:0 0 0 3px rgba(23,178,106,.18); }
+        .brand-logo-shell { width:48px; height:42px; background:#fff; border-radius:9px; padding:3px; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
         .brand-logo { width:100%; height:100%; object-fit:contain; display:block; }
         .topbar-brand-logo { display:none; width:38px; height:34px; object-fit:contain; border-radius:5px; background:#fff; }
         .view-content { flex:1; overflow:hidden; position:relative; }
         .detail-layout { display:flex; gap:16px; flex-wrap:wrap; }
         .asset-side { width:clamp(320px,32vw,420px); max-width:420px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
         .detail-main { flex:1; min-width:280px; }
-        .detail-tabs { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:8px; padding:10px; border-bottom:1px solid var(--border); background:var(--surface2); }
-        .detail-tab-btn { min-height:42px; padding:9px 11px; border:1px solid var(--border); border-radius:7px; background:var(--surface); color:var(--text2); font-size:12px; font-weight:700; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.3; }
-        .detail-tab-btn:hover { border-color:var(--accent); color:var(--accent); }
-        .detail-tab-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 2px 6px rgba(22,58,95,.18); }
-        .asset-image-shell { min-height:260px; max-height:65vh; background:#e9edf2; cursor:zoom-in; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; border-bottom:1px solid var(--border); }
+        .detail-tabs { display:flex; gap:2px; padding:0 12px; border-bottom:1px solid var(--border); background:var(--surface); overflow-x:auto; scrollbar-width:none; }
+        .detail-tabs::-webkit-scrollbar { display:none; }
+        .detail-tab-btn { flex-shrink:0; min-height:48px; padding:0 11px; border-bottom:2px solid transparent; margin-bottom:-1px; background:none; color:var(--text2); font-size:13px; font-weight:500; cursor:pointer; transition:color .15s, border-color .15s; display:flex; align-items:center; white-space:nowrap; }
+        .detail-tab-btn:hover { color:var(--text); border-bottom-color:var(--border-strong); }
+        .detail-tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+        .asset-image-shell { min-height:260px; max-height:65vh; background:var(--surface2); cursor:zoom-in; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; border-bottom:1px solid var(--border); }
         .asset-image { display:block; width:100%; height:auto; max-height:65vh; object-fit:contain; }
         .field-row { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:10px 0; border-bottom:1px solid var(--border); }
         .field-value { font-weight:600; font-size:13px; max-width:65%; text-align:right; overflow-wrap:anywhere; white-space:normal; }
@@ -247,7 +303,10 @@
         .asset-card-compact { min-height:220px !important; }
         .asset-photo-large { width:100%; aspect-ratio:4/3; min-height:170px; background:var(--surface2); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
         .asset-photo-compact { width:100%; height:140px; min-height:140px; background:var(--surface2); border-radius:6px; position:relative; overflow:hidden; flex:none; display:flex; align-items:center; justify-content:center; }
-        .asset-list-photo { width:100%; height:100%; object-fit:contain; display:block; background:#e9edf2; }
+        .asset-list-photo { width:100%; height:100%; object-fit:cover; display:block; background:var(--surface2); }
+        .asset-card-large:hover .asset-list-photo { transform:scale(1.03); }
+        .asset-list-photo { transition:transform .4s cubic-bezier(.16,1,.3,1); }
+        .asset-photo-large { border-bottom:1px solid var(--border); }
 
         @media (max-width: 767px) {
             body { height:100dvh; }
@@ -268,9 +327,17 @@
             .asset-image { max-height:none; }
             .field-row { gap:8px; }
             .field-value { max-width:68%; }
-            .detail-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; padding:8px; }
-            .detail-tab-btn { min-width:0; min-height:48px; padding:9px 7px; font-size:11px; white-space:normal; }
-            .card, .card-static { border-radius:7px; }
+            .detail-tabs { padding:0 4px; }
+            .detail-tab-btn { padding:0 12px; font-size:13px; }
+            .page-title { font-size:19px; }
+            .kpi-value { font-size:22px; }
+            .kpi { padding:14px; gap:6px; }
+            .kpi-icon { width:30px; height:30px; }
+            .kpi-label { font-size:12px; }
+            .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; }
+            .two-col { grid-template-columns:1fr !important; }
+            .topbar-date { display:none; }
+            .card, .card-static, .panel, .kpi { border-radius:10px; }
             .btn { min-height:42px; padding:9px 14px; }
             .inp { min-height:44px; font-size:16px; background:#fff; }
             textarea.inp { min-height:88px; }
@@ -309,8 +376,8 @@ const APP_VERSION = "2.3 Pro";
 const BRAND_LOGO = "./Logo.png";
 
 // ====== ICONS ======
-const I = ({ d, size=20, cls="" }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>{d}</svg>
+const I = ({ d, size=20, cls="", style }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls} style={{flexShrink:0, ...style}}>{d}</svg>
 );
 const ic = {
     dash: <><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></>,
@@ -424,36 +491,48 @@ const Toast = ({ notify, setNotify }) => {
 
 // ====== SIDEBAR ======
 const Sidebar = ({ view, setView, fetchData, pmOverdue }) => {
-    const navs = [
-        { id:'dashboard', label:'Dashboard', icon:ic.dash },
-        { id:'kanban', label:'PM Kanban Board', icon:ic.kanban, badge: pmOverdue > 0 ? pmOverdue : null },
-        { id:'pm_documents', label:'เอกสารและแบบตรวจ PM', icon:ic.file },
-        { id:'departments', label:'แผนกและอุปกรณ์', icon:ic.building },
-        { id:'global_search', label:'ค้นหาทั่วระบบ', icon:ic.search },
-        { id:'electrical', label:'ระบบไฟฟ้า', icon:ic.zap },
-        { id:'water', label:'ระบบน้ำ', icon:ic.drop },
-        { id:'executive', label:'รายงานผู้บริหาร', icon:ic.chart },
+    const groups = [
+        { title:'ภาพรวม', items:[
+            { id:'dashboard', label:'แดชบอร์ด', icon:ic.dash },
+            { id:'executive', label:'รายงานผู้บริหาร', icon:ic.chart },
+        ]},
+        { title:'งานบำรุงรักษา', items:[
+            { id:'kanban', label:'แผนงาน PM', icon:ic.kanban, badge: pmOverdue > 0 ? pmOverdue : null },
+            { id:'pm_documents', label:'เอกสารและแบบตรวจ PM', icon:ic.file },
+        ]},
+        { title:'อุปกรณ์', items:[
+            { id:'departments', label:'แผนกและอุปกรณ์', icon:ic.building },
+            { id:'global_search', label:'ค้นหาทั่วระบบ', icon:ic.search },
+            { id:'electrical', label:'ระบบไฟฟ้า', icon:ic.zap },
+            { id:'water', label:'ระบบน้ำ', icon:ic.drop },
+        ]},
     ];
+    const isActive = (id) => ['departments','assets','detail','add_asset','edit_asset'].includes(view) ? id==='departments' : view===id;
     return (
         <aside className="desktop-sidebar">
-            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:32,padding:'0 4px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8,padding:'0 6px'}}>
                 <div className="brand-logo-shell"><img src={BRAND_LOGO} className="brand-logo" alt="โลโก้แผนกซ่อมบำรุง"/></div>
-                <div>
-                    <div style={{fontWeight:800,fontSize:16,letterSpacing:'-0.5px'}}>ระบบงานซ่อมบำรุง</div>
-                    <div style={{fontSize:11,color:'var(--text3)',fontFamily:'IBM Plex Mono, monospace'}}>MTA ASSET · v{APP_VERSION}</div>
+                <div style={{minWidth:0}}>
+                    <div className="brand-name">ระบบงานซ่อมบำรุง</div>
+                    <div className="brand-meta">MTA ASSET · v{APP_VERSION}</div>
                 </div>
             </div>
-            <nav style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:4}}>
-                {navs.map(n => (
-                    <div key={n.id} className={`nav-item ${['departments','assets','detail','add_asset','edit_asset'].includes(view) && n.id==='departments' ? 'active' : view===n.id ? 'active' : ''}`} onClick={() => setView(n.id)}>
-                        <I d={n.icon} size={18}/>
-                        <span style={{flex:1}}>{n.label}</span>
-                        {n.badge && <span style={{background:'var(--red)',color:'white',fontSize:10,fontWeight:800,padding:'2px 7px',borderRadius:6}}>{n.badge}</span>}
-                    </div>
+            <nav style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:2,paddingLeft:12,marginLeft:-12}}>
+                {groups.map(g => (
+                    <React.Fragment key={g.title}>
+                        <div className="nav-section">{g.title}</div>
+                        {g.items.map(n => (
+                            <div key={n.id} role="button" tabIndex={0} className={`nav-item ${isActive(n.id) ? 'active' : ''}`} onClick={() => setView(n.id)} onKeyDown={e => e.key==='Enter' && setView(n.id)}>
+                                <I d={n.icon} size={18}/>
+                                <span style={{flex:1}}>{n.label}</span>
+                                {n.badge && <span style={{background:'#f04438',color:'white',fontSize:11,fontWeight:700,padding:'0 7px',borderRadius:99,lineHeight:'18px'}}>{n.badge}</span>}
+                            </div>
+                        ))}
+                    </React.Fragment>
                 ))}
             </nav>
-            <div style={{borderTop:'1px solid var(--border)',paddingTop:12,marginTop:12}}>
-                <div className="nav-item" onClick={fetchData}><I d={ic.refresh} size={18}/> รีเฟรชข้อมูล</div>
+            <div className="sidebar-foot">
+                <div className="nav-item" role="button" tabIndex={0} onClick={fetchData} onKeyDown={e => e.key==='Enter' && fetchData()}><I d={ic.refresh} size={18}/> รีเฟรชข้อมูล</div>
             </div>
         </aside>
     );
@@ -488,14 +567,25 @@ const AppTopbar = ({ view, selectedDept, selectedAsset }) => {
         water:'ระบบน้ำ', add_asset:'ลงทะเบียนอุปกรณ์ใหม่', edit_asset:'แก้ไขข้อมูลอุปกรณ์',
         detail:selectedAsset?.name || 'รายละเอียดอุปกรณ์', executive:'รายงานสำหรับผู้บริหาร'
     };
+    const crumbs = ['assets','detail','add_asset','edit_asset'].includes(view)
+        ? ['แผนกและอุปกรณ์', view==='assets' ? null : selectedDept].filter(Boolean)
+        : [];
+    const today = new Date().toLocaleDateString('th-TH', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
     return (
         <header className="app-topbar">
-            <div style={{minWidth:0,display:'flex',alignItems:'center',gap:9}}>
+            <div style={{minWidth:0,display:'flex',alignItems:'center',gap:10}}>
                 <img src={BRAND_LOGO} className="topbar-brand-logo" alt="โลโก้"/>
-                <div style={{minWidth:0}}><div className="app-topbar-title" style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{titles[view] || 'ระบบบริหารงานซ่อมบำรุง'}</div>
-                <div className="app-topbar-subtitle">MAINTENANCE MANAGEMENT SYSTEM</div></div>
+                <div style={{minWidth:0}}>
+                    <div className="app-topbar-subtitle">
+                        {crumbs.length ? crumbs.map((c,i) => <React.Fragment key={i}>{i>0 && <span>/</span>}<span>{c}</span></React.Fragment>) : 'MTA Asset · ระบบบริหารงานซ่อมบำรุง'}
+                    </div>
+                    <div className="app-topbar-title" style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{titles[view] || 'ระบบบริหารงานซ่อมบำรุง'}</div>
+                </div>
             </div>
-            <div className="system-status"><span className="system-status-dot"/> ระบบพร้อมใช้งาน</div>
+            <div className="topbar-right">
+                <span className="topbar-date">{today}</span>
+                <div className="system-status"><span className="system-status-dot"/> ออนไลน์</div>
+            </div>
         </header>
     );
 };
@@ -756,31 +846,34 @@ const ExecutiveDashboard = ({ data }) => {
     const pmCompliance = total > 0 ? Math.round(((total - noPm) / total) * 100) : 0;
 
     const StatCard = ({label, value, sub, color='var(--accent)', icon}) => (
-        <div className="card-static fade-up" style={{padding:20}}>
-            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
-                <div style={{background:color+'18',color,padding:10,borderRadius:6}}>{icon}</div>
-                <div style={{color:'var(--text3)',fontSize:12,fontWeight:600}}>{label}</div>
+        <div className="kpi fade-up">
+            <div className="kpi-top">
+                <span className="kpi-label">{label}</span>
+                <span className="kpi-icon" style={{background:`color-mix(in srgb, ${color} 12%, transparent)`,color}}>{icon}</span>
             </div>
-            <div style={{fontSize:28,fontWeight:800,color}}>{value}</div>
-            {sub && <div style={{fontSize:12,color:'var(--text3)',marginTop:4}}>{sub}</div>}
+            <div className="kpi-value">{value}</div>
+            {sub && <div className="kpi-sub">{sub}</div>}
         </div>
     );
 
     return (
         <div style={{padding:24,maxWidth:1200,margin:'0 auto',height:'100%',overflowY:'auto'}} className="fade-up pb-nav">
-            <div style={{marginBottom:24}}>
-                <h2 style={{fontSize:22,fontWeight:800,marginBottom:4}}>รายงานผู้บริหาร</h2>
-                <p style={{fontSize:13,color:'var(--text2)'}}>ภาพรวมค่าใช้จ่ายและสถานะอุปกรณ์ทั้งหมด</p>
+            <div className="page-head">
+                <div>
+                    <div className="eyebrow">ภาพรวม</div>
+                    <h2 className="page-title">รายงานผู้บริหาร</h2>
+                    <div className="page-sub">ภาพรวมค่าใช้จ่ายและสถานะอุปกรณ์ทั้งหมด</div>
+                </div>
             </div>
 
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}} className="stagger">
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:16,marginBottom:24}} className="stagger kpi-grid">
                 <StatCard label="อุปกรณ์ทั้งหมด" value={total} icon={<I d={ic.building} size={20}/>} color="var(--accent)"/>
                 <StatCard label="กำลังซ่อม" value={repairing} icon={<I d={ic.wrench} size={20}/>} color="var(--orange)" sub={`${Math.round(repairing/total*100)||0}% ของทั้งหมด`}/>
                 <StatCard label="PM Compliance" value={`${pmCompliance}%`} icon={<I d={ic.cal} size={20}/>} color={pmCompliance>80?'var(--green)':'var(--orange)'} sub={`${noPm} เครื่องไม่มีแผน PM`}/>
                 <StatCard label="ค่าซ่อมรวม" value={`฿${fmtNum(totalCost)}`} icon={<I d={ic.chart} size={20}/>} color="var(--yellow)" sub="ตลอดอายุการใช้งาน"/>
             </div>
 
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:24}} className="stagger">
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:24}} className="stagger two-col">
                 <div className="card-static" style={{padding:20}}>
                     <h3 style={{fontWeight:700,marginBottom:16,display:'flex',alignItems:'center',gap:8}}><I d={ic.chart} size={16}/> ค่าซ่อมตามแผนก</h3>
                     {deptCostArr.length === 0 && <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:20}}>ยังไม่มีข้อมูลค่าซ่อม</div>}
@@ -840,52 +933,131 @@ const ExecutiveDashboard = ({ data }) => {
     );
 };
 
-const Dashboard = ({ data, setView }) => {
-    const total = data.assets.length;
-    const repairing = data.assets.filter(a=>a.status==='ส่งซ่อม').length;
-    const noPm = data.assets.filter(a=>!a.nextPmDate).length;
-    const totalCost = data.assets.reduce((s,a) => s + (a.history||[]).reduce((ss,h) => ss + Number(h.totalCost||0), 0), 0);
+// พื้นหลังจาง ๆ ของสีที่ส่งมาเป็น CSS variable (เช่น 'var(--red)')
+const tint = (color, pct=10) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+
+const Dashboard = ({ data, setView, setSelectedAsset, setSelectedDept }) => {
+    const assets = data.assets;
+    const total = assets.length;
+    const repairing = assets.filter(a=>a.status==='ส่งซ่อม').length;
+    const broken = assets.filter(a=>a.status==='เสีย').length;
+    const noPm = assets.filter(a=>!a.nextPmDate).length;
+    const totalCost = assets.reduce((s,a) => s + (a.history||[]).reduce((ss,h) => ss + Number(h.totalCost||0), 0), 0);
+    const pmCoverage = total ? Math.round((total-noPm)/total*100) : 0;
 
     const stats = [
-        {label:'อุปกรณ์ทั้งหมด', value:total, color:'var(--accent)', icon:ic.building, action:()=>setView('departments')},
-        {label:'กำลังซ่อม', value:repairing, color:'var(--orange)', icon:ic.wrench},
-        {label:'ไม่มีแผน PM', value:noPm, color:'var(--red)', icon:ic.alert, action:()=>setView('kanban')},
-        {label:'ค่าซ่อมรวม', value:`฿${fmtNum(totalCost)}`, color:'var(--yellow)', icon:ic.chart, action:()=>setView('executive')},
+        {label:'อุปกรณ์ทั้งหมด', value:fmtNum(total), sub:`${data.departments.length} แผนก`, color:'var(--accent)', icon:ic.building, action:()=>setView('departments')},
+        {label:'ส่งซ่อม / เสีย', value:`${repairing + broken}`, sub:`ส่งซ่อม ${repairing} · เสีย ${broken}`, color:'var(--orange)', icon:ic.wrench},
+        {label:'มีแผน PM', value:`${pmCoverage}%`, sub:`${noPm} เครื่องยังไม่มีแผน`, color: pmCoverage >= 80 ? 'var(--green)' : 'var(--red)', icon:ic.cal, action:()=>setView('kanban')},
+        {label:'ค่าซ่อมสะสม', value:`฿${fmtNum(totalCost)}`, sub:'รวมทุกอุปกรณ์', color:'var(--yellow)', icon:ic.chart, action:()=>setView('executive')},
     ];
 
+    const byDept = data.departments
+        .map(d => ({ name:d.name, code:d.code, count:assets.filter(a=>a.location===d.name).length }))
+        .sort((a,b) => b.count-a.count);
+    const maxDept = Math.max(1, ...byDept.map(d=>d.count));
+
+    const recentLogs = assets
+        .flatMap(a => (a.history||[]).map(h => ({...h, asset:a})))
+        .sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')))
+        .slice(0, 6);
+
+    const attention = assets.filter(a => a.status && a.status !== 'ปกติ').slice(0, 6);
+    const openAsset = (a) => { setSelectedAsset(a); setView('detail'); };
+    const statusBadge = (s) => s==='ปกติ' ? 'badge-green' : s==='เสีย' ? 'badge-red' : 'badge-orange';
+
     return (
-        <div style={{padding:24,maxWidth:1200,margin:'0 auto',height:'100%',overflowY:'auto'}} className="fade-up pb-nav">
-            <div style={{marginBottom:28}}>
-                <div style={{fontSize:12,color:'var(--text3)',fontFamily:'IBM Plex Mono,monospace',marginBottom:6}}>OVERVIEW</div>
-                <h2 style={{fontSize:28,fontWeight:800,letterSpacing:'-0.5px'}}>Dashboard</h2>
-                <p style={{color:'var(--text2)',marginTop:4}}>ภาพรวมสถานะระบบ MTA Asset Pro</p>
+        <div style={{padding:28,maxWidth:1280,margin:'0 auto',height:'100%',overflowY:'auto'}} className="fade-up pb-nav">
+            <div className="page-head">
+                <div>
+                    <div className="eyebrow">ภาพรวม</div>
+                    <h2 className="page-title">แดชบอร์ดงานซ่อมบำรุง</h2>
+                    <div className="page-sub">สถานะอุปกรณ์ แผน PM และค่าใช้จ่ายทั้งหมดในที่เดียว</div>
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                    <button className="btn btn-ghost" onClick={()=>setView('global_search')}><I d={ic.search} size={16}/> ค้นหาอุปกรณ์</button>
+                    <button className="btn btn-primary" onClick={()=>{setSelectedDept(null);setView('add_asset');}}><I d={ic.plus} size={16}/> เพิ่มอุปกรณ์</button>
+                </div>
             </div>
 
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:16,marginBottom:28}} className="stagger">
+            <div className="kpi-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:16,marginBottom:20}}>
                 {stats.map((s,i) => (
-                    <div key={i} className="card" style={{padding:20,cursor:s.action?'pointer':'default',animationDelay:`${i*60}ms`}} onClick={s.action}>
-                        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:16}}>
-                            <div style={{background:s.color+'18',color:s.color,padding:10,borderRadius:6}}><I d={s.icon} size={20}/></div>
-                            {s.action && <I d={ic.back} size={16} cls="" style={{color:'var(--text3)',transform:'rotate(180deg)'}}/>}
+                    <div key={i} className={`kpi ${s.action?'clickable':''}`} onClick={s.action} role={s.action?'button':undefined}>
+                        <div className="kpi-top">
+                            <span className="kpi-label">{s.label}</span>
+                            <span className="kpi-icon" style={{background:tint(s.color,12),color:s.color}}><I d={s.icon} size={18}/></span>
                         </div>
-                        <div style={{fontSize:30,fontWeight:800,color:s.color,marginBottom:4}}>{s.value}</div>
-                        <div style={{fontSize:12,color:'var(--text3)'}}>{s.label}</div>
+                        <div className="kpi-value">{s.value}</div>
+                        <div className="kpi-sub">{s.sub}</div>
                     </div>
                 ))}
             </div>
 
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}} className="stagger">
-                {[
-                    {label:'PM Kanban Board', desc:'ดูงาน PM แบบ Kanban', icon:ic.kanban, id:'kanban', color:'var(--accent)'},
-                    {label:'ค้นหาทั่วระบบ', desc:'ค้นข้ามแผนก ทุก field', icon:ic.search, id:'global_search', color:'var(--accent2)'},
-                    {label:'รายงานผู้บริหาร', desc:'กราฟค่าซ่อมและสถิติ', icon:ic.chart, id:'executive', color:'var(--yellow)'},
-                ].map((f,i) => (
-                    <div key={i} className="card" style={{padding:16,cursor:'pointer',animationDelay:`${i*60}ms`}} onClick={()=>setView(f.id)}>
-                        <div style={{color:f.color,marginBottom:8}}><I d={f.icon} size={20}/></div>
-                        <div style={{fontWeight:700,marginBottom:4,fontSize:14}}>{f.label}</div>
-                        <div style={{fontSize:12,color:'var(--text3)'}}>{f.desc}</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(340px,1fr))',gap:16,marginBottom:16}}>
+                <div className="panel">
+                    <div className="panel-head">
+                        <div className="panel-title"><I d={ic.building} size={16}/> อุปกรณ์แยกตามแผนก</div>
+                        <button className="link-btn" onClick={()=>setView('departments')}>ดูทั้งหมด</button>
                     </div>
-                ))}
+                    <div className="panel-body" style={{display:'flex',flexDirection:'column',gap:12}}>
+                        {byDept.map(d => (
+                            <div key={d.name} style={{cursor:'pointer'}} onClick={()=>{setSelectedDept(d.name);setView('assets');}}>
+                                <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:5,gap:8}}>
+                                    <span style={{color:'var(--text)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.name} <span className="mono" style={{color:'var(--text3)',fontSize:11}}>{d.code}</span></span>
+                                    <span style={{fontWeight:600,fontVariantNumeric:'tabular-nums'}}>{d.count}</span>
+                                </div>
+                                <div className="meter"><span style={{width:`${d.count/maxDept*100}%`}}/></div>
+                            </div>
+                        ))}
+                        {byDept.length === 0 && <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:20}}>ยังไม่มีแผนก</div>}
+                    </div>
+                </div>
+
+                <div className="panel">
+                    <div className="panel-head">
+                        <div className="panel-title"><I d={ic.clock} size={16}/> ประวัติซ่อมล่าสุด</div>
+                        <button className="link-btn" onClick={()=>setView('executive')}>ดูรายงาน</button>
+                    </div>
+                    <div>
+                        {recentLogs.map((h,i) => (
+                            <div key={i} onClick={()=>openAsset(h.asset)} style={{display:'flex',gap:12,alignItems:'flex-start',padding:'12px 18px',borderTop:i?'1px solid var(--border)':'none',cursor:'pointer'}}>
+                                <span className="kpi-icon" style={{width:32,height:32,flexShrink:0,background:tint(h.type==='บำรุงรักษา'?'var(--green)':'var(--orange)',12),color:h.type==='บำรุงรักษา'?'var(--green)':'var(--orange)'}}><I d={ic.wrench} size={15}/></span>
+                                <div style={{flex:1,minWidth:0}}>
+                                    <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.asset.name}</div>
+                                    <div style={{fontSize:12,color:'var(--text2)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.description || h.type}</div>
+                                </div>
+                                <div style={{textAlign:'right',flexShrink:0}}>
+                                    <div style={{fontSize:12,color:'var(--text3)'}}>{fmtDate(h.date)}</div>
+                                    {Number(h.totalCost) > 0 && <div style={{fontSize:12,fontWeight:600}}>฿{fmtNum(h.totalCost)}</div>}
+                                </div>
+                            </div>
+                        ))}
+                        {recentLogs.length === 0 && <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:28}}>ยังไม่มีประวัติซ่อม</div>}
+                    </div>
+                </div>
+            </div>
+
+            <div className="panel">
+                <div className="panel-head">
+                    <div className="panel-title"><I d={ic.alert} size={16}/> อุปกรณ์ที่ต้องติดตาม</div>
+                    <span className="badge badge-gray">{assets.filter(a => a.status && a.status !== 'ปกติ').length} รายการ</span>
+                </div>
+                {attention.length === 0
+                    ? <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:28}}>อุปกรณ์ทุกเครื่องอยู่ในสถานะปกติ</div>
+                    : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))'}}>
+                        {attention.map(a => (
+                            <div key={a.id} onClick={()=>openAsset(a)} style={{display:'flex',gap:12,alignItems:'center',padding:'12px 18px',borderTop:'1px solid var(--border)',cursor:'pointer'}}>
+                                <div style={{width:44,height:44,borderRadius:8,overflow:'hidden',background:'var(--surface2)',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}>
+                                    {a.image ? <img src={a.image} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/> : <I d={ic.img} size={18}/>}
+                                </div>
+                                <div style={{flex:1,minWidth:0}}>
+                                    <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.name}</div>
+                                    <div className="mono" style={{fontSize:11,color:'var(--text3)'}}>{a.id}</div>
+                                </div>
+                                <span className={`badge ${statusBadge(a.status)}`}>{a.status}</span>
+                            </div>
+                        ))}
+                    </div>}
             </div>
         </div>
     );
@@ -897,22 +1069,34 @@ const DeptView = ({ data, setSelectedDept, setView, postData }) => {
     const [form, setForm] = useState({name:'',code:''});
     return (
         <div style={{padding:24,height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav">
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexShrink:0}}>
+            <div className="page-head" style={{flexShrink:0}}>
                 <div>
-                    <h2 style={{fontSize:22,fontWeight:800}}>แผนก</h2>
-                    <p style={{fontSize:13,color:'var(--text2)'}}>เลือกแผนกเพื่อดูอุปกรณ์</p>
+                    <div className="eyebrow">อุปกรณ์</div>
+                    <h2 className="page-title">แผนกทั้งหมด</h2>
+                    <div className="page-sub">{data.departments.length} แผนก · {data.assets.length} อุปกรณ์ · เลือกแผนกเพื่อดูรายการอุปกรณ์</div>
                 </div>
                 <button className="btn btn-ghost" onClick={()=>setShowModal(true)}><I d={ic.plus} size={16}/> เพิ่มแผนก</button>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:14,overflowY:'auto',flex:1,paddingBottom:16}}>
-                {data.departments.map((d,i) => (
-                    <div key={d.name} className="card" style={{padding:20,textAlign:'center',cursor:'pointer',animationDelay:`${i*40}ms`}} onClick={()=>{setSelectedDept(d.name);setView('assets');}}>
-                        <div style={{background:'rgba(30,58,95,0.1)',color:'var(--accent)',padding:12,borderRadius:8,display:'inline-flex',marginBottom:12}}><I d={ic.building} size={24}/></div>
-                        <div style={{fontWeight:700,marginBottom:4}}>{d.name}</div>
-                        <div style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:'var(--text3)',marginBottom:8}}>{d.code}</div>
-                        <span className="badge badge-blue">{data.assets.filter(a=>a.location===d.name).length} เครื่อง</span>
-                    </div>
-                ))}
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(230px,1fr))',gap:14,overflowY:'auto',flex:1,paddingBottom:16,alignContent:'start'}}>
+                {data.departments.map((d,i) => {
+                    const list = data.assets.filter(a=>a.location===d.name);
+                    const issues = list.filter(a=>a.status && a.status!=='ปกติ').length;
+                    return (
+                        <div key={d.name} className="card" role="button" tabIndex={0} style={{padding:18,cursor:'pointer',display:'flex',flexDirection:'column',gap:14}} onClick={()=>{setSelectedDept(d.name);setView('assets');}} onKeyDown={e=>{if(e.key==='Enter'){setSelectedDept(d.name);setView('assets');}}}>
+                            <div style={{display:'flex',alignItems:'center',gap:12}}>
+                                <span className="kpi-icon" style={{background:'var(--accent-soft)',color:'var(--accent)',flexShrink:0}}><I d={ic.building} size={18}/></span>
+                                <div style={{minWidth:0,flex:1}}>
+                                    <div style={{fontWeight:600,fontSize:14,lineHeight:1.35}}>{d.name}</div>
+                                    <div className="mono" style={{fontSize:11,color:'var(--text3)'}}>{d.code}</div>
+                                </div>
+                            </div>
+                            <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginTop:'auto'}}>
+                                <div><span style={{fontSize:22,fontWeight:700,fontVariantNumeric:'tabular-nums'}}>{list.length}</span> <span style={{fontSize:12,color:'var(--text2)'}}>เครื่อง</span></div>
+                                {issues > 0 ? <span className="badge badge-orange">ต้องติดตาม {issues}</span> : list.length > 0 && <span className="badge badge-green">ปกติทั้งหมด</span>}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
             {showModal && (
                 <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20,backdropFilter:'blur(4px)'}} onClick={()=>setShowModal(false)}>
@@ -966,7 +1150,10 @@ const AssetList = ({ data, selectedDept, setView, setSelectedAsset }) => {
         <div style={{padding:24,height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav">
             <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:16,flexShrink:0,flexWrap:'wrap'}}>
                 <button className="btn btn-ghost" style={{padding:'8px 12px'}} onClick={()=>setView('departments')}><I d={ic.back} size={18}/></button>
-                <h2 style={{fontSize:20,fontWeight:800,flex:1}}>{selectedDept}</h2>
+                <div style={{flex:1,minWidth:180}}>
+                    <h2 className="page-title">{selectedDept}</h2>
+                    <div className="page-sub">{filtered.length} เครื่อง{q ? ` ที่ตรงกับ "${q}"` : ''}</div>
+                </div>
                 <ViewModeToggle/>
                 <div style={{position:'relative'}}>
                     <I d={ic.search} size={16} cls="" style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text3)'}}/>
@@ -975,25 +1162,26 @@ const AssetList = ({ data, selectedDept, setView, setSelectedAsset }) => {
                 <button className="btn btn-primary" onClick={()=>setView('add_asset')}><I d={ic.plus} size={18}/> เพิ่ม</button>
             </div>
 
-            <div style={{fontSize:12,color:'var(--text3)',marginBottom:10,flexShrink:0}}>
-                {filtered.length} เครื่อง
-            </div>
 
             {/* LARGE grid: big photo cards (original look, tuned) */}
             {viewMode==='large' && (
                 <div className="asset-grid-large">
                     {filtered.map((item,i) => (
-                        <div key={item.id} className="card asset-card-large" style={{cursor:'pointer',overflow:'hidden',display:'flex',flexDirection:'column',animationDelay:`${i*30}ms`}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
-                            {!item.nextPmDate && <div style={{background:'rgba(164,38,44,0.9)',color:'white',fontSize:10,fontWeight:700,padding:'4px 10px',display:'flex',alignItems:'center',gap:4}}><I d={ic.alert} size={11}/> ไม่มีแผน PM</div>}
+                        <div key={item.id} className="card asset-card-large" style={{cursor:'pointer',overflow:'hidden',display:'flex',flexDirection:'column'}} onClick={()=>{setSelectedAsset(item);setView('detail');}}>
                             <div className="asset-photo-large">
-                                {item.image ? <img src={item.image} className="asset-list-photo" alt={item.name}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={36}/></div>}
-                                <div style={{position:'absolute',bottom:8,right:8}}>
-                                    <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`} style={{fontSize:10}}>{item.status}</span>
-                                </div>
+                                {item.image ? <img src={item.image} loading="lazy" className="asset-list-photo" alt={item.name}/> : <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><I d={ic.img} size={36}/></div>}
                             </div>
-                            <div style={{padding:14,flex:1}}>
-                                <div style={{fontWeight:700,fontSize:14,marginBottom:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</div>
-                                <div style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:'var(--accent)'}}>{item.id}</div>
+                            <div style={{padding:'12px 14px 14px',flex:1,display:'flex',flexDirection:'column',gap:8}}>
+                                <div style={{minWidth:0}}>
+                                    <div style={{fontWeight:600,fontSize:14,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.name}</div>
+                                    <div className="mono" style={{fontSize:11,color:'var(--text3)'}}>{item.id}</div>
+                                </div>
+                                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                                    <span className={`badge ${item.status==='ปกติ'?'badge-green':item.status==='เสีย'?'badge-red':'badge-orange'}`}>{item.status}</span>
+                                    {item.nextPmDate
+                                        ? <span className="badge badge-blue"><I d={ic.cal} size={11}/> PM {fmtDate(item.nextPmDate)}</span>
+                                        : <span className="badge badge-gray"><I d={ic.alert} size={11}/> ไม่มีแผน PM</span>}
+                                </div>
                             </div>
                         </div>
                     ))}
@@ -1658,7 +1846,7 @@ const App = () => {
             <main style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
                 <AppTopbar view={view} selectedDept={selectedDept} selectedAsset={selectedAsset}/>
                 <div className="view-content">
-                    {view==='dashboard' && <Dashboard data={data} setView={setView}/>}
+                    {view==='dashboard' && <Dashboard data={data} setView={setView} setSelectedAsset={setSelectedAsset} setSelectedDept={setSelectedDept}/>}
                     {view==='kanban' && <KanbanBoard assets={data.assets} setSelectedAsset={setSelectedAsset} setView={setView}/>}
                     {view==='pm_documents' && (window.PMDocumentsView
                         ? <window.PMDocumentsView data={data}/>
