@@ -39,7 +39,7 @@ const PMDocumentsView = ({ data }) => {
     setBusy(true); try{await api('delete_pm_template',{templateId:id});await load();}catch(e){setMessage(e.message);setBusy(false);}
   };
   const updateItem = (id,key,value) => setTemplate(t=>({...t,items:t.items.map(x=>x.id===id?{...x,[key]:value}:x)}));
-  const selectedTemplate = templates.find(x=>String(x.id)===String(documentForm.templateId));
+  const selectedTemplate = templates.find(x=>String(x.id)===String(documentForm.templateId)) || (documentForm.id && documentForm.templateSnapshot && String(documentForm.templateSnapshot.id)===String(documentForm.templateId) ? documentForm.templateSnapshot : null);
   const selectedAsset = data.assets.find(x=>String(x.id)===String(documentForm.assetId));
   const setResponse = (id,value) => setDocumentForm(f=>({...f,responses:{...f.responses,[id]:value}}));
   const imageToBase64 = file => new Promise((resolve,reject)=>{if(file.size>5*1024*1024)return reject(new Error('รูปต้องไม่เกิน 5MB'));const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});
@@ -47,15 +47,20 @@ const PMDocumentsView = ({ data }) => {
     if(!selectedTemplate||!selectedAsset||!documentForm.inspector.trim()) return alert('กรุณาเลือกแม่แบบ อุปกรณ์ และระบุผู้ตรวจ');
     const missing=selectedTemplate.items.find(x=>x.required&&(documentForm.responses[x.id]===undefined||documentForm.responses[x.id]===''));
     if(missing) return alert('กรุณากรอก: '+missing.label);
-    const snapshot={...documentForm,id:'PMDOC-'+Date.now(),templateName:selectedTemplate.name,assetName:selectedAsset.name,templateSnapshot:selectedTemplate};
+    const snapshot={...documentForm,id:documentForm.id||'PMDOC-'+Date.now(),templateName:selectedTemplate.name,assetName:selectedAsset.name,templateSnapshot:selectedTemplate};
     setBusy(true);
-    try{await api('save_pm_document',{document:snapshot});setMessage('บันทึกเอกสาร PM สำเร็จ');setDocumentForm(blankDocument());setPage('records');await load();}
+    try{await api('save_pm_document',{document:snapshot});setMessage(documentForm.id?'แก้ไขเอกสาร PM สำเร็จ':'บันทึกเอกสาร PM สำเร็จ');setDocumentForm(blankDocument());setPage('records');await load();}
     catch(e){setMessage(e.message);setBusy(false);}
   };
 
+  const editDocument = d => { setDocumentForm({...blankDocument(),...d,responses:{...(d.responses||{})}}); setPage('run'); setMessage(''); };
+  const deleteDocument = async d => {
+    if(!confirm(`ลบเอกสาร "${d.templateName}" ของ ${d.assetName||d.assetId} วันที่ ${d.inspectionDate}?\nแผน PM ที่ปิดด้วยเอกสารนี้จะกลับเป็น "รอเป้าหมาย"`)) return;
+    setBusy(true); try{await api('delete_pm_document',{id:d.id});setMessage('ลบเอกสาร PM แล้ว');await load();}catch(e){setMessage(e.message);setBusy(false);}
+  };
   const inputStyle={fontSize:12,color:'var(--text2)',fontWeight:700,display:'block',marginBottom:6};
   const Nav = () => <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:12,marginBottom:16,borderBottom:'1px solid var(--border)'}}>
-    {[['templates','แม่แบบ PM'],['builder','สร้างแม่แบบ'],['run','ทำรายการ PM'],['records','ประวัติเอกสาร']].map(([id,label])=><button key={id} className={page===id?'btn btn-primary':'btn btn-ghost'} style={{whiteSpace:'nowrap'}} onClick={()=>{setPage(id);if(id==='builder')setTemplate(blankTemplate());}}>{label}</button>)}
+    {[['templates','แม่แบบ PM'],['builder','สร้างแม่แบบ'],['run','ทำรายการ PM'],['records','ประวัติเอกสาร']].map(([id,label])=><button key={id} className={page===id?'btn btn-primary':'btn btn-ghost'} style={{whiteSpace:'nowrap'}} onClick={()=>{setPage(id);if(id==='builder')setTemplate(blankTemplate());if(id==='run'&&documentForm.id)setDocumentForm(blankDocument());}}>{label}</button>)}
   </div>;
 
   return <div style={{height:'100%',overflowY:'auto',padding:24}} className="fade-up pb-nav">
@@ -82,7 +87,7 @@ const PMDocumentsView = ({ data }) => {
     </div>}
 
     {page==='run'&&<div className="card-static" style={{padding:18,maxWidth:950,margin:'0 auto'}}>
-      <div style={{fontWeight:800,fontSize:18,marginBottom:15}}>บันทึกผลการตรวจ PM</div>
+      <div style={{fontWeight:800,fontSize:18,marginBottom:15,display:'flex',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}><span>{documentForm.id?'แก้ไขเอกสาร PM':'บันทึกผลการตรวจ PM'}</span>{documentForm.id&&<button className="btn btn-ghost" style={{padding:'5px 10px',fontSize:12}} onClick={()=>{setDocumentForm(blankDocument());setPage('records');}}>ยกเลิกการแก้ไข</button>}</div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10}}><div><label style={inputStyle}>แม่แบบ PM *</label><select className="inp" value={documentForm.templateId} disabled={!!launchContext?.templateId} onChange={e=>setDocumentForm({...blankDocument(),templateId:e.target.value})}><option value="">-- เลือกแม่แบบ --</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div><label style={inputStyle}>อุปกรณ์ *</label>{launchContext?.assetId?<div className="inp" style={{background:'var(--surface2)',fontWeight:700}}>{selectedAsset?.name||launchContext.assetId} ({launchContext.assetId})</div>:<select className="inp" value={documentForm.assetId} onChange={e=>setDocumentForm({...documentForm,assetId:e.target.value})}><option value="">-- เลือกอุปกรณ์ --</option>{data.assets.map(a=><option key={a.id} value={a.id}>{a.name} ({a.id})</option>)}</select>}</div><div><label style={inputStyle}>วันที่ตรวจ</label><input type="date" className="inp" value={documentForm.inspectionDate} onChange={e=>setDocumentForm({...documentForm,inspectionDate:e.target.value})}/></div><div><label style={inputStyle}>ผู้ตรวจ *</label><input className="inp" value={documentForm.inspector} onChange={e=>setDocumentForm({...documentForm,inspector:e.target.value})}/></div></div>
       {selectedTemplate&&<div style={{marginTop:18,display:'flex',flexDirection:'column',gap:10}}>{selectedTemplate.items.map((it,index)=><div key={it.id} style={{padding:14,border:'1px solid var(--border)',borderRadius:7}}><div style={{fontWeight:700,marginBottom:8}}>{index+1}. {it.label} {it.required&&<span style={{color:'var(--red)'}}>*</span>}</div>
         {it.type==='radio'&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{it.options.map(o=><label key={o} className="btn btn-ghost"><input type="radio" name={it.id} checked={documentForm.responses[it.id]===o} onChange={()=>setResponse(it.id,o)}/>{o}</label>)}</div>}
@@ -94,7 +99,7 @@ const PMDocumentsView = ({ data }) => {
       {selectedTemplate&&<><div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:10,marginTop:14}} className="pm-result-footer"><div><label style={inputStyle}>ผลโดยรวม</label><select className="inp" value={documentForm.overallStatus} onChange={e=>setDocumentForm({...documentForm,overallStatus:e.target.value})}><option>ผ่าน</option><option>ไม่ผ่าน</option><option>ต้องติดตาม</option></select></div><div><label style={inputStyle}>หมายเหตุ</label><textarea className="inp" rows="2" value={documentForm.notes} onChange={e=>setDocumentForm({...documentForm,notes:e.target.value})}/></div></div><button className="btn btn-primary" style={{marginTop:14,width:'100%',justifyContent:'center'}} onClick={saveDocument} disabled={busy}>บันทึกเอกสาร PM</button></>}
     </div>}
 
-    {page==='records'&&<div style={{display:'flex',flexDirection:'column',gap:8}}>{!documents.length&&<div className="card-static" style={{padding:35,textAlign:'center',color:'var(--text3)'}}>ยังไม่มีเอกสาร PM</div>}{documents.map(d=><div key={d.id} className="card" style={{padding:14,display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}><div><div style={{fontWeight:800}}>{d.templateName}</div><div style={{fontSize:12,color:'var(--text2)',marginTop:4}}>{d.assetName} ({d.assetId}) · ผู้ตรวจ {d.inspector}</div><div style={{fontSize:11,color:'var(--text3)',marginTop:3}}>{d.inspectionDate}</div></div><span className={`badge ${d.overallStatus==='ผ่าน'?'badge-green':d.overallStatus==='ไม่ผ่าน'?'badge-red':'badge-orange'}`}>{d.overallStatus}</span></div>)}</div>}
+    {page==='records'&&<div style={{display:'flex',flexDirection:'column',gap:8}}>{!documents.length&&<div className="card-static" style={{padding:35,textAlign:'center',color:'var(--text3)'}}>ยังไม่มีเอกสาร PM</div>}{documents.map(d=><div key={d.id} className="card" style={{padding:14,display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}><div><div style={{fontWeight:800}}>{d.templateName}</div><div style={{fontSize:12,color:'var(--text2)',marginTop:4}}>{d.assetName} ({d.assetId}) · ผู้ตรวจ {d.inspector}</div><div style={{fontSize:11,color:'var(--text3)',marginTop:3}}>{d.inspectionDate}</div></div><div style={{display:'flex',gap:6,alignItems:'center'}}><span className={`badge ${d.overallStatus==='ผ่าน'?'badge-green':d.overallStatus==='ไม่ผ่าน'?'badge-red':'badge-orange'}`}>{d.overallStatus}</span><button className="btn btn-ghost" style={{padding:'5px 10px',fontSize:12}} onClick={()=>editDocument(d)}>แก้ไข</button><button className="btn btn-danger" style={{padding:'5px 10px',fontSize:12}} onClick={()=>deleteDocument(d)}>ลบ</button></div></div>)}</div>}
   </div>;
 };
 window.PMDocumentsView = PMDocumentsView;

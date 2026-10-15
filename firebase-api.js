@@ -149,6 +149,17 @@
         return pmList;
     };
 
+    // แผน PM ที่ถูกปิดด้วยเอกสารนี้ -> กลับเป็น "รอเป้าหมาย" (ใช้ตอนลบ/แก้ไขเอกสาร)
+    const unlinkPmDocument = async (pmDocId) => {
+        if (!pmDocId) return;
+        const linked = (await db.collection(C.pm).where('pmDocumentId', '==', String(pmDocId)).get()).docs;
+        if (!linked.length) return;
+        const batch = db.batch();
+        linked.forEach(d => batch.update(d.ref, { status: 'รอเป้าหมาย', doneDate: '', pmDocumentId: '' }));
+        await batch.commit();
+        for (const id of new Set(linked.map(d => String(d.data().assetId)))) await refreshNextPm(id);
+    };
+
     // ====== ACTIONS ======
     const actions = {
         async save_dept(p) {
@@ -156,6 +167,31 @@
             const ref = db.collection(C.depts).doc(docId(p.code));
             const snap = await ref.get();
             await ref.set({ name: p.name, code: p.code, sortOrder: snap.exists ? snap.data().sortOrder ?? Date.now() : Date.now() });
+        },
+
+        // แก้ชื่อ/รหัสแผนก: อัปเดต location ของอุปกรณ์ทุกเครื่องในแผนกตามชื่อใหม่ด้วย
+        async update_dept(p) {
+            const name = String(p.name || '').trim(), code = String(p.code || '').trim();
+            if (!name || !code) throw new Error('กรอกข้อมูลให้ครบ');
+            const oldRef = db.collection(C.depts).doc(docId(p.oldCode));
+            const oldSnap = await oldRef.get();
+            const prev = oldSnap.exists ? oldSnap.data() : {};
+            const batch = db.batch();
+            if (docId(code) !== docId(p.oldCode)) {
+                if ((await db.collection(C.depts).doc(docId(code)).get()).exists) throw new Error('รหัสแผนก ' + code + ' มีอยู่แล้ว');
+                batch.delete(oldRef);
+            }
+            batch.set(db.collection(C.depts).doc(docId(code)), clean({ ...prev, name, code }));
+            if (p.oldName && p.oldName !== name) {
+                (await db.collection(C.assets).where('location', '==', p.oldName).get()).docs.forEach(d => batch.update(d.ref, { location: name }));
+            }
+            await batch.commit();
+        },
+
+        async delete_dept(p) {
+            const used = await db.collection(C.assets).where('location', '==', p.name).get();
+            if (used.docs.length) throw new Error(`ยังมีอุปกรณ์ ${used.docs.length} เครื่องในแผนกนี้ ย้ายหรือลบอุปกรณ์ก่อน`);
+            await db.collection(C.depts).doc(docId(p.code)).delete();
         },
 
         async save_asset(p) {
@@ -273,7 +309,13 @@
             return { documents: docs.sort((a, b) => String(b.inspectionDate || '').localeCompare(String(a.inspectionDate || ''))) };
         },
 
+        async delete_pm_document(p) {
+            await unlinkPmDocument(p.id);
+            await db.collection(C.docs).doc(docId(p.id)).delete();
+        },
+
         async save_pm_document(p) {
+            if (p.document.id) await unlinkPmDocument(p.document.id);   // แก้ไขเอกสาร: ปลดแผนที่เคยผูกไว้ก่อน แล้วผูกใหม่ตามวันที่ล่าสุด
             const d = await storeFilesDeep({ ...p.document, id: p.document.id || 'PMDOC-' + Date.now() }, 'pm-documents');
             await db.collection(C.docs).doc(docId(d.id)).set(clean(d));
             if (d.assetId) {
