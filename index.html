@@ -490,7 +490,7 @@ const Toast = ({ notify, setNotify }) => {
 };
 
 // ====== SIDEBAR ======
-const Sidebar = ({ view, setView, fetchData, pmOverdue }) => {
+const Sidebar = ({ view, setView, fetchData, pmOverdue, backupDue }) => {
     const groups = [
         { title:'ภาพรวม', items:[
             { id:'dashboard', label:'แดชบอร์ด', icon:ic.dash },
@@ -505,6 +505,9 @@ const Sidebar = ({ view, setView, fetchData, pmOverdue }) => {
             { id:'global_search', label:'ค้นหาทั่วระบบ', icon:ic.search },
             { id:'electrical', label:'ระบบไฟฟ้า', icon:ic.zap },
             { id:'water', label:'ระบบน้ำ', icon:ic.drop },
+        ]},
+        { title:'ระบบ', items:[
+            { id:'backup', label:'สำรองข้อมูล', icon:ic.folder, badge: backupDue ? '!' : null },
         ]},
     ];
     const isActive = (id) => ['departments','assets','detail','add_asset','edit_asset'].includes(view) ? id==='departments' : view===id;
@@ -565,7 +568,7 @@ const AppTopbar = ({ view, selectedDept, selectedAsset }) => {
         dashboard:'ภาพรวมงานซ่อมบำรุง', kanban:'แผนงานบำรุงรักษา PM', pm_documents:'ระบบเอกสาร PM', departments:'แผนกและอุปกรณ์',
         assets:selectedDept || 'รายการอุปกรณ์', global_search:'ค้นหาข้อมูลอุปกรณ์', electrical:'ระบบไฟฟ้า',
         water:'ระบบน้ำ', add_asset:'ลงทะเบียนอุปกรณ์ใหม่', edit_asset:'แก้ไขข้อมูลอุปกรณ์',
-        detail:selectedAsset?.name || 'รายละเอียดอุปกรณ์', executive:'รายงานสำหรับผู้บริหาร'
+        detail:selectedAsset?.name || 'รายละเอียดอุปกรณ์', executive:'รายงานสำหรับผู้บริหาร', backup:'สำรองข้อมูล'
     };
     const crumbs = ['assets','detail','add_asset','edit_asset'].includes(view)
         ? ['แผนกและอุปกรณ์', view==='assets' ? null : selectedDept].filter(Boolean)
@@ -936,7 +939,7 @@ const ExecutiveDashboard = ({ data }) => {
 // พื้นหลังจาง ๆ ของสีที่ส่งมาเป็น CSS variable (เช่น 'var(--red)')
 const tint = (color, pct=10) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 
-const Dashboard = ({ data, setView, setSelectedAsset, setSelectedDept }) => {
+const Dashboard = ({ data, setView, setSelectedAsset, setSelectedDept, backupStatus }) => {
     const assets = data.assets;
     const total = assets.length;
     const repairing = assets.filter(a=>a.status==='ส่งซ่อม').length;
@@ -979,6 +982,17 @@ const Dashboard = ({ data, setView, setSelectedAsset, setSelectedDept }) => {
                     <button className="btn btn-primary" onClick={()=>{setSelectedDept(null);setView('add_asset');}}><I d={ic.plus} size={16}/> เพิ่มอุปกรณ์</button>
                 </div>
             </div>
+
+            {backupStatus && backupOverdue(backupStatus) && (
+                <div className="panel" style={{marginBottom:16,borderLeft:'4px solid var(--orange)',display:'flex',alignItems:'center',gap:12,padding:'12px 16px',flexWrap:'wrap'}}>
+                    <span style={{color:'var(--orange)',display:'flex'}}><I d={ic.alert} size={20}/></span>
+                    <div style={{flex:1,minWidth:200,fontSize:13}}>
+                        <b>{backupStatus.lastBackupAt ? `ไม่ได้สำรองข้อมูลมา ${daysSince(backupStatus.lastBackupAt)} วันแล้ว` : 'ยังไม่เคยสำรองข้อมูล'}</b>
+                        <span style={{color:'var(--text2)'}}> · แนะนำให้สำรองอย่างน้อยสัปดาห์ละครั้ง</span>
+                    </div>
+                    <button className="btn btn-ghost" onClick={()=>setView('backup')}><I d={ic.folder} size={16}/> สำรองข้อมูลตอนนี้</button>
+                </div>
+            )}
 
             <div className="kpi-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:16,marginBottom:20}}>
                 {stats.map((s,i) => (
@@ -1777,6 +1791,128 @@ const UtilityView = ({ data, type, setView, setSelectedAsset }) => {
     );
 };
 
+// ====== BACKUP ======
+const BACKUP_REMIND_DAYS = 7;
+const daysSince = (iso) => iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : null;
+const backupOverdue = (status) => { const d = daysSince(status?.lastBackupAt); return d === null || d >= BACKUP_REMIND_DAYS; };
+const fmtDateTime = (iso) => iso ? new Date(iso).toLocaleString('th-TH', {day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+const BACKUP_LABELS = { departments:'แผนก', assets:'อุปกรณ์ (รวมประวัติซ่อมและ Spare Part)', pmSchedules:'ตาราง PM', pmTemplates:'แม่แบบ PM', pmDocuments:'เอกสาร PM', assetPmTemplates:'การผูกแม่แบบกับอุปกรณ์' };
+
+const BackupView = ({ data, backupStatus, refreshBackupStatus }) => {
+    const [busy, setBusy] = useState(false);
+    const [msg, setMsg] = useState(null);
+    const [by, setBy] = useState(() => { try { return localStorage.getItem('mta-backup-by') || ''; } catch(e) { return ''; } });
+    const last = backupStatus?.lastBackupAt;
+    const days = daysSince(last);
+    const overdue = backupOverdue(backupStatus);
+    const history = backupStatus?.history || [];
+    const logCount = data.assets.reduce((s,a) => s + (a.history||[]).length, 0);
+    const spareCount = data.assets.reduce((s,a) => s + (a.spareParts||[]).length, 0);
+
+    const runBackup = async () => {
+        setBusy(true); setMsg(null);
+        try { localStorage.setItem('mta-backup-by', by); } catch(e) {}
+        const r = await window.mtaApi.call({action:'export_backup'});
+        if (r.status === 'error') { setMsg({ok:false, text:'สำรองข้อมูลไม่สำเร็จ: ' + r.message}); setBusy(false); return; }
+        const json = JSON.stringify(r.backup, null, 2);
+        const blob = new Blob([json], {type:'application/json'});
+        const stamp = new Date(r.backup.exportedAt);
+        const pad = (n) => String(n).padStart(2,'0');
+        const name = `mt-asset-backup-${stamp.getFullYear()}-${pad(stamp.getMonth()+1)}-${pad(stamp.getDate())}-${pad(stamp.getHours())}${pad(stamp.getMinutes())}.json`;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        const sizeKb = Math.round(blob.size / 1024);
+        await window.mtaApi.call({action:'record_backup', by, counts:r.backup.counts, sizeKb});
+        await refreshBackupStatus();
+        setMsg({ok:true, text:`ดาวน์โหลด ${name} (${fmtNum(sizeKb)} KB) แล้ว`});
+        setBusy(false);
+    };
+
+    const tone = days === null ? 'red' : overdue ? 'orange' : 'green';
+    const toneColor = {red:'var(--red)', orange:'var(--orange)', green:'var(--green)'}[tone];
+
+    return (
+        <div style={{padding:28,maxWidth:1080,margin:'0 auto',height:'100%',overflowY:'auto'}} className="fade-up pb-nav">
+            <div className="page-head">
+                <div>
+                    <div className="eyebrow">ระบบ</div>
+                    <h2 className="page-title">สำรองข้อมูล</h2>
+                    <div className="page-sub">ดาวน์โหลดข้อมูลทั้งหมดเก็บไว้เป็นไฟล์ แนะนำให้ทำอย่างน้อยสัปดาห์ละครั้ง</div>
+                </div>
+            </div>
+
+            <div className="panel" style={{marginBottom:16,borderLeft:`4px solid ${toneColor}`}}>
+                <div className="panel-body" style={{display:'flex',gap:16,alignItems:'center',flexWrap:'wrap'}}>
+                    <span className="kpi-icon" style={{width:44,height:44,background:tint(toneColor,12),color:toneColor}}><I d={tone==='green'?ic.folder:ic.alert} size={22}/></span>
+                    <div style={{flex:1,minWidth:220}}>
+                        <div style={{fontWeight:600,fontSize:15}}>
+                            {days === null ? 'ยังไม่เคยสำรองข้อมูล' : days === 0 ? 'สำรองข้อมูลล่าสุดวันนี้' : `สำรองข้อมูลล่าสุดเมื่อ ${days} วันที่แล้ว`}
+                        </div>
+                        <div style={{fontSize:13,color:'var(--text2)'}}>
+                            {last ? `${fmtDateTime(last)}${backupStatus.lastBackupBy ? ' · โดย ' + backupStatus.lastBackupBy : ''}` : 'ควรสำรองข้อมูลครั้งแรกตอนนี้'}
+                            {overdue && last && ` · เกิน ${BACKUP_REMIND_DAYS} วันแล้ว ควรสำรองใหม่`}
+                        </div>
+                    </div>
+                    <span className={`badge badge-${tone}`}>{tone==='green'?'เป็นปัจจุบัน':tone==='orange'?'ถึงเวลาสำรอง':'ยังไม่มีไฟล์สำรอง'}</span>
+                </div>
+            </div>
+
+            <div className="two-col" style={{display:'grid',gridTemplateColumns:'minmax(0,1.2fr) minmax(0,1fr)',gap:16,marginBottom:16}}>
+                <div className="panel">
+                    <div className="panel-head"><div className="panel-title"><I d={ic.folder} size={16}/> สร้างไฟล์สำรอง</div></div>
+                    <div className="panel-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+                        <div>
+                            <label style={{fontSize:13,fontWeight:500,color:'var(--text2)',display:'block',marginBottom:6}}>ชื่อผู้สำรองข้อมูล (ไม่บังคับ)</label>
+                            <input className="inp" value={by} onChange={e=>setBy(e.target.value)} placeholder="เช่น ช่างสมชาย" maxLength={60}/>
+                        </div>
+                        <button className="btn btn-primary" style={{justifyContent:'center',minHeight:46,fontSize:15}} onClick={runBackup} disabled={busy}>
+                            {busy ? <><Loader size={18}/> กำลังเตรียมไฟล์...</> : <><I d={ic.folder} size={18}/> ดาวน์โหลดไฟล์สำรอง (.json)</>}
+                        </button>
+                        {msg && <div className={`badge ${msg.ok?'badge-green':'badge-red'}`} style={{whiteSpace:'normal',padding:'8px 12px',borderRadius:8,fontSize:13}}>{msg.ok?'✓ ':''}{msg.text}</div>}
+                        <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.7,background:'var(--surface2)',borderRadius:8,padding:'10px 12px'}}>
+                            ไฟล์จะอยู่ในโฟลเดอร์ Downloads ของเครื่องที่กด แนะนำให้ย้ายไปเก็บใน <b>Google Drive</b> อีกที เพื่อไม่ให้หายเมื่อเครื่องเสีย
+                        </div>
+                    </div>
+                </div>
+
+                <div className="panel">
+                    <div className="panel-head"><div className="panel-title"><I d={ic.list} size={16}/> ข้อมูลที่จะถูกสำรอง</div></div>
+                    <div className="panel-body" style={{display:'flex',flexDirection:'column',gap:0}}>
+                        {[
+                            ['แผนก', data.departments.length],
+                            ['อุปกรณ์', data.assets.length],
+                            ['ประวัติซ่อม', logCount],
+                            ['Spare Part', spareCount],
+                            ['ตาราง PM, แม่แบบ และเอกสาร PM', 'ทั้งหมด'],
+                        ].map(([k,v]) => (
+                            <div key={k} className="field-row"><span style={{color:'var(--text2)',fontSize:13}}>{k}</span><span className="field-value">{typeof v==='number'?fmtNum(v):v}</span></div>
+                        ))}
+                        <div style={{fontSize:12,color:'var(--text3)',marginTop:10,lineHeight:1.6}}>รูปและ PDF จะเก็บเป็นลิงก์ ตัวไฟล์จริงอยู่ใน Firebase Storage และต้นฉบับยังอยู่ใน Google Drive เดิม</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="panel">
+                <div className="panel-head">
+                    <div className="panel-title"><I d={ic.clock} size={16}/> ประวัติการสำรองข้อมูล</div>
+                    <span className="badge badge-gray">{history.length} ครั้งล่าสุด</span>
+                </div>
+                {history.length === 0
+                    ? <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:28}}>ยังไม่มีประวัติ</div>
+                    : history.slice(0,10).map((h,i) => (
+                        <div key={h.at} style={{display:'flex',gap:12,alignItems:'center',padding:'11px 18px',borderTop:i?'1px solid var(--border)':'none',fontSize:13}}>
+                            <span style={{flex:1,fontWeight:500}}>{fmtDateTime(h.at)}</span>
+                            <span style={{color:'var(--text2)',minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.by || '-'}</span>
+                            <span className="mono" style={{color:'var(--text3)',fontSize:12,width:120,textAlign:'right'}}>{fmtNum(h.counts?.assets)} อุปกรณ์ · {fmtNum(h.sizeKb)} KB</span>
+                        </div>
+                    ))}
+            </div>
+        </div>
+    );
+};
+
 // ====== APP ======
 const App = () => {
     const [view, setView] = useState('dashboard');
@@ -1785,8 +1921,13 @@ const App = () => {
     const [selectedDept, setSelectedDept] = useState(null);
     const [selectedAsset, setSelectedAsset] = useState(null);
     const [notify, setNotify] = useState({show:false,status:'idle',message:'',action:null});
+    const [backupStatus, setBackupStatus] = useState(null);
+    const refreshBackupStatus = async () => {
+        const r = await window.mtaApi.call({action:'get_backup_status'});
+        if (r.status !== 'error') setBackupStatus(r.backupStatus);
+    };
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { fetchData(); refreshBackupStatus(); }, []);
     useEffect(() => {
         if(selectedAsset && data.assets.length>0) {
             const updated = data.assets.find(a=>String(a.id)===String(selectedAsset.id));
@@ -1842,11 +1983,12 @@ const App = () => {
     return (
         <div style={{display:'flex',height:'100vh',width:'100%',overflow:'hidden',background:'var(--bg)'}}>
             <Toast notify={notify} setNotify={setNotify}/>
-            <Sidebar view={view} setView={setView} fetchData={fetchData} pmOverdue={pmOverdue}/>
+            <Sidebar view={view} setView={setView} fetchData={fetchData} pmOverdue={pmOverdue} backupDue={backupStatus && backupOverdue(backupStatus)}/>
             <main style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
                 <AppTopbar view={view} selectedDept={selectedDept} selectedAsset={selectedAsset}/>
                 <div className="view-content">
-                    {view==='dashboard' && <Dashboard data={data} setView={setView} setSelectedAsset={setSelectedAsset} setSelectedDept={setSelectedDept}/>}
+                    {view==='dashboard' && <Dashboard data={data} setView={setView} setSelectedAsset={setSelectedAsset} setSelectedDept={setSelectedDept} backupStatus={backupStatus}/>}
+                    {view==='backup' && <BackupView data={data} backupStatus={backupStatus} refreshBackupStatus={refreshBackupStatus}/>}
                     {view==='kanban' && <KanbanBoard assets={data.assets} setSelectedAsset={setSelectedAsset} setView={setView}/>}
                     {view==='pm_documents' && (window.PMDocumentsView
                         ? <window.PMDocumentsView data={data}/>

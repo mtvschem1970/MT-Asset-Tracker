@@ -28,6 +28,8 @@
         depts: 'departments', assets: 'assets', pm: 'pmSchedules',
         templates: 'pmTemplates', docs: 'pmDocuments', assetTpl: 'assetPmTemplates'
     };
+    // ข้อมูลระบบ (เช่น สถานะการสำรองข้อมูล) แยกจากข้อมูลงาน และไม่รวมในไฟล์สำรอง
+    const META = 'meta';
 
     // Firestore ห้ามมี undefined และห้ามมี '/' ใน document id
     const clean = (v) => JSON.parse(JSON.stringify(v === undefined ? null : v));
@@ -238,6 +240,42 @@
 
         async save_asset_pm_templates(p) {
             await db.collection(C.assetTpl).doc(docId(p.assetId)).set({ assetId: String(p.assetId), templateIds: (p.templateIds || []).map(String) });
+        },
+
+        // ====== BACKUP ======
+        // ดึงข้อมูลทุก collection พร้อม document id เพื่อใช้กู้คืนได้ตรงตามเดิม
+        async export_backup() {
+            const names = Object.values(C);
+            const collections = {};
+            const counts = {};
+            for (const name of names) {
+                const snap = await db.collection(name).get();
+                collections[name] = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+                counts[name] = snap.size;
+            }
+            return {
+                backup: {
+                    format: 'mt-asset-tracker-backup',
+                    formatVersion: 1,
+                    exportedAt: new Date().toISOString(),
+                    projectId: (window.MTA_FIREBASE_CONFIG || {}).projectId || '',
+                    counts,
+                    collections
+                }
+            };
+        },
+
+        async get_backup_status() {
+            const snap = await db.collection(META).doc('backup').get();
+            return { backupStatus: snap.exists ? snap.data() : { lastBackupAt: '', history: [] } };
+        },
+
+        async record_backup(p) {
+            const ref = db.collection(META).doc('backup');
+            const snap = await ref.get();
+            const prev = snap.exists ? (snap.data().history || []) : [];
+            const entry = { at: new Date().toISOString(), by: String(p.by || '').slice(0, 60), counts: p.counts || {}, sizeKb: Number(p.sizeKb) || 0 };
+            await ref.set(clean({ lastBackupAt: entry.at, lastBackupBy: entry.by, history: [entry, ...prev].slice(0, 20) }));
         }
     };
 
