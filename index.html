@@ -15,6 +15,12 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Firebase (หลังบ้าน) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+    <script src="./firebase-config.js"></script>
+    <script src="./firebase-api.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 
@@ -297,8 +303,8 @@
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
 // ====== CONFIG ======
-const API_URL = "https://script.google.com/macros/s/AKfycbxrg3L1Kvzbjh5U0WlFve8ExsGYcC8YTte2qB8Rs5Ckkza4aDjQ4QRFpCtz599s1NdE/exec";
-window.MTA_API_URL = API_URL;
+// หลังบ้านอยู่บน Firebase แล้ว ดู firebase-config.js และ firebase-api.js
+const mtaCall = (payload) => window.mtaApi.call(payload);
 const APP_VERSION = "2.3 Pro";
 const BRAND_LOGO = "./Logo.png";
 
@@ -588,8 +594,7 @@ const KanbanBoard = ({ assets, setSelectedAsset, setView }) => {
         const load = async () => {
             setLoading(true);
             try {
-                const r = await fetch(API_URL, { method:'POST', body: JSON.stringify({action:'get_all_pm_dashboard'}) });
-                const j = await r.json();
+                const j = await mtaCall({action:'get_all_pm_dashboard'});
                 if (j.allPm) setAllPm(j.allPm);
             } catch(e) { console.error(e); }
             setLoading(false);
@@ -1166,8 +1171,7 @@ const DetailView = ({ item, setView, postData }) => {
     const fetchPm = async () => {
         setPmLoading(true);
         try {
-            const r = await fetch(API_URL,{method:'POST',body:JSON.stringify({action:'get_pm_schedules',assetId:item.id})});
-            const j = await r.json();
+            const j = await mtaCall({action:'get_pm_schedules',assetId:item.id});
             if(j.pmSchedules) setPmList(j.pmSchedules);
         } catch(e){}
         setPmLoading(false);
@@ -1614,8 +1618,7 @@ const App = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const r = await fetch(API_URL);
-            const j = await r.json();
+            const j = await window.mtaApi.getAll();
             if(j.assets) setData({assets:j.assets,departments:j.departments||[]});
         } catch(e){ console.error(e); }
         setLoading(false);
@@ -1624,8 +1627,7 @@ const App = () => {
     const postData = async (payload) => {
         setNotify({show:true,status:'syncing',message:'กำลังบันทึก...',action:null});
         try {
-            const response = await fetch(API_URL,{method:'POST',body:JSON.stringify(payload)});
-            const result = await response.json();
+            const result = await mtaCall(payload);
             if(result.status === 'error') throw new Error(result.message || 'ไม่สามารถบันทึกข้อมูลได้');
             if(['save_asset','delete_asset'].includes(payload.action)) setView('assets');
             setNotify({show:true,status:'success',message:'บันทึกสำเร็จ!',action:()=>{fetchData();setNotify({show:false});}});

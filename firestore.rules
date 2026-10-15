@@ -1,0 +1,11 @@
+rules_version = '2';
+// ระดับความปลอดภัยเท่ากับระบบเดิม (Apps Script เปิดให้ทุกคนที่มีลิงก์อ่าน/เขียนได้)
+// อนุญาตเฉพาะ collection ที่แอปใช้ ส่วนอื่นปิดทั้งหมด
+// แนะนำ: เพิ่มระบบล็อกอินภายหลัง แล้วเปลี่ยน `true` เป็น `request.auth != null`
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{col}/{id} {
+      allow read, write: if col in ['departments', 'assets', 'pmSchedules', 'pmTemplates', 'pmDocuments', 'assetPmTemplates'];
+    }
+  }
+}

@@ -1,0 +1,29 @@
+// Storage rules ของโปรเจกต์ Maintenance-System (รวม block ของ MT Asset Tracker แล้ว)
+// ยังไม่ได้ deploy: rules ปัจจุบันเปิด read/write ทุก path อยู่แล้ว ไฟล์นี้จึงไม่เปลี่ยนพฤติกรรมใด ๆ
+// ใช้เป็นจุดตั้งต้นเมื่อจะปิดสิทธิ์ของ Maintenance-System ให้รัดกุมขึ้น:
+// เมื่อแก้ block "allPaths" ของ Maintenance-System แล้ว block ของ mt-asset-tracker/ ยังทำงานได้ตามเดิม
+rules_version = '2';
+
+// Craft rules based on data in your Firestore database
+// allow write: if firestore.get(
+//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ===== Maintenance-System (เดิม ไม่ได้แก้) =====
+    // This rule allows anyone with your Storage bucket reference to view, edit,
+    // and delete all data in your Storage bucket.
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+
+    // ===== MT Asset Tracker: เฉพาะโฟลเดอร์ mt-asset-tracker/ =====
+    // อ่านได้ทุกคน, เพิ่มได้เฉพาะรูป/PDF ไม่เกิน 10MB, แก้ไข/ลบไม่ได้
+    // (จะมีผลจริงเมื่อ block allPaths ด้านบนถูกจำกัดสิทธิ์ลง)
+    match /mt-asset-tracker/{allPaths=**} {
+      allow read: if true;
+      allow create: if request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+  }
+}
