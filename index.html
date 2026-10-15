@@ -21,6 +21,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
     <script src="./firebase-config.js"></script>
     <script src="./firebase-api.js"></script>
+    <script src="./doc-export.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -499,6 +500,7 @@ const Sidebar = ({ view, setView, fetchData, pmOverdue, backupDue }) => {
         { title:'งานบำรุงรักษา', items:[
             { id:'kanban', label:'แผนงาน PM', icon:ic.kanban, badge: pmOverdue > 0 ? pmOverdue : null },
             { id:'pm_documents', label:'เอกสารและแบบตรวจ PM', icon:ic.file },
+            { id:'iso_docs', label:'เอกสาร ISO 14001', icon:ic.list },
         ]},
         { title:'อุปกรณ์', items:[
             { id:'departments', label:'แผนกและอุปกรณ์', icon:ic.building },
@@ -568,7 +570,7 @@ const AppTopbar = ({ view, selectedDept, selectedAsset }) => {
         dashboard:'ภาพรวมงานซ่อมบำรุง', kanban:'แผนงานบำรุงรักษา PM', pm_documents:'ระบบเอกสาร PM', departments:'แผนกและอุปกรณ์',
         assets:selectedDept || 'รายการอุปกรณ์', global_search:'ค้นหาข้อมูลอุปกรณ์', electrical:'ระบบไฟฟ้า',
         water:'ระบบน้ำ', add_asset:'ลงทะเบียนอุปกรณ์ใหม่', edit_asset:'แก้ไขข้อมูลอุปกรณ์',
-        detail:selectedAsset?.name || 'รายละเอียดอุปกรณ์', executive:'รายงานสำหรับผู้บริหาร', backup:'สำรองข้อมูล'
+        detail:selectedAsset?.name || 'รายละเอียดอุปกรณ์', executive:'รายงานสำหรับผู้บริหาร', backup:'สำรองข้อมูล', iso_docs:'เอกสาร ISO 14001'
     };
     const crumbs = ['assets','detail','add_asset','edit_asset'].includes(view)
         ? ['แผนกและอุปกรณ์', view==='assets' ? null : selectedDept].filter(Boolean)
@@ -1460,6 +1462,7 @@ const DetailView = ({ item, setView, postData }) => {
                         <span className={`badge ${item.status==='ปกติ'?'badge-green':'badge-orange'}`}>{item.status}</span>
                     </div>
                 </div>
+                <button className="btn btn-ghost" style={{padding:'8px 12px'}} title="ประวัติเครื่องจักร (ISO 14001)" onClick={()=>openIsoDoc('history', {assetId:item.id}, [item])}><I d={ic.file} size={18}/> พิมพ์ประวัติเครื่อง</button>
                 <button className="btn btn-ghost" style={{padding:'8px 12px'}} onClick={()=>setShowQr(true)}><I d={ic.qr} size={18}/> QR</button>
             </div>
 
@@ -1913,6 +1916,155 @@ const BackupView = ({ data, backupStatus, refreshBackupStatus }) => {
     );
 };
 
+// ====== ISO 14001 DOCUMENTS ======
+// โหลดข้อมูลทั้งหมดที่เอกสารต้องใช้ (รวมการตั้งค่าหัวกระดาษ)
+const loadDocContext = async (assets) => {
+    const [pm, docs, tpl, st] = await Promise.all([
+        window.mtaApi.call({action:'get_all_pm_dashboard'}),
+        window.mtaApi.call({action:'get_pm_documents'}),
+        window.mtaApi.call({action:'get_pm_templates'}),
+        window.mtaApi.call({action:'get_doc_settings'}),
+    ]);
+    const failed = [pm, docs, tpl, st].find(r => r.status === 'error');
+    if (failed) throw new Error(failed.message);
+    return { assets, pmSchedules: pm.allPm || [], pmDocuments: docs.documents || [], pmTemplates: tpl.templates || [], settings: st.docSettings };
+};
+const openIsoDoc = (type, filters, assets) => window.MTADocs.open(type, null, () => loadDocContext(assets), filters);
+
+const DOC_TYPES = [
+    { id:'register',   icon:ic.list,     uses:['dept'],                desc:'รายการเครื่องจักรและอุปกรณ์ทั้งหมด พร้อมสถานะและกำหนด PM' },
+    { id:'history',    icon:ic.folder,   uses:['dept','asset','range'], desc:'ประวัติเครื่องรายเครื่อง: ข้อมูลเครื่อง ประวัติซ่อม แผน PM และอะไหล่ (1 เครื่อง/ฉบับ)' },
+    { id:'repairLog',  icon:ic.wrench,   uses:['dept','range'],         desc:'บันทึกงานซ่อมบำรุงทุกเครื่องตามช่วงวันที่ พร้อมค่าใช้จ่ายรวม' },
+    { id:'pmPlan',     icon:ic.cal,      uses:['dept','year'],          desc:'ตารางแผน PM 12 เดือน แสดงสถานะ ตามแผน / ทำแล้ว / เลยกำหนด / ยกเลิก' },
+    { id:'pmRecord',   icon:ic.file,     uses:['dept','asset','range'], desc:'ใบบันทึกผลการตรวจเช็ค PM ตามแม่แบบ (1 ใบตรวจ/ฉบับ)' },
+    { id:'spareParts', icon:ic.tag,      uses:['dept'],                desc:'ทะเบียนอะไหล่สำรอง คงเหลือ และรายการที่ต่ำกว่าจุดสั่งซื้อ' },
+];
+const FILTER_LABELS = { dept:'แผนก', asset:'อุปกรณ์', range:'ช่วงวันที่', year:'ปี' };
+
+const DocumentsView = ({ data }) => {
+    const thisYear = new Date().getFullYear();
+    const [f, setF] = useState({ dept:'', assetId:'', from:`${thisYear}-01-01`, to:'', year:String(thisYear) });
+    const [settings, setSettings] = useState(null);
+    const [showSettings, setShowSettings] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [msg, setMsg] = useState('');
+
+    useEffect(() => {
+        window.mtaApi.call({action:'get_doc_settings'}).then(r => setSettings(window.MTADocs.mergeSettings(r.docSettings)));
+    }, []);
+
+    const assetsInDept = data.assets.filter(a => !f.dept || a.location === f.dept);
+    const setForm = (k, patch) => setSettings(s => ({ ...s, forms: { ...s.forms, [k]: { ...s.forms[k], ...patch } } }));
+    const saveSettings = async () => {
+        setSaving(true); setMsg('');
+        const { updatedAt, ...clean } = settings;
+        const r = await window.mtaApi.call({action:'save_doc_settings', settings: clean});
+        setMsg(r.status === 'error' ? 'บันทึกไม่สำเร็จ: ' + r.message : 'บันทึกการตั้งค่าแล้ว');
+        setSaving(false);
+    };
+    const generate = (type) => {
+        const uses = DOC_TYPES.find(d => d.id === type).uses;
+        openIsoDoc(type, {
+            dept: uses.includes('dept') ? f.dept : '',
+            assetId: uses.includes('asset') ? f.assetId : '',
+            from: uses.includes('range') ? f.from : '', to: uses.includes('range') ? f.to : '',
+            year: f.year,
+        }, data.assets);
+    };
+    const label = { fontSize:12, fontWeight:500, color:'var(--text2)', display:'block', marginBottom:6 };
+
+    return (
+        <div style={{padding:28,maxWidth:1180,margin:'0 auto',height:'100%',overflowY:'auto'}} className="fade-up pb-nav">
+            <div className="page-head">
+                <div>
+                    <div className="eyebrow">ระบบเอกสาร</div>
+                    <h2 className="page-title">เอกสาร ISO 14001</h2>
+                    <div className="page-sub">ออกเอกสารแบบควบคุม (Documented Information ข้อ 7.5) จากข้อมูลในระบบ พิมพ์หรือบันทึกเป็น PDF ได้ทันที</div>
+                </div>
+                <button className="btn btn-ghost" onClick={()=>setShowSettings(s=>!s)}><I d={ic.info} size={16}/> {showSettings ? 'ซ่อนการตั้งค่า' : 'ตั้งค่าหัวกระดาษ'}</button>
+            </div>
+
+            {showSettings && settings && (
+                <div className="panel" style={{marginBottom:16}}>
+                    <div className="panel-head">
+                        <div className="panel-title"><I d={ic.info} size={16}/> ตั้งค่าหัวกระดาษและการควบคุมเอกสาร</div>
+                        <button className="btn btn-primary" onClick={saveSettings} disabled={saving}>{saving ? <Loader size={16}/> : '✓'} บันทึกการตั้งค่า</button>
+                    </div>
+                    <div className="panel-body" style={{display:'flex',flexDirection:'column',gap:16}}>
+                        {msg && <div className={`badge ${msg.startsWith('บันทึกไม่') ? 'badge-red' : 'badge-green'}`} style={{alignSelf:'flex-start',padding:'6px 12px'}}>{msg}</div>}
+                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:12}}>
+                            <div><label style={label}>ชื่อบริษัท / หน่วยงาน</label><input className="inp" value={settings.companyName} onChange={e=>setSettings({...settings,companyName:e.target.value})}/></div>
+                            <div><label style={label}>ฝ่าย / แผนกที่ออกเอกสาร</label><input className="inp" value={settings.department} onChange={e=>setSettings({...settings,department:e.target.value})}/></div>
+                        </div>
+                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+                            {[['prepared','ช่องลงนามที่ 1'],['reviewed','ช่องลงนามที่ 2'],['approved','ช่องลงนามที่ 3']].map(([k,t]) => (
+                                <div key={k}><label style={label}>{t}</label><input className="inp" value={settings.signers[k]} onChange={e=>setSettings({...settings,signers:{...settings.signers,[k]:e.target.value}})}/></div>
+                            ))}
+                        </div>
+                        <div style={{overflowX:'auto'}}>
+                            <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,minWidth:760}}>
+                                <thead><tr style={{color:'var(--text2)',textAlign:'left'}}>
+                                    {['เลขที่เอกสาร','ชื่อเอกสาร','Rev.','วันที่บังคับใช้','ระยะเวลาจัดเก็บ'].map(h => <th key={h} style={{padding:'6px 6px',fontWeight:600,borderBottom:'1px solid var(--border)'}}>{h}</th>)}
+                                </tr></thead>
+                                <tbody>{window.MTADocs.types.map(k => (
+                                    <tr key={k}>
+                                        <td style={{padding:4,width:130}}><input className="inp mono" value={settings.forms[k].code} onChange={e=>setForm(k,{code:e.target.value})}/></td>
+                                        <td style={{padding:4}}><input className="inp" value={settings.forms[k].title} onChange={e=>setForm(k,{title:e.target.value})}/></td>
+                                        <td style={{padding:4,width:70}}><input className="inp" value={settings.forms[k].rev} onChange={e=>setForm(k,{rev:e.target.value})}/></td>
+                                        <td style={{padding:4,width:160}}><input type="date" className="inp" value={settings.forms[k].effective} onChange={e=>setForm(k,{effective:e.target.value})}/></td>
+                                        <td style={{padding:4,width:200}}><input className="inp" value={settings.forms[k].retention} onChange={e=>setForm(k,{retention:e.target.value})}/></td>
+                                    </tr>
+                                ))}</tbody>
+                            </table>
+                        </div>
+                        <div style={{fontSize:12,color:'var(--text3)'}}>ใส่เลขที่เอกสารและ Rev. ให้ตรงกับทะเบียนเอกสารควบคุม (Master List) ของบริษัท เมื่อแก้แบบฟอร์มให้เพิ่ม Rev. และวันที่บังคับใช้ใหม่</div>
+                    </div>
+                </div>
+            )}
+
+            <div className="panel" style={{marginBottom:16}}>
+                <div className="panel-head"><div className="panel-title"><I d={ic.search} size={16}/> เงื่อนไขเอกสาร</div></div>
+                <div className="panel-body" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
+                    <div><label style={label}>แผนก</label>
+                        <select className="inp" value={f.dept} onChange={e=>setF({...f,dept:e.target.value,assetId:''})}>
+                            <option value="">ทุกแผนก</option>{data.departments.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+                        </select></div>
+                    <div><label style={label}>อุปกรณ์ (ประวัติเครื่อง / ใบตรวจ PM)</label>
+                        <select className="inp" value={f.assetId} onChange={e=>setF({...f,assetId:e.target.value})}>
+                            <option value="">ทุกเครื่องในแผนกที่เลือก</option>{assetsInDept.map(a => <option key={a.id} value={a.id}>{a.id} · {a.name}</option>)}
+                        </select></div>
+                    <div><label style={label}>ตั้งแต่วันที่</label><input type="date" className="inp" value={f.from} onChange={e=>setF({...f,from:e.target.value})}/></div>
+                    <div><label style={label}>ถึงวันที่</label><input type="date" className="inp" value={f.to} onChange={e=>setF({...f,to:e.target.value})}/></div>
+                    <div><label style={label}>ปีของแผน PM</label>
+                        <select className="inp" value={f.year} onChange={e=>setF({...f,year:e.target.value})}>
+                            {[thisYear-2, thisYear-1, thisYear, thisYear+1].map(y => <option key={y} value={y}>{y+543} ({y})</option>)}
+                        </select></div>
+                </div>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))',gap:14}}>
+                {DOC_TYPES.map(d => {
+                    const form = settings ? settings.forms[d.id] : window.MTADocs.DEFAULT_SETTINGS.forms[d.id];
+                    return (
+                        <div key={d.id} className="card" style={{padding:18,display:'flex',flexDirection:'column',gap:12}}>
+                            <div style={{display:'flex',gap:12,alignItems:'flex-start'}}>
+                                <span className="kpi-icon" style={{background:'var(--accent-soft)',color:'var(--accent)'}}><I d={d.icon} size={18}/></span>
+                                <div style={{flex:1,minWidth:0}}>
+                                    <div className="mono" style={{fontSize:11,color:'var(--text3)'}}>{form.code} · Rev.{form.rev}</div>
+                                    <div style={{fontWeight:600,fontSize:14,lineHeight:1.4}}>{form.title}</div>
+                                </div>
+                            </div>
+                            <div style={{fontSize:13,color:'var(--text2)',flex:1}}>{d.desc}</div>
+                            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{d.uses.map(u => <span key={u} className="badge badge-gray">{FILTER_LABELS[u]}</span>)}</div>
+                            <button className="btn btn-primary" style={{justifyContent:'center'}} onClick={()=>generate(d.id)}><I d={ic.file} size={16}/> สร้างเอกสาร</button>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 // ====== APP ======
 const App = () => {
     const [view, setView] = useState('dashboard');
@@ -1988,6 +2140,7 @@ const App = () => {
                 <AppTopbar view={view} selectedDept={selectedDept} selectedAsset={selectedAsset}/>
                 <div className="view-content">
                     {view==='dashboard' && <Dashboard data={data} setView={setView} setSelectedAsset={setSelectedAsset} setSelectedDept={setSelectedDept} backupStatus={backupStatus}/>}
+                    {view==='iso_docs' && <DocumentsView data={data}/>}
                     {view==='backup' && <BackupView data={data} backupStatus={backupStatus} refreshBackupStatus={refreshBackupStatus}/>}
                     {view==='kanban' && <KanbanBoard assets={data.assets} setSelectedAsset={setSelectedAsset} setView={setView}/>}
                     {view==='pm_documents' && (window.PMDocumentsView

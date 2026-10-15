@@ -270,6 +270,16 @@
             return { backupStatus: snap.exists ? snap.data() : { lastBackupAt: '', history: [] } };
         },
 
+        // ====== ISO DOCUMENT SETTINGS (หัวกระดาษ เลขที่เอกสาร Rev. ผู้ลงนาม) ======
+        async get_doc_settings() {
+            const snap = await db.collection(META).doc('docSettings').get();
+            return { docSettings: snap.exists ? snap.data() : null };
+        },
+
+        async save_doc_settings(p) {
+            await db.collection(META).doc('docSettings').set(clean({ ...p.settings, updatedAt: new Date().toISOString() }));
+        },
+
         async record_backup(p) {
             const ref = db.collection(META).doc('backup');
             const snap = await ref.get();
