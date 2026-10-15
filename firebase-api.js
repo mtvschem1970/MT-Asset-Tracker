@@ -35,6 +35,9 @@
     const clean = (v) => JSON.parse(JSON.stringify(v === undefined ? null : v));
     const docId = (v) => String(v).trim().replace(/\//g, '_');
     const listAll = async (col) => (await db.collection(col).get()).docs.map(d => d.data());
+    // แผน PM: แนบรหัสเอกสารจริง (_docId) ไว้ด้วย รายการเก่าที่ย้ายมาจากระบบเดิมบางรายการไม่มี schId หรือ schId ไม่ตรงกับรหัสเอกสาร
+    const pmFromSnap = (snap) => snap.docs.map(d => { const x = d.data(); return { ...x, schId: x.schId || d.id, _docId: d.id }; });
+    const pmRef = (p) => db.collection(C.pm).doc(p && p._docId ? p._docId : docId(p && p.schId));
 
     // ====== FILES ======
     const isDataUrl = (v) => typeof v === 'string' && v.startsWith('data:');
@@ -135,14 +138,14 @@
             const k = `${d.assetId}|${String(d.inspectionDate).slice(0, 7)}`;
             if (!byMonth.has(k)) byMonth.set(k, d);
         });
-        const fixes = pmList.filter(p => p.status === 'รอเป้าหมาย' && p.planDate && p.schId &&
+        const fixes = pmList.filter(p => p.status === 'รอเป้าหมาย' && p.planDate && (p.schId || p._docId) &&
             byMonth.has(`${p.assetId}|${String(p.planDate).slice(0, 7)}`));
         if (!fixes.length) return pmList;
         const batch = db.batch();
         fixes.forEach(p => {
             const d = byMonth.get(`${p.assetId}|${String(p.planDate).slice(0, 7)}`);
             Object.assign(p, { status: 'ดำเนินการแล้ว', doneDate: d.inspectionDate, pmDocumentId: d.id || '' });
-            batch.update(db.collection(C.pm).doc(docId(p.schId)), { status: p.status, doneDate: p.doneDate, pmDocumentId: p.pmDocumentId });
+            batch.update(pmRef(p), { status: p.status, doneDate: p.doneDate, pmDocumentId: p.pmDocumentId });
         });
         await batch.commit();
         for (const id of new Set(fixes.map(p => String(p.assetId)))) await refreshNextPm(id);
@@ -246,22 +249,22 @@
         },
 
         async get_pm_schedules(p) {
-            const list = (await db.collection(C.pm).where('assetId', '==', String(p.assetId)).get()).docs.map(d => d.data());
+            const list = pmFromSnap(await db.collection(C.pm).where('assetId', '==', String(p.assetId)).get());
             return { pmSchedules: list.sort((a, b) => String(a.planDate).localeCompare(String(b.planDate))) };
         },
 
         async save_pm_schedule(p) {
-            const s = { ...p.schedule };
+            const { _docId, ...s } = p.schedule;
             s.schId = s.schId || 'SCH-' + Date.now();
             const folder = `assets/${docId(p.assetId)}/pm`;
             s.image = await storeFile(s.image, folder);
             s.pdf = await storeFile(s.pdf, folder);
-            await db.collection(C.pm).doc(docId(s.schId)).set(clean({ ...s, assetId: String(p.assetId), assetName: p.assetName || '' }));
+            await (_docId ? db.collection(C.pm).doc(_docId) : db.collection(C.pm).doc(docId(s.schId))).set(clean({ ...s, assetId: String(p.assetId), assetName: p.assetName || '' }));
             await refreshNextPm(p.assetId);
         },
 
         async delete_pm_schedule(p) {
-            await db.collection(C.pm).doc(docId(p.schId)).delete();
+            await pmRef({ _docId: p.docId, schId: p.schId }).delete();
             await refreshNextPm(p.assetId);
         },
 
@@ -273,7 +276,7 @@
                 const s = { ...c.schedule, schId: c.schedule.schId || `SCH-${Date.now()}-${i}` };
                 ops.push(b => b.set(db.collection(C.pm).doc(docId(s.schId)), clean({ ...s, assetId: String(c.assetId), assetName: c.assetName || '' })));
             });
-            (p.updates || []).forEach(u => ops.push(b => b.update(db.collection(C.pm).doc(docId(u.schId)), clean(u.patch))));
+            (p.updates || []).forEach(u => ops.push(b => b.update(pmRef({ _docId: u.docId, schId: u.schId }), clean(u.patch))));
             (p.deletes || []).forEach(id => ops.push(b => b.delete(db.collection(C.pm).doc(docId(id)))));
             for (let i = 0; i < ops.length; i += 400) {
                 const batch = db.batch();
@@ -285,8 +288,21 @@
             return { created: (p.creates || []).length, deleted: (p.deletes || []).length, updated: (p.updates || []).length };
         },
 
+        // ลบแผน PM ที่ค้างอยู่ของอุปกรณ์ที่ไม่มีในทะเบียนแล้ว
+        async delete_orphan_pm() {
+            const ids = new Set((await db.collection(C.assets).get()).docs.map(d => String(d.data().id ?? d.id)));
+            (await db.collection(C.assets).get()).docs.forEach(d => ids.add(String(d.id)));
+            const orphans = (await db.collection(C.pm).get()).docs.filter(d => !ids.has(String(d.data().assetId)));
+            for (let i = 0; i < orphans.length; i += 400) {
+                const batch = db.batch();
+                orphans.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+                await batch.commit();
+            }
+            return { deleted: orphans.length };
+        },
+
         async get_all_pm_dashboard() {
-            const [pm, docs] = await Promise.all([listAll(C.pm), listAll(C.docs)]);
+            const [pm, docs] = await Promise.all([db.collection(C.pm).get().then(pmFromSnap), listAll(C.docs)]);
             try { await reconcilePmWithDocuments(pm, docs); } catch (e) { console.warn('reconcile PM', e); }
             return { allPm: pm };
         },

@@ -716,6 +716,62 @@ const GlobalSearch = ({ data, setView, setSelectedAsset }) => {
     );
 };
 
+// ====== แก้ไข / ลบ แผน PM รายการเดียว (ใช้ใน Kanban และหน้าตั้งแผนประจำปี) ======
+const PmEditModal = ({ pm, onClose, onChanged }) => {
+    const [f, setF] = useState({ ...pm, note: pm.note || '', pmVendorName: pm.pmVendorName || '', pmVendorContact: pm.pmVendorContact || '', doneDate: pm.doneDate || '' });
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState('');
+    const run = async (payload) => {
+        setBusy(true); setErr('');
+        const j = await mtaCall(payload);
+        setBusy(false);
+        if (j.status === 'error') { setErr(j.message); return false; }
+        onChanged && onChanged(); onClose(); return true;
+    };
+    const save = () => {
+        if (!f.topic.trim() || !f.planDate) return setErr('ระบุหัวข้อและวันที่แผน');
+        const schedule = { ...f, topic: f.topic.trim(), doneDate: f.status === 'ดำเนินการแล้ว' ? (f.doneDate || new Date().toISOString().slice(0, 10)) : '',
+            pmDocumentId: f.status === 'ดำเนินการแล้ว' ? (f.pmDocumentId || '') : '' };
+        if (f.planDate.slice(0, 7) !== String(pm.planDate).slice(0, 7)) schedule.planMonth = f.planDate.slice(0, 7);
+        run({ action: 'save_pm_schedule', assetId: pm.assetId, assetName: pm.assetName, schedule });
+    };
+    const del = () => {
+        if (!confirm(`ลบแผน PM "${pm.topic}" ของ ${pm.assetName || pm.assetId} (${pm.planDate}) ถาวร?`)) return;
+        run({ action: 'delete_pm_schedule', assetId: pm.assetId, schId: pm.schId, docId: pm._docId });
+    };
+    const lab = { fontSize: 12, color: 'var(--text2)', fontWeight: 600, display: 'block', marginBottom: 6 };
+    return ReactDOM.createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
+            <div className="card-static modal-in" style={{ padding: 22, maxWidth: 460, width: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                    <div><h3 style={{ fontWeight: 800 }}>แก้ไขแผน PM</h3><div style={{ fontSize: 12, color: 'var(--text3)' }}>{pm.assetName} ({pm.assetId})</div></div>
+                    <button onClick={onClose} style={{ color: 'var(--text3)' }}><I d={ic.x} size={20}/></button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div><label style={lab}>หัวข้อ PM</label><input className="inp" value={f.topic} onChange={e => setF({ ...f, topic: e.target.value })}/></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <div><label style={lab}>วันที่แผน (ครบกำหนด)</label><input type="date" className="inp" value={f.planDate} onChange={e => setF({ ...f, planDate: e.target.value })}/></div>
+                        <div><label style={lab}>สถานะ</label><select className="inp" value={f.status} onChange={e => setF({ ...f, status: e.target.value })}><option>รอเป้าหมาย</option><option>ดำเนินการแล้ว</option><option>ยกเลิก</option></select></div>
+                    </div>
+                    {f.status === 'ดำเนินการแล้ว' && <div><label style={lab}>วันที่ทำจริง</label><input type="date" className="inp" value={f.doneDate} onChange={e => setF({ ...f, doneDate: e.target.value })}/></div>}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <div><label style={lab}>ทำโดย</label><select className="inp" value={f.pmType || 'ภายใน'} onChange={e => setF({ ...f, pmType: e.target.value })}><option>ภายใน</option><option>ภายนอก</option></select></div>
+                        {f.pmType === 'ภายนอก' && <div><label style={lab}>ผู้รับจ้าง</label><input className="inp" value={f.pmVendorName} onChange={e => setF({ ...f, pmVendorName: e.target.value })}/></div>}
+                    </div>
+                    {f.pmType === 'ภายนอก' && <div><label style={lab}>เบอร์ติดต่อ</label><input className="inp" value={f.pmVendorContact} onChange={e => setF({ ...f, pmVendorContact: e.target.value })}/></div>}
+                    <div><label style={lab}>หมายเหตุ</label><input className="inp" value={f.note} onChange={e => setF({ ...f, note: e.target.value })}/></div>
+                    {err && <div style={{ color: 'var(--red)', fontSize: 13, fontWeight: 600 }}>{err}</div>}
+                    <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                        <button className="btn btn-danger" onClick={del} disabled={busy}><I d={ic.trash} size={14}/> ลบ</button>
+                        <div style={{ flex: 1 }}/>
+                        <button className="btn btn-ghost" onClick={onClose} disabled={busy}>ยกเลิก</button>
+                        <button className="btn btn-primary" onClick={save} disabled={busy}>{busy ? <Loader size={16}/> : 'บันทึก'}</button>
+                    </div>
+                </div>
+            </div>
+        </div>, document.body);
+};
+
 // ====== ANNUAL PM PLANNER (ตั้งแผน PM ประจำปีในหน้าเดียว) ======
 // แถว = อุปกรณ์ + หัวข้อ PM, คอลัมน์ = 12 เดือน คลิกช่องเพื่อเลือก/ยกเลิกเดือน แล้วกดบันทึกครั้งเดียว
 // รายการที่ทำแล้ว (✓) หรือยกเลิก (✗) จะไม่ถูกแก้ ลบได้เฉพาะรายการที่ยัง "รอเป้าหมาย"
@@ -785,13 +841,13 @@ const computePmChanges = (rows, year) => {
                 assetIds.add(r.assetId);
             }
             if (!r.sel[m] && pending.length) {
-                pending.filter(p => p.schId).forEach(p => { deletes.push(p.schId); removed.add(p.schId); });
+                pending.filter(p => p._docId || p.schId).forEach(p => { deletes.push(p._docId || p.schId); removed.add(p.schId); });
                 assetIds.add(r.assetId);
             }
         });
         if (topic !== r.origTopic || r.pmType !== r.origPmType || vendor !== (r.origPmType === 'ภายนอก' ? r.origVendor : '')) {
             r.existing.flat().filter(p => p.schId && !removed.has(p.schId)).forEach(p =>
-                updates.push({ schId: p.schId, patch: { topic, pmType: r.pmType, pmVendorName: vendor } }));
+                updates.push({ schId: p.schId, docId: p._docId, patch: { topic, pmType: r.pmType, pmVendorName: vendor } }));
         }
     });
     return { creates, updates, deletes, assetIds: [...assetIds] };
@@ -805,6 +861,7 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
     const [q, setQ] = useState('');
     const [onlyPlanned, setOnlyPlanned] = useState(false);
     const [menu, setMenu] = useState(null);   // เมนูของช่องที่มีแผนแล้ว {key, m, x, y}
+    const [editPm, setEditPm] = useState(null);
     const [allPm, setAllPm] = useState([]);
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -899,12 +956,14 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(doneDate.trim())) { setMsg({ type: 'error', text: 'รูปแบบวันที่ไม่ถูกต้อง ต้องเป็น ปปปป-ดด-วว (ค.ศ.) เช่น 2026-09-20' }); return; }
         setSaving(true);
         const j = await mtaCall({ action: 'save_pm_plan', assetIds: [menuRow.assetId],
-            updates: menuPending.filter(p => p.schId).map(p => ({ schId: p.schId, patch: { status: 'ดำเนินการแล้ว', doneDate: doneDate.trim() } })) });
+            updates: menuPending.filter(p => p.schId).map(p => ({ schId: p.schId, docId: p._docId, patch: { status: 'ดำเนินการแล้ว', doneDate: doneDate.trim() } })) });
         setSaving(false);
         setMsg(j.status === 'error' ? { type: 'error', text: 'บันทึกไม่สำเร็จ: ' + j.message } : { type: 'success', text: `บันทึก ${menuRow.assetId} ${PM_MONTHS[menu.m]} เป็น "ทำแล้ว"` });
         await load();
     };
     const removeFromMenu = () => { if (menuRow) toggleCell(menuRow.key, menu.m); setMenu(null); };
+    const menuAll = menuRow ? menuRow.existing[menu.m] : [];
+    const openEditor = (p) => { if (!leaveIfDirty()) return; setMenu(null); setEditPm(p); };
 
     const monthTotals = PM_MONTHS.map((_, m) => visible.reduce((s, r) => s + (r.sel[m] ? 1 : 0) + r.existing[m].filter(p => p.status === 'ดำเนินการแล้ว').length, 0));
     const plannedRows = visible.filter(r => r.sel.some(Boolean) || r.existing.some(l => l.length)).length;
@@ -931,7 +990,7 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
         return (
             <td key={m} className="pmp-td">
                 <button type="button" className={cls} title={title} aria-pressed={want} onClick={e => {
-                    if (want && pending.length) { const b = e.currentTarget.getBoundingClientRect(); setMenu({ key: r.key, m, x: b.left, y: b.bottom + 4 }); }
+                    if ((want && pending.length) || done || cancel) { const b = e.currentTarget.getBoundingClientRect(); setMenu({ key: r.key, m, x: b.left, y: b.bottom + 4 }); }
                     else toggleCell(r.key, m);
                 }}>
                     {label}
@@ -1058,14 +1117,23 @@ const PmPlanner = ({ data, setView, setSelectedAsset }) => {
                 <span>คลิกชื่อเดือนที่หัวตาราง = เลือกทั้งคอลัมน์</span>
             </div>
 
+            {editPm && <PmEditModal pm={editPm} onClose={() => setEditPm(null)} onChanged={load}/>}
             {menu && menuRow && ReactDOM.createPortal(
                 <>
                     <div style={{ position: 'fixed', inset: 0, zIndex: 60 }} onClick={() => setMenu(null)}/>
                     <div className="pmp-menu" style={{ left: Math.min(menu.x, window.innerWidth - 270), top: Math.min(menu.y, window.innerHeight - 200) }}>
                         <div style={{ fontSize: 12, color: 'var(--text3)', padding: '6px 10px 4px' }}>{menuRow.assetId} · {PM_MONTHS[menu.m]} {year + 543} · {menuRow.topic}</div>
-                        <button type="button" onClick={recordDocument}>📝 บันทึกเอกสาร PM{pmMonthEnd(`${year}-${pmPad(menu.m + 1)}-01`) < today ? ' (ย้อนหลัง)' : ''}</button>
-                        <button type="button" onClick={markDone}>✓ ทำแล้ว (ไม่มีเอกสาร)</button>
-                        <button type="button" onClick={removeFromMenu} style={{ color: 'var(--red)' }}>✗ เอาแผนเดือนนี้ออก</button>
+                        {menuRow.sel[menu.m] && menuPending.length > 0 && <>
+                            <button type="button" onClick={recordDocument}>📝 บันทึกเอกสาร PM{pmMonthEnd(`${year}-${pmPad(menu.m + 1)}-01`) < today ? ' (ย้อนหลัง)' : ''}</button>
+                            <button type="button" onClick={markDone}>✓ ทำแล้ว (ไม่มีเอกสาร)</button>
+                            <button type="button" onClick={removeFromMenu} style={{ color: 'var(--red)' }}>✗ เอาแผนเดือนนี้ออก</button>
+                        </>}
+                        {!menuRow.sel[menu.m] && <button type="button" onClick={removeFromMenu}>+ เพิ่มแผนในเดือนนี้อีกครั้ง</button>}
+                        {menuAll.length > 0 && <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0', paddingTop: 4 }}>
+                            <div style={{ fontSize: 11, color: 'var(--text3)', padding: '2px 10px' }}>แก้ไข / ลบ รายการที่บันทึกไว้</div>
+                            {menuAll.map(p => <button type="button" key={p.schId} onClick={() => openEditor(p)}>
+                                ✏️ {p.planDate} · {p.status}{p.doneDate ? ` (${p.doneDate})` : ''}</button>)}
+                        </div>}
                     </div>
                 </>, document.body
             )}
@@ -1088,18 +1156,17 @@ const KanbanBoard = ({ assets, setSelectedAsset, setView }) => {
     const [allPm, setAllPm] = useState([]);
     const [loading, setLoading] = useState(false);
     const [filter, setFilter] = useState('all');
+    const [editPm, setEditPm] = useState(null);
 
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            try {
-                const j = await mtaCall({action:'get_all_pm_dashboard'});
-                if (j.allPm) setAllPm(j.allPm);
-            } catch(e) { console.error(e); }
-            setLoading(false);
-        };
-        load();
-    }, []);
+    const load = async () => {
+        setLoading(true);
+        try {
+            const j = await mtaCall({action:'get_all_pm_dashboard'});
+            if (j.allPm) setAllPm(j.allPm);
+        } catch(e) { console.error(e); }
+        setLoading(false);
+    };
+    useEffect(() => { load(); }, []);
 
     const filtered = filter === 'all' ? allPm : allPm.filter(t => t.status === filter);
 
@@ -1113,21 +1180,34 @@ const KanbanBoard = ({ assets, setSelectedAsset, setView }) => {
 
     const getItems = (colId) => filtered.filter(t => getPmCategory(t.planDate) === colId);
 
-    const handleClick = (t) => {
+    const handleClick = (t) => setEditPm(t);
+    const assetIdSet = new Set(assets.map(a => String(a.id)));
+    const isOrphan = (t) => assets.length > 0 && !assetIdSet.has(String(t.assetId));
+    const orphanCount = allPm.filter(isOrphan).length;
+    const cleanOrphans = async () => {
+        if (!confirm(`ลบแผน PM ${orphanCount} รายการ ของอุปกรณ์ที่ถูกลบออกจากทะเบียนไปแล้ว?`)) return;
+        setLoading(true);
+        const j = await mtaCall({ action: 'delete_orphan_pm' });
+        if (j.status === 'error') alert('ลบไม่สำเร็จ: ' + j.message);
+        await load();
+    };
+    const openAsset = (t) => {
         const a = assets.find(x => String(x.id) === String(t.assetId));
-        if (a) { setSelectedAsset(a); setView('detail'); }
+        if (a) { setSelectedAsset(a); setView('detail'); } else alert('ไม่พบอุปกรณ์ ' + t.assetId + ' ในทะเบียน (อาจถูกลบไปแล้ว) แก้ไขหรือลบแผนนี้ได้จากหน้าต่างแก้ไข');
     };
 
     const statuses = ['all','รอเป้าหมาย','ดำเนินการแล้ว','ยกเลิก'];
 
     return (
         <div style={{padding:'24px',height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav">
+            {editPm && <PmEditModal pm={editPm} onClose={()=>setEditPm(null)} onChanged={load}/>}
             <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'center',marginBottom:20,flexShrink:0}}>
                 <div>
                     <h2 style={{fontSize:22,fontWeight:800}}>PM Kanban Board</h2>
                     <p style={{fontSize:13,color:'var(--text2)'}}>ภาพรวมตารางงาน PM ทั้งหมด</p>
                 </div>
                 <div style={{marginLeft:'auto',display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {orphanCount > 0 && <button className="btn btn-danger" style={{padding:'6px 14px',fontSize:12}} onClick={cleanOrphans} title="แผน PM ของอุปกรณ์ที่ไม่มีในทะเบียนแล้ว"><I d={ic.trash} size={14}/> ล้างแผนค้างของเครื่องที่ถูกลบ ({orphanCount})</button>}
                     <button className="btn btn-primary" style={{padding:'6px 14px',fontSize:12}} onClick={()=>setView('pm_planner')}><I d={ic.cal} size={14}/> ตั้งแผนทั้งปี</button>
                     {statuses.map(s => (
                         <button key={s} className={`btn ${filter===s?'btn-primary':'btn-ghost'}`} style={{padding:'6px 14px',fontSize:12}} onClick={()=>setFilter(s)}>
@@ -1155,13 +1235,17 @@ const KanbanBoard = ({ assets, setSelectedAsset, setView }) => {
                                     {items.map((t,i) => (
                                         <div key={i} className="kanban-card" onClick={()=>handleClick(t)}>
                                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6,gap:8}}>
-                                                <div style={{fontWeight:700,fontSize:13,lineHeight:1.3}}>{t.assetName}</div>
+                                                <div style={{fontWeight:700,fontSize:13,lineHeight:1.3}}>{t.assetName}{isOrphan(t) && <div style={{fontSize:10,fontWeight:700,color:'var(--red)',marginTop:2}}>⚠️ ไม่พบอุปกรณ์ในทะเบียน</div>}</div>
                                                 <span className={`badge ${t.status==='ดำเนินการแล้ว'?'badge-green':'badge-gray'}`} style={{flexShrink:0,fontSize:10}}>{t.status==='ดำเนินการแล้ว'?'✓ เสร็จ':'รอ'}</span>
                                             </div>
                                             <div style={{fontSize:12,color:'var(--text2)',marginBottom:8}}>{t.topic}</div>
                                             <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
                                                 <span style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:col.color,background:col.color+'15',padding:'2px 7px',borderRadius:6}}>{t.planDate}</span>
                                                 {t.pmType==='ภายนอก' && <span style={{fontSize:10,color:'var(--accent)'}}>🔧 {t.pmVendorName}</span>}
+                                                <span style={{marginLeft:'auto',display:'flex',gap:4}}>
+                                                    <button className="btn btn-ghost" style={{padding:'2px 8px',minHeight:0,fontSize:11}} onClick={e=>{e.stopPropagation();openAsset(t);}} title="ไปหน้าอุปกรณ์">อุปกรณ์</button>
+                                                    <button className="btn btn-ghost" style={{padding:'2px 8px',minHeight:0,fontSize:11}} onClick={e=>{e.stopPropagation();setEditPm(t);}} title="แก้ไข / ลบ"><I d={ic.wrench} size={12}/> แก้ไข</button>
+                                                </span>
                                             </div>
                                         </div>
                                     ))}
@@ -1488,6 +1572,17 @@ const Dashboard = ({ data, setView, setSelectedAsset, setSelectedDept, backupSta
 const DeptView = ({ data, setSelectedDept, setView, postData }) => {
     const [showModal, setShowModal] = useState(false);
     const [form, setForm] = useState({name:'',code:''});
+    const [editDept, setEditDept] = useState(null);   // {oldName, oldCode, name, code}
+    const saveDeptEdit = async () => {
+        if (!editDept.name.trim() || !editDept.code.trim()) return alert('กรอกข้อมูลให้ครบ');
+        await postData({action:'update_dept', ...editDept});
+        setEditDept(null);
+    };
+    const deleteDept = async (d, count) => {
+        if (count > 0) return alert(`ลบไม่ได้: ยังมีอุปกรณ์ ${count} เครื่องในแผนก "${d.name}" ย้ายแผนกหรือลบอุปกรณ์ก่อน`);
+        if (!confirm(`ลบแผนก "${d.name}" (${d.code})?`)) return;
+        await postData({action:'delete_dept', name:d.name, code:d.code});
+    };
     return (
         <div style={{padding:24,height:'100%',display:'flex',flexDirection:'column'}} className="fade-up pb-nav">
             <div className="page-head" style={{flexShrink:0}}>
@@ -1510,6 +1605,8 @@ const DeptView = ({ data, setSelectedDept, setView, postData }) => {
                                     <div style={{fontWeight:600,fontSize:14,lineHeight:1.35}}>{d.name}</div>
                                     <div className="mono" style={{fontSize:11,color:'var(--text3)'}}>{d.code}</div>
                                 </div>
+                                <button className="btn btn-ghost" style={{padding:'4px 7px',minHeight:0}} title="แก้ไขแผนก" onClick={e=>{e.stopPropagation();setEditDept({oldName:d.name,oldCode:d.code,name:d.name,code:d.code});}}><I d={ic.wrench} size={13}/></button>
+                                <button className="btn btn-ghost" style={{padding:'4px 7px',minHeight:0,color:'var(--red)'}} title="ลบแผนก" onClick={e=>{e.stopPropagation();deleteDept(d,list.length);}}><I d={ic.trash} size={13}/></button>
                             </div>
                             <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginTop:'auto'}}>
                                 <div><span style={{fontSize:22,fontWeight:700,fontVariantNumeric:'tabular-nums'}}>{list.length}</span> <span style={{fontSize:12,color:'var(--text2)'}}>เครื่อง</span></div>
@@ -1519,6 +1616,19 @@ const DeptView = ({ data, setSelectedDept, setView, postData }) => {
                     );
                 })}
             </div>
+            {editDept && (
+                <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20}} onClick={()=>setEditDept(null)}>
+                    <div className="card-static modal-in" style={{padding:24,maxWidth:360,width:'100%'}} onClick={e=>e.stopPropagation()}>
+                        <h3 style={{fontWeight:800,marginBottom:16}}>แก้ไขแผนก</h3>
+                        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                            <div><label style={{fontSize:12,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ชื่อแผนก</label><input className="inp" value={editDept.name} onChange={e=>setEditDept({...editDept,name:e.target.value})}/></div>
+                            <div><label style={{fontSize:12,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>รหัสย่อ</label><input className="inp" value={editDept.code} onChange={e=>setEditDept({...editDept,code:e.target.value.toUpperCase()})}/></div>
+                            <div style={{fontSize:12,color:'var(--text3)'}}>เปลี่ยนชื่อแล้ว อุปกรณ์ในแผนกนี้จะย้ายตามชื่อใหม่ให้อัตโนมัติ (รหัสอุปกรณ์เดิมไม่เปลี่ยน)</div>
+                            <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}><button className="btn btn-ghost" onClick={()=>setEditDept(null)}>ยกเลิก</button><button className="btn btn-primary" onClick={saveDeptEdit}>บันทึก</button></div>
+                        </div>
+                    </div>
+                </div>
+            )}
             {showModal && (
                 <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:20,backdropFilter:'blur(4px)'}} onClick={()=>setShowModal(false)}>
                     <div className="card-static modal-in" style={{padding:24,maxWidth:360,width:'100%'}} onClick={e=>e.stopPropagation()}>
@@ -1794,12 +1904,13 @@ const DetailView = ({ item, setView, postData }) => {
         setTimeout(fetchPm,2000);
     };
 
-    const delPm = async (id) => { if(!confirm('ลบ?')) return; setPmLoading(true); await postData({action:'delete_pm_schedule',assetId:item.id,schId:id}); setTimeout(fetchPm,2000); };
+    const delPm = async (id, docId) => { if(!confirm('ลบ?')) return; setPmLoading(true); await postData({action:'delete_pm_schedule',assetId:item.id,schId:id,docId}); setTimeout(fetchPm,2000); };
 
     const submitLog = () => {
         const total = Number(log.labor)+(log.parts.reduce((s,p)=>s+Number(p.price),0))+(part.name?Number(part.price):0);
         const finalParts = part.name ? [...log.parts,part] : [...log.parts];
-        postData({action:'save_log',assetId:item.id,log:{id:log.id||Date.now(),date:log.date,type:log.type,description:log.description,laborCost:log.labor,totalCost:total,parts:finalParts}});
+        const { labor, ...extra } = log;   // เก็บฟิลด์อื่นของรายการเดิมไว้ (เช่น ข้อมูลจากระบบแจ้งซ่อม)
+        postData({action:'save_log',assetId:item.id,log:{...extra,id:log.id||Date.now(),date:log.date,type:log.type,description:log.description,laborCost:labor,totalCost:total,parts:finalParts}});
         setLog({date:new Date().toISOString().split('T')[0],type:'ซ่อมแซม',description:'',labor:'',parts:[]});
         setPart({name:'',price:'',image:'',pdf:''});
         setTab('history');
@@ -1909,7 +2020,7 @@ const DetailView = ({ item, setView, postData }) => {
                 <div className="detail-main">
                     <div className="card-static" style={{overflow:'hidden'}}>
                         <div className="detail-tabs">
-                            {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:'+ บันทึกซ่อม'},{id:'spares',label:`รายการ Spare Part (${spareParts.length})${lowStockCount ? ` ⚠️ ${lowStockCount}` : ''}`},{id:'newspare',label:'+ เพิ่ม Spare Part'},{id:'pmtemplates',label:'📋 แม่แบบ PM'},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
+                            {[{id:'history',label:`ประวัติซ่อม (${item.history?.length||0})`},{id:'newlog',label:log.id?'✏️ แก้ไขประวัติ':'+ บันทึกซ่อม'},{id:'spares',label:`รายการ Spare Part (${spareParts.length})${lowStockCount ? ` ⚠️ ${lowStockCount}` : ''}`},{id:'newspare',label:'+ เพิ่ม Spare Part'},{id:'pmtemplates',label:'📋 แม่แบบ PM'},{id:'pmschedule',label:'📅 ตาราง PM'}].map(t => (
                                 <button key={t.id} className={`detail-tab-btn ${tab===t.id?'active':''}`} onClick={()=>setTab(t.id)}>
                                     {t.label}
                                 </button>
@@ -1963,7 +2074,8 @@ const DetailView = ({ item, setView, postData }) => {
                                         ))}
                                     </div>
                                     <div><label style={{fontSize:11,color:'var(--text2)',fontWeight:600,display:'block',marginBottom:6}}>ค่าแรง (฿)</label><input type="number" className="inp" value={log.labor} onChange={e=>setLog({...log,labor:e.target.value})} placeholder="0"/></div>
-                                    <button className="btn btn-primary" style={{justifyContent:'center',padding:12}} onClick={submitLog} disabled={fileLoading}>บันทึกประวัติ</button>
+                                    <button className="btn btn-primary" style={{justifyContent:'center',padding:12}} onClick={submitLog} disabled={fileLoading}>{log.id ? 'บันทึกการแก้ไข' : 'บันทึกประวัติ'}</button>
+                                    {log.id && <button className="btn btn-ghost" style={{justifyContent:'center'}} onClick={()=>{setLog({date:new Date().toISOString().split('T')[0],type:'ซ่อมแซม',description:'',labor:'',parts:[]});setTab('history');}}>ยกเลิกการแก้ไข</button>}
                                 </div>
                             )}
                             {tab==='spares' && (
@@ -2086,7 +2198,7 @@ const DetailView = ({ item, setView, postData }) => {
                                                         </div>
                                                         <div style={{display:'flex',gap:4,flexShrink:0}}>
                                                             <button className="btn btn-ghost" style={{padding:'6px'}} onClick={()=>setPmForm(pm)}><I d={ic.wrench} size={14}/></button>
-                                                            <button className="btn btn-danger" style={{padding:'6px'}} onClick={()=>delPm(pm.schId)}><I d={ic.trash} size={14}/></button>
+                                                            <button className="btn btn-danger" style={{padding:'6px'}} onClick={()=>delPm(pm.schId, pm._docId)}><I d={ic.trash} size={14}/></button>
                                                         </div>
                                                     </div>
                                                 );
@@ -2137,7 +2249,11 @@ const DetailView = ({ item, setView, postData }) => {
                             <span style={{color:'var(--text2)',fontSize:13}}>ค่าแรง ฿{fmtNum(selLog.laborCost)}</span>
                             <span style={{fontWeight:800,color:'var(--accent)',fontSize:16}}>รวม ฿{fmtNum(selLog.totalCost)}</span>
                         </div>
-                        <button className="btn btn-danger" style={{width:'100%',justifyContent:'center'}} onClick={()=>{if(confirm('ลบ?')){postData({action:'delete_log',assetId:item.id,logId:selLog.id});setSelLog(null);}}}>ลบรายการนี้</button>
+                        {selLog.source === 'Maintenance-Repair-System' && <div style={{fontSize:12,color:'var(--orange)',marginBottom:10}}>รายการนี้มาจากระบบแจ้งซ่อม ({selLog.jobID}) ถ้าแก้ที่นี่ แล้วมีการอัปเดตใบแจ้งซ่อมภายหลัง ข้อมูลจะถูกเขียนทับตามใบแจ้งซ่อม</div>}
+                        <div style={{display:'flex',gap:8}}>
+                            <button className="btn btn-ghost" style={{flex:1,justifyContent:'center'}} onClick={()=>{const {laborCost,totalCost,...rest}=selLog;setLog({...rest,labor:laborCost||'',parts:[...(selLog.parts||[])]});setPart({name:'',price:'',image:'',pdf:''});setSelLog(null);setTab('newlog');}}><I d={ic.wrench} size={14}/> แก้ไข</button>
+                            <button className="btn btn-danger" style={{flex:1,justifyContent:'center'}} onClick={()=>{if(confirm('ลบรายการนี้?')){postData({action:'delete_log',assetId:item.id,logId:selLog.id});setSelLog(null);}}}><I d={ic.trash} size={14}/> ลบรายการนี้</button>
+                        </div>
                     </div>
                 </div>
             )}
